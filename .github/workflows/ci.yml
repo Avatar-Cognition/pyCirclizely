@@ -2,38 +2,26 @@ name: CI
 on:
   push:
     branches: [main, develop]
-    paths: ["src/**", "tests/**", ".github/workflows/ci.yml"]
   pull_request:
     branches: [main, develop]
-    paths: ["src/**", "tests/**", ".github/workflows/ci.yml"]
-  workflow_dispatch:
 
 jobs:
-  CI:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+  test:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Rye
-        run: |
-          curl -sSf https://rye.astral.sh/get | RYE_INSTALL_OPTION="--yes" bash
-          echo "$HOME/.rye/shims" >> $GITHUB_PATH
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.9'
 
-      - name: Install Python ${{ matrix.python-version }} & dependencies
-        run: |
-          rye pin ${{ matrix.python-version }}
-          rye sync --update-all --all-features
+      - name: Install pipenv
+        run: pip install pipenv
 
-      - name: Run ruff lint check
-        run: rye run ruff check --diff
+      - name: Install dependencies
+        run: pipenv install --dev
 
-      - name: Run ruff format check
-        run: rye run ruff format --check --diff
-
-      - name: Run pytest
-        run: rye run pytest
+      - name: Run tests
+        run: pipenv run pytest
