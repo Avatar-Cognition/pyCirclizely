@@ -102,7 +102,6 @@ plotly_layout_defaults = {
         "zeroline": False,
         "showticklabels": False,
     },
-    "paper_bgcolor": "rgba(0,0,0,0)",  # Transparent background outside the axes
     "plot_bgcolor": "rgba(0,0,0,0)",  # Transparent background inside the axes
 }
 

@@ -11,9 +11,9 @@ import numpy as np
 from PIL import Image, ImageOps
 from plotly.graph_objs.layout._annotation import Annotation
 from plotly.graph_objs.layout._shape import Shape
-from pycirclizely_TEST import config, utils
-from pycirclizely_TEST.patches import PolarSVGPatchBuilder
-from pycirclizely_TEST.track import Track
+from pycirclizely import config, utils
+from pycirclizely.patches import PolarSVGPatchBuilder
+from pycirclizely.track import Track
 
 
 class Sector:

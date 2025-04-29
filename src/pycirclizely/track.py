@@ -11,13 +11,13 @@ import pandas as pd
 from PIL import Image
 from plotly.graph_objs.layout._annotation import Annotation
 from plotly.graph_objs.layout._shape import Shape
-from pycirclizely_TEST import config, utils
-from pycirclizely_TEST.parser import StackedBarTable
-from pycirclizely_TEST.patches import PolarSVGPatchBuilder
+from pycirclizely import config, utils
+from pycirclizely.parser import StackedBarTable
+from pycirclizely.patches import PolarSVGPatchBuilder
 
 if TYPE_CHECKING:
     # Avoid Sector <-> Track circular import error at runtime
-    from pycirclizely_TEST.sector import Sector
+    from pycirclizely.sector import Sector
 
 
 class Track:

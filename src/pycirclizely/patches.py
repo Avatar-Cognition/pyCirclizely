@@ -1,7 +1,7 @@
 from typing import ClassVar
 
 import numpy as np
-from pycirclizely_TEST import config
+from pycirclizely import config
 
 
 class PolarSVGPatchBuilder:
