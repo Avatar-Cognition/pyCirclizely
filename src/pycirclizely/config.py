@@ -84,7 +84,10 @@ ann_adjust = _AnnotationAdjustConfig
 ###########################################################
 
 plotly_layout_defaults = {
-    "title": {'font': {'color': 'black', 'family': 'Times New Roman', 'size': 18}, 'text': None},
+    "title": {
+        "font": {"color": "black", "family": "Times New Roman", "size": 18},
+        "text": None,
+    },
     "hovermode": "closest",
     "showlegend": False,
     "xaxis": {
@@ -99,8 +102,8 @@ plotly_layout_defaults = {
         "zeroline": False,
         "showticklabels": False,
     },
-    "paper_bgcolor" : "rgba(0,0,0,0)",  # Transparent background outside the axes
-    "plot_bgcolor" : "rgba(0,0,0,0)"   # Transparent background inside the axes
+    "paper_bgcolor": "rgba(0,0,0,0)",  # Transparent background outside the axes
+    "plot_bgcolor": "rgba(0,0,0,0)",  # Transparent background inside the axes
 }
 
 # Plotly annotation defaults
@@ -115,11 +118,8 @@ plotly_annotation_defaults = {
 # Plotly shape defaults
 plotly_shape_defaults = {
     "fillcolor": None,
-    "line": {
-        "color": "black",
-        "width": 2
-    },
-    "layer": "above"
+    "line": {"color": "black", "width": 2},
+    "layer": "above",
 }
 
 # Text orientation-specific overrides
@@ -136,7 +136,7 @@ plotly_text_orientation_defaults = {
 # GitHub Eukaryote & Prokaryote Dataset Config
 ###########################################################
 
-# GITHUB_DATA_URL = "https://raw.githubusercontent.com/moshi4/pycirclize-data/master/"
+# GITHUB_DATA_URL = "https://raw.githubusercontent.com/moshi4/pycirclizely-data/master/"
 
 EUKARYOTE_DATASET = {
     "hg38": [
