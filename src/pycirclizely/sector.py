@@ -248,7 +248,7 @@ class Sector:
         self,
         text: str,
         x: float | None = None,
-        r: float = 110,
+        r: float = 112,
         *,
         adjust_rotation: bool = True,
         orientation: str = "horizontal",

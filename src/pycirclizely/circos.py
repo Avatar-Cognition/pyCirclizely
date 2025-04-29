@@ -572,7 +572,7 @@ class Circos:
 
         def plot_colorbar(ax: PolarAxes) -> None:
             axin: Axes = ax.inset_axes(bounds)
-            norm = Normalize(vmin=vmin, vmax=vmax)
+            norm = utils.plot.Normalize(vmin=vmin, vmax=vmax)
             cb = Colorbar(
                 axin,
                 cmap=cmap,  # type: ignore

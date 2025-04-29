@@ -200,3 +200,17 @@ def build_plotly_shape(path: str, **kwargs) -> dict:
     shape_defaults = deepcopy(config.plotly_shape_defaults)
     shape_defaults.update(**kwargs)
     return {"type": "path", "path": path, **shape_defaults}
+
+class Normalize:
+    def __init__(self, vmin, vmax, clip=False):
+        if vmin == vmax:
+            raise ValueError("vmin and vmax must be different")
+        self.vmin = vmin
+        self.vmax = vmax
+        self.clip = clip
+
+    def __call__(self, value):
+        normed = (value - self.vmin) / (self.vmax - self.vmin)
+        if self.clip:
+            return max(0.0, min(1.0, normed))
+        return normed
