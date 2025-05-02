@@ -8,7 +8,7 @@ from pathlib import Path
 from urllib.request import urlretrieve
 
 from Bio import Entrez
-from pycirclizely_TEST import config
+from pycirclizely import config
 
 
 def load_prokaryote_example_file(

@@ -12,7 +12,7 @@ from typing import ClassVar
 MIN_R = 0
 MAX_R = 100
 R_PLOT_MARGIN = 10
-ARC_RADIAN_STEP = 0.01
+ARC_POINTS = 100
 R_LIM = (MIN_R, MAX_R)
 AXIS_FACE_PARAM = dict(layer="below", line=dict(color="rgba(0,0,0,0)"))
 AXIS_EDGE_PARAM = dict(layer="above", fillcolor=None)
@@ -102,7 +102,6 @@ plotly_layout_defaults = {
         "zeroline": False,
         "showticklabels": False,
     },
-    "paper_bgcolor": "rgba(0,0,0,0)",  # Transparent background outside the axes
     "plot_bgcolor": "rgba(0,0,0,0)",  # Transparent background inside the axes
 }
 
@@ -118,7 +117,7 @@ plotly_annotation_defaults = {
 # Plotly shape defaults
 plotly_shape_defaults = {
     "fillcolor": None,
-    "line": {"color": "black", "width": 2},
+    "line": {"color": "black", "width": 1},
     "layer": "above",
 }
 

@@ -14,11 +14,11 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.graph_objs.layout._annotation import Annotation
 from plotly.graph_objs.layout._shape import Shape
-from pycirclizely_TEST import config, utils
-from pycirclizely_TEST.parser import Bed
-from pycirclizely_TEST.patches import PolarSVGPatchBuilder
-from pycirclizely_TEST.sector import Sector
-from pycirclizely_TEST.track import Track
+from pycirclizely import config, utils
+from pycirclizely.parser import Bed
+from pycirclizely.patches import PolarSVGPatchBuilder
+from pycirclizely.sector import Sector
+from pycirclizely.track import Track
 
 
 class Circos:
@@ -572,7 +572,7 @@ class Circos:
 
         def plot_colorbar(ax: PolarAxes) -> None:
             axin: Axes = ax.inset_axes(bounds)
-            norm = Normalize(vmin=vmin, vmax=vmax)
+            norm = utils.plot.Normalize(vmin=vmin, vmax=vmax)
             cb = Colorbar(
                 axin,
                 cmap=cmap,  # type: ignore

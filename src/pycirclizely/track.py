@@ -11,13 +11,13 @@ import pandas as pd
 from PIL import Image
 from plotly.graph_objs.layout._annotation import Annotation
 from plotly.graph_objs.layout._shape import Shape
-from pycirclizely_TEST import config, utils
-from pycirclizely_TEST.parser import StackedBarTable
-from pycirclizely_TEST.patches import PolarSVGPatchBuilder
+from pycirclizely import config, utils
+from pycirclizely.parser import StackedBarTable
+from pycirclizely.patches import PolarSVGPatchBuilder
 
 if TYPE_CHECKING:
     # Avoid Sector <-> Track circular import error at runtime
-    from pycirclizely_TEST.sector import Sector
+    from pycirclizely.sector import Sector
 
 
 class Track:
@@ -729,7 +729,7 @@ class Track:
         arc: bool = True,
         **kwargs,
     ) -> None:
-        """Plot line with SVG path at plotly.
+        """Plot lines with SVG paths at plotly.
 
         Parameters
         ----------
@@ -758,12 +758,23 @@ class Track:
         r = [self._y_to_r(val, vmin, vmax) for val in y]
 
         if arc:
-            # Create curved arc line
-            path = PolarSVGPatchBuilder.arc_line(
-                rad_lim=(min(rad), max(rad)), r_lim=(min(r), max(r))
-            )
+            path_segments = []
+            for i in range(len(rad) - 1):
+                seg_path = PolarSVGPatchBuilder.arc_line(
+                    rad_lim=(rad[i], rad[i + 1]),
+                    r_lim=(r[i], r[i + 1])
+                )
+
+                if i == 0:
+                    path_segments.append(seg_path)
+                else:
+                    seg_body = seg_path.split("L", 1)[-1]
+                    path_segments.append("L" + seg_body)
+
+            path = " ".join(path_segments)
+            
         else:
-            # Create straight chord line
+            # Create straight line segments
             points = [
                 PolarSVGPatchBuilder._polar_to_cart(rad[i], r[i])
                 for i in range(len(rad))
@@ -781,39 +792,49 @@ class Track:
         *,
         vmin: float = 0,
         vmax: float | None = None,
+        radius: float = 1.0,
         **kwargs,
     ) -> None:
-        """Plot scatter
+        """Plot scatter points using Plotly shapes.
 
         Parameters
         ----------
         x : list[float] | np.ndarray
-            X position list
+            X (genomic) positions
         y : list[float] | np.ndarray
-            Y position list
+            Data values
         vmin : float, optional
-            Y min value
+            Minimum value for radial scaling (default: 0)
         vmax : float | None, optional
-            Y max value. If None, `max(y)` is set.
+            Maximum value for radial scaling. If None, uses max(y)
+        radius : float, optional
+            Radius of the scatter points in cartesian units (default: 1.0)
         **kwargs : dict, optional
-            Axes.scatter properties (e.g. `ec="black", lw=1.0, ...`)
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.scatter.html>
+            Shape style dictionary (e.g. `fillcolor="red", line_width=0`)
+            See: <https://plotly.com/python/reference/layout/shapes/#layout-shapes-items-shape>
         """
-        # Check x, y list length
         if len(x) != len(y):
-            err_msg = f"List length is not match ({len(x)=}, {len(y)=})"
-            raise ValueError(err_msg)
+            raise ValueError(f"x and y lengths must match ({len(x)} vs {len(y)})")
 
-        # Convert (x, y) to (rad, r)
-        rad = list(map(self.x_to_rad, x))
+        rad = [self.x_to_rad(pos) for pos in x]
         vmax = max(y) if vmax is None else vmax
         self._check_value_min_max(y, vmin, vmax)
-        r = [self._y_to_r(v, vmin, vmax) for v in y]
+        r = [self._y_to_r(val, vmin, vmax) for val in y]
 
-        def plot_scatter(ax: PolarAxes) -> None:
-            ax.scatter(rad, r, **kwargs)  # type:ignore
+        for theta, rho in zip(rad, r):
+            cx, cy = PolarSVGPatchBuilder._polar_to_cart(theta, rho)
 
-        self._plot_funcs.append(plot_scatter)
+            shape = {
+                "type": "circle",
+                "xref": "x",
+                "yref": "y",
+                "x0": cx - radius,
+                "x1": cx + radius,
+                "y0": cy - radius,
+                "y1": cy + radius,
+                **kwargs,
+            }
+            self._shapes.append(shape)
 
     def bar(
         self,
@@ -1195,7 +1216,7 @@ class Track:
 
         # Plot heatmap
         colormap = cmap if isinstance(cmap, Colormap) else mpl.colormaps[cmap]  # type: ignore
-        norm = Normalize(vmin=vmin, vmax=vmax)
+        norm = utils.plot.Normalize(vmin=vmin, vmax=vmax)
         for row_idx, row in enumerate(data):
             for col_idx, v in enumerate(row):
                 # Plot heatmap rectangle
@@ -1431,7 +1452,7 @@ class Track:
         r : float
             Converted radius position
         """
-        norm = Normalize(vmin, vmax)
+        norm = utils.plot.Normalize(vmin, vmax)
         r = min(self.r_plot_lim) + (self.r_plot_size * norm(y))
         return r
 

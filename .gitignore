@@ -1,0 +1,7 @@
+Pipfile*
+.ipynb_checkpoints
+__pycache__
+*.pyc
+requirements.yml
+requirements-dev.yml
+.vscode/
