@@ -11,6 +11,8 @@ import pandas as pd
 from PIL import Image
 from plotly.graph_objs.layout._annotation import Annotation
 from plotly.graph_objs.layout._shape import Shape
+from plotly.graph_objs import graph_objs as go
+from plotly.basedatatypes import BaseTraceType
 from pycirclizely import config, utils
 from pycirclizely.parser import StackedBarTable
 from pycirclizely.patches import PolarSVGPatchBuilder
@@ -52,9 +54,10 @@ class Track:
         self._start = parent_sector.start
         self._end = parent_sector.end
 
-        # Plot data and functions
+        # Plotly classes
         self._shapes: list[Shape] = []
         self._annotations: list[Annotation] = []
+        self._traces: list[BaseTraceType] = []
 
     ############################################################
     # Property
@@ -792,10 +795,10 @@ class Track:
         *,
         vmin: float = 0,
         vmax: float | None = None,
-        radius: float = 1.0,
+        hovertext: list[str] | None = None,
         **kwargs,
     ) -> None:
-        """Plot scatter points using Plotly shapes.
+        """Scatter plot using Plotly Scatter trace.
 
         Parameters
         ----------
@@ -807,34 +810,62 @@ class Track:
             Minimum value for radial scaling (default: 0)
         vmax : float | None, optional
             Maximum value for radial scaling. If None, uses max(y)
-        radius : float, optional
-            Radius of the scatter points in cartesian units (default: 1.0)
+        hovertext : list[str] | None, optional
+            Custom hover text for each point. If None, generates default text
+            showing position and value.
         **kwargs : dict, optional
-            Shape style dictionary (e.g. `fillcolor="red", line_width=0`)
-            See: <https://plotly.com/python/reference/layout/shapes/#layout-shapes-items-shape>
+            Scatter trace properties that override defaults. Common options include:
+            - marker: dict with properties like size, color, symbol
+            - mode: 'markers', 'lines', 'markers+lines'
+            - name: legend name for the trace
         """
         if len(x) != len(y):
             raise ValueError(f"x and y lengths must match ({len(x)} vs {len(y)})")
 
+        # Get and merge defaults with kwargs
+        trace_defaults = deepcopy(config.plotly_scatter_defaults)
+        trace_defaults.update(kwargs)
+
+        # Convert to polar coordinates
         rad = [self.x_to_rad(pos) for pos in x]
         vmax = max(y) if vmax is None else vmax
         self._check_value_min_max(y, vmin, vmax)
         r = [self._y_to_r(val, vmin, vmax) for val in y]
 
+        # Convert polar to Cartesian
+        x_vals, y_vals = [], []
         for theta, rho in zip(rad, r):
             cx, cy = PolarSVGPatchBuilder._polar_to_cart(theta, rho)
+            x_vals.append(cx)
+            y_vals.append(cy)
 
-            shape = {
-                "type": "circle",
-                "xref": "x",
-                "yref": "y",
-                "x0": cx - radius,
-                "x1": cx + radius,
-                "y0": cy - radius,
-                "y1": cy + radius,
-                **kwargs,
-            }
-            self._shapes.append(shape)
+        # Generate default hover text if none provided
+        if hovertext is None:
+            hovertext = [
+                f"Sector: {self._parent_sector._name}<br>"
+                f"Position: {xi}<br>"
+                f"Value: {yi:.2f}"
+                for xi, yi in zip(x, y)
+            ]
+
+        # Create the trace
+        trace = go.Scatter(
+            x=x_vals,
+            y=y_vals,
+            text=hovertext,
+            **trace_defaults
+        )
+
+        # # Handle special color mapping cases if needed
+        # if hasattr(self, 'chr_color_dict') and 'colorcolumn' in kwargs:
+        #     colorcolumn = kwargs['colorcolumn']
+        #     if colorcolumn == 'ideogram':
+        #         chr_labels = [...]  # Get chromosome labels from your data
+        #         trace.marker.color = [self.chr_color_dict[label] for label in chr_labels]
+
+        # Add to traces
+        self._traces.append(trace)
+
 
     def bar(
         self,

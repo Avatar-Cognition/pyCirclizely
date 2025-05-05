@@ -131,6 +131,21 @@ plotly_text_orientation_defaults = {
     },
 }
 
+plotly_scatter_defaults = {
+    'mode': 'markers',
+    'marker': {
+        'size': 6,
+        'color': '#1f77b4',
+        'opacity': 1.0,
+        'line': {
+            'width': 0,
+            'color': None
+        }
+    },
+    'hoverinfo': 'text',
+    'showlegend': False
+}
+
 ###########################################################
 # GitHub Eukaryote & Prokaryote Dataset Config
 ###########################################################

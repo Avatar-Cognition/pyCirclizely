@@ -14,6 +14,7 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.graph_objs.layout._annotation import Annotation
 from plotly.graph_objs.layout._shape import Shape
+from plotly.basedatatypes import BaseTraceType
 from pycirclizely import config, utils
 from pycirclizely.parser import Bed
 from pycirclizely.patches import PolarSVGPatchBuilder
@@ -104,10 +105,10 @@ class Circos:
         self._rad_lim = (math.radians(start), math.radians(end))
         self._show_axis_for_debug = show_axis_for_debug
 
-        # Shapes and annotations for Layout
+        # Plotly classes
         self._shapes: list[Shape] = []
         self._annotations: list[Annotation] = []
-        # self._ax: PolarAxes | None = None
+        self._traces: list[BaseTraceType] = []
 
     ############################################################
     # Property
@@ -613,8 +614,9 @@ class Circos:
 
         layout_dict["shapes"] = self._get_all_shapes()
         layout_dict["annotations"] = self._get_all_annotations()
+        data_dict = self._get_all_traces()
 
-        return go.Figure(layout=go.Layout(layout_dict))
+        return go.Figure(data=data_dict, layout=go.Layout(layout_dict))
 
     def savefig(
         self,
@@ -725,6 +727,31 @@ class Circos:
         sector_ann = list(itertools.chain(*[s._annotations for s in self.sectors]))
         track_ann = list(itertools.chain(*[t._annotations for t in self.tracks]))
         return circos_ann + sector_ann + track_ann
+    
+    def _get_all_traces(self) -> list[BaseTraceType]:
+        """Gather all traces from self, sectors, and tracks.
+
+        Returns
+        -------
+        List[BaseTraceType]
+            Combined list of all trace objects (scatter, bar, etc.)
+        """
+        # Get traces from main Circos object
+        circos_traces = self._traces
+        
+        # Get traces from all sectors (flatten nested lists)
+        sector_traces = list(itertools.chain(*[
+            s._traces for s in self.sectors 
+            if hasattr(s, '_traces')
+        ]))
+        
+        # Get traces from all tracks (flatten nested lists)
+        track_traces = list(itertools.chain(*[
+            t._traces for t in self.tracks 
+            if hasattr(t, '_traces')
+        ]))
+        
+        return circos_traces + sector_traces + track_traces
 
     def _adjust_annotation(self) -> None:
         """Adjust annotation text position"""
