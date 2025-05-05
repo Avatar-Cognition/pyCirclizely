@@ -7,6 +7,31 @@ from typing import Literal
 import numpy as np
 from pycirclizely import config
 from plotly.graph_objs import graph_objs as go
+from .helper import ColorCycler
+
+def get_default_color(kwargs: dict, target: str = "line") -> str:
+    """
+    Returns a consistent color based on kwargs or assigns a new one from the ColorCycler.
+
+    Parameters
+    ----------
+    kwargs : dict
+        Dictionary of Plotly styling keyword arguments.
+    target : str
+        The key to check for color (e.g., 'line', 'marker').
+
+    Returns
+    -------
+    str
+        A color string (e.g., "#1f77b4").
+    """
+    target_dict = kwargs.get(target, {})
+    color = target_dict.get("color")
+
+    if color is None:
+        color = ColorCycler.get_color()
+
+    return color
 
 
 def degrees(rad: float) -> float:
@@ -197,10 +222,11 @@ def get_plotly_label_params(
     return annotation
 
 
-def build_plotly_shape(path: str, **kwargs) -> dict:
-    shape_defaults = deepcopy(config.plotly_shape_defaults)
+def build_plotly_shape(path: str, defaults: dict = {}, **kwargs) -> dict:
+    shape_defaults = deepcopy(defaults)
     shape_defaults.update(**kwargs)
     return {"type": "path", "path": path, **shape_defaults}
+
 
 def build_scatter_trace(x: list, y: list, mode: str, **kwargs) -> go.Scatter:
     scatter_config = deepcopy(config.plotly_scatter_defaults)

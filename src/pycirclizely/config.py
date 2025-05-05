@@ -100,12 +100,10 @@ plotly_text_orientation_defaults = {
 plotly_scatter_defaults = {
     'marker': {
         'size': 6,
-        'color': '#1f77b4',
         'opacity': 1.0,
     },
     'line': {
         'width': 2,
-        'color': '#1f77b4'
     },
     'hoverinfo': 'text',
     'showlegend': False

@@ -372,7 +372,7 @@ class Sector:
         height = max(r_lim) - min(r_lim)
 
         path = PolarSVGPatchBuilder.arc_rectangle(radr, width, height)
-        shape = utils.plot.build_plotly_shape(path, **kwargs)
+        shape = utils.plot.build_plotly_shape(path, config.plotly_shape_defaults, **kwargs)
         self._shapes.append(shape)
 
     def raster(

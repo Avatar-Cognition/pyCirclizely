@@ -15,6 +15,18 @@ class PolarSVGPatchBuilder:
         y = r * np.sin(adjusted_theta)
         return (x, y)
     
+    @staticmethod
+    def _svg_path_from_points(
+        points: list[tuple[float, float]], closed: bool = False
+    ) -> str:
+        if not points:
+            return ""
+        path = [f"M {points[0][0]} {points[0][1]}"]
+        path += [f"L {x} {y}" for x, y in points[1:]]
+        if closed:
+            path.append("Z")
+        return " ".join(path)
+
     @classmethod
     def arc_rectangle(cls, radr: Tuple[float, float], width: float, height: float) -> str:
         """Create rectangular arc sector approximated with line segments."""
@@ -43,18 +55,6 @@ class PolarSVGPatchBuilder:
         path += " Z"
         
         return path
-
-    @staticmethod
-    def _svg_path_from_points(
-        points: list[tuple[float, float]], closed: bool = False
-    ) -> str:
-        if not points:
-            return ""
-        path = [f"M {points[0][0]} {points[0][1]}"]
-        path += [f"L {x} {y}" for x, y in points[1:]]
-        if closed:
-            path.append("Z")
-        return " ".join(path)
 
     @classmethod
     def arc_line(cls, rad_lim: Tuple[float, float], r_lim: Tuple[float, float]) -> str:

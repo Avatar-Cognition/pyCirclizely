@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable
 import numpy as np
 import pandas as pd
 from PIL import Image
+import plotly.graph_objs as go
 from plotly.graph_objs.layout._annotation import Annotation
 from plotly.graph_objs.layout._shape import Shape
 from plotly.basedatatypes import BaseTraceType
@@ -304,7 +305,7 @@ class Track:
 
         # Build and add shape
         path = PolarSVGPatchBuilder.arc_rectangle(radr, width, height)
-        shape = utils.plot.build_plotly_shape(path, **kwargs)
+        shape = utils.plot.build_plotly_shape(path, config.plotly_shape_defaults, **kwargs)
         self._shapes.append(shape)
 
     def arrow(
@@ -758,8 +759,14 @@ class Track:
         vmax = max(y) if vmax is None else vmax
         r = [self._y_to_r(val, vmin, vmax) for val in y]
 
+        color = utils.plot.get_default_color(kwargs, target="line")
+        kwargs["line"] = {"color": color}
+        kwargs["hoverlabel"] = {"bgcolor": color}
+
         if 'text' not in kwargs:
             hovertext = utils.plot.default_hovertext(x, y, sector_name=self._parent_sector._name)
+        else:
+            hovertext = kwargs["text"]
 
         if arc:
             # For smooth arcs - dense points but sparse hover
@@ -829,6 +836,11 @@ class Track:
         # Get and merge defaults with kwargs
         trace_defaults = deepcopy(config.plotly_scatter_defaults)
         trace_defaults.update(kwargs)
+        kwargs = trace_defaults
+
+        color = utils.plot.get_default_color(kwargs, target="line")
+        kwargs["line"] = {"color": color}
+        kwargs["hoverlabel"] = {"bgcolor": color}
 
         # Convert to polar coordinates
         rad = [self.x_to_rad(pos) for pos in x]
@@ -850,7 +862,6 @@ class Track:
 
         self._traces.append(trace)
 
-
     def bar(
         self,
         x: list[float] | np.ndarray,
@@ -863,62 +874,104 @@ class Track:
         vmax: float | None = None,
         **kwargs,
     ) -> None:
-        """Plot bar
-
+        """Plot bar chart using Plotly shapes with hover information from scatter traces.
+        
         Parameters
         ----------
         x : list[float] | np.ndarray
-            Bar x coordinates
+            Bar x coordinates (genomic positions)
         height : list[float] | np.ndarray
             Bar heights
         width : float, optional
-            Bar width
-        bottom : float | np.ndarray, optional
-            Bar bottom(s)
+            Bar width in genomic coordinates (default: 0.8)
+        bottom : float | list[float] | np.ndarray, optional
+            Bar bottom y-value(s) (default: 0)
         align : str, optional
-            Bar alignment type (`center` or `edge`)
+            Bar alignment ("center" or "edge") (default: "center")
         vmin : float, optional
-            Y min value
+            Minimum value for radial scaling (default: 0)
         vmax : float | None, optional
-            Y max value. If None, `np.max(height + bottom)` is set.
+            Maximum value for radial scaling. If None, uses max(height + bottom)
         **kwargs : dict, optional
-            Axes.bar properties (e.g. `color="tomato", ec="black", lw=0.5, hatch="//"`)
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.bar.html>
+            Properties for both shapes and hover text
         """
-        # Check x, height list length
         if len(x) != len(height):
-            err_msg = f"List length is not match ({len(x)=}, {len(height)=})"
-            raise ValueError(err_msg)
+            raise ValueError(f"x and height lengths must match ({len(x)} vs {len(height)})")
 
-        # Calculate top & vmax
-        if isinstance(bottom, (list, tuple, np.ndarray)):
-            bottom = np.array(bottom)
-        else:
-            bottom = np.array([bottom])
+        # Convert bottom to numpy array
+        bottom = np.array(bottom) if isinstance(bottom, (list, tuple, np.ndarray)) else np.full(len(x), bottom)
+
+        # Calculate top and vmax
         top = np.array(height) + bottom
         vmax = float(max(top)) if vmax is None else vmax
 
-        # Check if bottom & top(height + bottom) is in valid min-max range
+        # Value range checks
         self._check_value_min_max(bottom, vmin, vmax)
         self._check_value_min_max(top, vmin, vmax)
 
-        # Calculate bar params
-        rad = list(map(self.x_to_rad, x))
+        # Convert to polar coordinates
+        rad = [self.x_to_rad(pos) for pos in x]
         r_bottom = np.array([self._y_to_r(v, vmin, vmax) for v in bottom])
-        r_height = [self._y_to_r(v, vmin, vmax) for v in top] - r_bottom
+        r_height = np.array([self._y_to_r(v, vmin, vmax) for v in top]) - r_bottom
         rad_width = self.rad_size * (width / self.size)
 
-        def plot_bar(ax: PolarAxes) -> None:
-            ax.bar(
-                rad,  # type: ignore
-                r_height,
-                rad_width,
-                r_bottom,
-                align=align,  # type: ignore
-                **kwargs,
+        color = utils.plot.get_default_color(kwargs, target="line")
+
+        # Create hover points at center-top of each bar
+        hover_x, hover_y, hover_text = [], [], []
+        for i in range(len(x)):
+            # Calculate bar center position
+            if align == "center":
+                center_rad = rad[i]
+                start_pos = x[i] - width/2
+                end_pos = x[i] + width/2
+            elif align == "edge":
+                center_rad = rad[i] + rad_width/2
+                start_pos = x[i]
+                end_pos = x[i] + width
+            
+            # Position at top-center of bar
+            top_r = r_bottom[i] + r_height[i]
+            cx, cy = PolarSVGPatchBuilder._polar_to_cart(center_rad, top_r)
+            
+            hover_x.append(cx)
+            hover_y.append(cy)
+            hover_text.append(
+                f"Sector: {self._parent_sector._name}<br>"
+                f"Start: {start_pos:.2f}<br>"
+                f"End: {end_pos:.2f}<br>"
+                f"Value: {height[i]:.2f}"
             )
 
-        self._plot_funcs.append(plot_bar)
+            # Create the bar shape
+            if align == "center":
+                rad_start = rad[i] - rad_width/2
+                rad_end = rad[i] + rad_width/2
+            else:
+                rad_start = rad[i]
+                rad_end = rad[i] + rad_width
+                
+            path = PolarSVGPatchBuilder.arc_rectangle(
+                radr=(rad_start, r_bottom[i]),
+                width=rad_end - rad_start,
+                height=r_height[i]
+            )
+            
+            shape = utils.plot.build_plotly_shape(path, fillcolor=color, line=dict(width=0), **kwargs)
+            self._shapes.append(shape)
+
+        # Create invisible scatter trace for hover
+        hover_trace = utils.plot.build_scatter_trace(
+            hover_x,
+            hover_y,
+            mode='markers',
+            text=hover_text,
+            marker=dict(size=20, opacity=0),
+            hoverinfo='text',
+            hoverlabel={"bgcolor": color},
+        )
+
+        self._traces.append(hover_trace)
 
     def stacked_bar(
         self,
@@ -1538,7 +1591,7 @@ class Track:
             )
 
         # Build and add shape
-        shape = utils.plot.build_plotly_shape(path, **kwargs)
+        shape = utils.plot.build_plotly_shape(path, config.plotly_shape_defaults, **kwargs)
         self._shapes.append(shape)
 
     def _check_value_min_max(

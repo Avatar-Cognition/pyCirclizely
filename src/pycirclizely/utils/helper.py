@@ -4,89 +4,58 @@ from pathlib import Path
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
-import matplotlib as mpl
-import numpy as np
 from Bio.SeqFeature import SeqFeature
-from matplotlib.colors import Colormap, to_hex
 from PIL import Image
 
+from plotly.colors import qualitative
+from typing import Optional
 
 class ColorCycler:
-    """Color Cycler Class"""
+    """Color cycler class using Plotly qualitative palettes."""
 
-    counter = 0
-    cmap: Colormap = mpl.colormaps["tab10"]  # type: ignore
+    _counter: int = 0
+    _palette_name: str = "Plotly"
+    _colors: list[str] = qualitative.Plotly  # Default palette
 
-    def __new__(cls, n: int | None = None) -> str:
-        """Get hexcolor cyclically from cmap by counter or user specified number
-
-        `ColorCycler()` works same as `ColorCycler.get_color()`
-
-        Parameters
-        ----------
-        n : int | None, optional
-            Number for color cycle. If None, counter class variable is used.
-
-        Returns
-        -------
-        hexcolor : str
-            Cyclic hexcolor string
-        """
+    def __new__(cls, n: Optional[int] = None) -> str:
+        """Return a color from the cycle, same as get_color."""
         return cls.get_color(n)
 
     @classmethod
     def reset_cycle(cls) -> None:
-        """Reset cycle counter"""
-        cls.counter = 0
+        """Reset the color cycle counter."""
+        cls._counter = 0
 
     @classmethod
-    def set_cmap(cls, name: str) -> None:
-        """Set colormap (Default: `tab10`)"""
-        cls.cmap = mpl.colormaps[name]  # type: ignore
-        cls.counter = 0
+    def set_palette(cls, name: str) -> None:
+        """Set the color palette by name (e.g. 'Plotly', 'D3', 'Dark24')."""
+        if not hasattr(qualitative, name):
+            raise ValueError(f"Palette '{name}' not found in plotly.colors.qualitative")
+        cls._colors = getattr(qualitative, name)
+        cls._palette_name = name
+        cls._counter = 0
 
     @classmethod
-    def get_color(cls, n: int | None = None) -> str:
-        """Get hexcolor cyclically from cmap by counter or user specified number
-
-        Parameters
-        ----------
-        n : int | None, optional
-            Number for color cycle. If None, counter class variable is used.
-
-        Returns
-        -------
-        hexcolor : str
-            Cyclic hexcolor string
-        """
+    def get_color(cls, n: Optional[int] = None) -> str:
+        """Get a color from the palette, either by index or the next in the cycle."""
         if n is None:
-            n = cls.counter
-            cls.counter += 1
-        return to_hex(cls.cmap(n % cls.cmap.N), keep_alpha=True)  # type: ignore
+            n = cls._counter
+            cls._counter += 1
+        return cls._colors[n % len(cls._colors)]
 
     @classmethod
-    def get_color_list(cls, n: int | None = None) -> list[str]:
-        """Get hexcolor list of colormap
-
-        Parameters
-        ----------
-        n : int | None, optional
-            If n is None, all(=cmap.N) hexcolors are extracted from colormap.
-            If n is specified, hexcolors are extracted from n equally divided colormap.
-
-        Returns
-        -------
-        hexcolor_list : list[str]
-            Hexcolor list
-        """
+    def get_color_list(cls, n: Optional[int] = None) -> list[str]:
+        """Get a list of `n` colors from the palette (cycled if n > palette size)."""
         if n is None:
-            cmap_idx_list = list(range(0, cls.cmap.N))  # type: ignore
-        elif n > 0:
-            cmap_idx_list = [int(i) for i in np.linspace(0, cls.cmap.N, n)]  # type: ignore
-        else:
+            return cls._colors.copy()
+        if n <= 0:
             raise ValueError(f"{n=} is invalid number (Must be 'n > 0').")
+        return [cls._colors[i % len(cls._colors)] for i in range(n)]
 
-        return [to_hex(cls.cmap(i), keep_alpha=True) for i in cmap_idx_list]  # type: ignore
+    @classmethod
+    def current_palette_name(cls) -> str:
+        """Get the name of the current color palette."""
+        return cls._palette_name
 
 
 def calc_group_spaces(
