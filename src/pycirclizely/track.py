@@ -11,7 +11,6 @@ import pandas as pd
 from PIL import Image
 from plotly.graph_objs.layout._annotation import Annotation
 from plotly.graph_objs.layout._shape import Shape
-from plotly.graph_objs import graph_objs as go
 from plotly.basedatatypes import BaseTraceType
 from pycirclizely import config, utils
 from pycirclizely.parser import StackedBarTable
@@ -751,7 +750,6 @@ class Track:
             Line properties (e.g. `line=dict(color="red", width=2, dash="dash")`)
             See: <https://plotly.com/python/reference/layout/shapes/>
         """
-        # Validation
         if len(x) != len(y):
             raise ValueError(f"x and y lengths must match ({len(x)} vs {len(y)})")
 
@@ -760,33 +758,43 @@ class Track:
         vmax = max(y) if vmax is None else vmax
         r = [self._y_to_r(val, vmin, vmax) for val in y]
 
+        if 'text' not in kwargs:
+            hovertext = utils.plot.default_hovertext(x, y, sector_name=self._parent_sector._name)
+
         if arc:
-            path_segments = []
-            for i in range(len(rad) - 1):
-                seg_path = PolarSVGPatchBuilder.arc_line(
-                    rad_lim=(rad[i], rad[i + 1]),
-                    r_lim=(r[i], r[i + 1])
-                )
-
-                if i == 0:
-                    path_segments.append(seg_path)
-                else:
-                    seg_body = seg_path.split("L", 1)[-1]
-                    path_segments.append("L" + seg_body)
-
-            path = " ".join(path_segments)
+            # For smooth arcs - dense points but sparse hover
+            dense_rad = np.linspace(rad[0], rad[-1], num=100)
+            dense_r = np.interp(dense_rad, rad, r)
+            x_vals, y_vals = [], []
+            for theta, rho in zip(dense_rad, dense_r):
+                cx, cy = PolarSVGPatchBuilder._polar_to_cart(theta, rho)
+                x_vals.append(cx)
+                y_vals.append(cy)
             
+            # Create hover text only at original vertices
+            full_hovertext = [None] * len(x_vals)
+            vertex_indices = [int(i * (len(x_vals)-1)/(len(x)-1)) for i in range(len(x))]
+            for idx, text in zip(vertex_indices, hovertext):
+                full_hovertext[idx] = text
         else:
-            # Create straight line segments
-            points = [
-                PolarSVGPatchBuilder._polar_to_cart(rad[i], r[i])
-                for i in range(len(rad))
-            ]
-            path = PolarSVGPatchBuilder._svg_path_from_points(points)
+            # Straight lines - direct mapping
+            x_vals, y_vals = [], []
+            for theta, rho in zip(rad, r):
+                cx, cy = PolarSVGPatchBuilder._polar_to_cart(theta, rho)
+                x_vals.append(cx)
+                y_vals.append(cy)
+            full_hovertext = hovertext
 
-        # Build and add shape
-        shape = utils.plot.build_plotly_shape(path, **kwargs)
-        self._shapes.append(shape)
+        # Build trace with proper hover handling
+        trace = utils.plot.build_scatter_trace(
+            x=x_vals,
+            y=y_vals,
+            mode='lines',
+            text=full_hovertext,
+            **kwargs
+        )
+        
+        self._traces.append(trace)
 
     def scatter(
         self,
@@ -795,7 +803,6 @@ class Track:
         *,
         vmin: float = 0,
         vmax: float | None = None,
-        hovertext: list[str] | None = None,
         **kwargs,
     ) -> None:
         """Scatter plot using Plotly Scatter trace.
@@ -810,9 +817,6 @@ class Track:
             Minimum value for radial scaling (default: 0)
         vmax : float | None, optional
             Maximum value for radial scaling. If None, uses max(y)
-        hovertext : list[str] | None, optional
-            Custom hover text for each point. If None, generates default text
-            showing position and value.
         **kwargs : dict, optional
             Scatter trace properties that override defaults. Common options include:
             - marker: dict with properties like size, color, symbol
@@ -839,31 +843,11 @@ class Track:
             x_vals.append(cx)
             y_vals.append(cy)
 
-        # Generate default hover text if none provided
-        if hovertext is None:
-            hovertext = [
-                f"Sector: {self._parent_sector._name}<br>"
-                f"Position: {xi}<br>"
-                f"Value: {yi:.2f}"
-                for xi, yi in zip(x, y)
-            ]
+        trace = utils.plot.build_scatter_trace(x_vals, y_vals, 'markers', **kwargs)
+        if trace.text is None:
+            default_text = utils.plot.default_hovertext(x, y, sector_name=self._parent_sector._name)
+            trace.update(text=default_text)
 
-        # Create the trace
-        trace = go.Scatter(
-            x=x_vals,
-            y=y_vals,
-            text=hovertext,
-            **trace_defaults
-        )
-
-        # # Handle special color mapping cases if needed
-        # if hasattr(self, 'chr_color_dict') and 'colorcolumn' in kwargs:
-        #     colorcolumn = kwargs['colorcolumn']
-        #     if colorcolumn == 'ideogram':
-        #         chr_labels = [...]  # Get chromosome labels from your data
-        #         trace.marker.color = [self.chr_color_dict[label] for label in chr_labels]
-
-        # Add to traces
         self._traces.append(trace)
 
 

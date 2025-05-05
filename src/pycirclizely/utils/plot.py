@@ -6,6 +6,7 @@ from typing import Literal
 
 import numpy as np
 from pycirclizely import config
+from plotly.graph_objs import graph_objs as go
 
 
 def degrees(rad: float) -> float:
@@ -200,6 +201,50 @@ def build_plotly_shape(path: str, **kwargs) -> dict:
     shape_defaults = deepcopy(config.plotly_shape_defaults)
     shape_defaults.update(**kwargs)
     return {"type": "path", "path": path, **shape_defaults}
+
+def build_scatter_trace(x: list, y: list, mode: str, **kwargs) -> go.Scatter:
+    scatter_config = deepcopy(config.plotly_scatter_defaults)
+    scatter_config["mode"] = mode
+    scatter_config.update(kwargs)
+    
+    return go.Scatter(x=x, y=y, **scatter_config)
+
+
+def default_hovertext(
+    x: list[float],
+    y: list[float],
+    sector_name: str | None = None,
+    value_format: str = ".2f",
+) -> list[str]:
+    """
+    Generate default hovertext for Plotly traces.
+
+    Parameters
+    ----------
+    x : list[float]
+        List of x-axis (e.g., genomic position or angle) values.
+    y : list[float]
+        List of y-axis (e.g., data value) values.
+    sector_name : str, optional
+        Name of the sector to include in the hover text.
+    value_format : str, optional
+        Format string for the y values (default is ".2f").
+
+    Returns
+    -------
+    list[str]
+        List of formatted hover text strings.
+    """
+    hovertext = []
+    for xi, yi in zip(x, y):
+        parts = []
+        if sector_name:
+            parts.append(f"Sector: {sector_name}")
+        parts.append(f"Position: {xi}")
+        parts.append(f"Value: {format(yi, value_format)}")
+        hovertext.append("<br>".join(parts))
+    return hovertext
+
 
 class Normalize:
     def __init__(self, vmin, vmax, clip=False):
