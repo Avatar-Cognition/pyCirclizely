@@ -302,34 +302,43 @@ class Circos:
 
         self._annotations.append(annotation)
 
-    # def line(
-    #     self,
-    #     *,
-    #     r: float | tuple[float, float],
-    #     deg_lim: tuple[float, float] | None = None,
-    #     arc: bool = True,
-    #     **kwargs,
-    # ) -> None:
-    #     """Plot line
+    def line(
+        self,
+        *,
+        r: float | tuple[float, float],
+        deg_lim: tuple[float, float] | None = None,
+        arc: bool = True,
+        **kwargs,
+    ) -> None:
+        """Plot line
 
-    #     Parameters
-    #     ----------
-    #     r : float | tuple[float, float]
-    #         Line radius position (0 - 100). If r is float, (r, r) is set.
-    #     deg_lim : tuple[float, float] | None, optional
-    #         Degree limit region (-360 - 360). If None, `circos.deg_lim` is set.
-    #     arc : bool, optional
-    #         If True, plot arc style line for polar projection.
-    #         If False, simply plot linear style line.
-    #     **kwargs : dict, optional
-    #         Patch properties (e.g. `color="red", lw=3, ...`)
-    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
-    #     """
-    #     deg_lim = self.deg_lim if deg_lim is None else deg_lim
-    #     rad_lim = (math.radians(min(deg_lim)), math.radians(max(deg_lim)))
-    #     r_lim = r if isinstance(r, (tuple, list)) else (r, r)
-    #     LinePatch = ArcLine if arc else Line
-    #     # self._patches.append(LinePatch(rad_lim, r_lim, **kwargs))
+        Parameters
+        ----------
+        r : float | tuple[float, float]
+            Line radius position (0 - 100). If r is float, (r, r) is set.
+        deg_lim : tuple[float, float] | None, optional
+            Degree limit region (-360 - 360). If None, `circos.deg_lim` is set.
+        arc : bool, optional
+            If True, plot arc style line for polar projection.
+            If False, simply plot linear style line.
+        **kwargs : dict, optional
+            Line properties (e.g. `line=dict(color="red", width=2, dash="dash")`)
+            See: <https://plotly.com/python/reference/layout/shapes/>
+        """
+        deg_lim = self.deg_lim if deg_lim is None else deg_lim
+        start_deg, end_deg = min(deg_lim), max(deg_lim)
+        rad_lim = (math.radians(start_deg), math.radians(end_deg))
+        
+        # Convert radius to tuple if needed
+        r_lim = (r, r) if isinstance(r, (float, int)) else r
+        
+        path = (
+            PolarSVGPatchBuilder.arc_line(rad_lim, r_lim) if arc 
+            else PolarSVGPatchBuilder.line(rad_lim, r_lim)
+        )
+            
+        shape = utils.plot.build_plotly_shape(path, config.plotly_shape_defaults, **kwargs)
+        self._shapes.append(shape)
 
     def rect(
         self,
