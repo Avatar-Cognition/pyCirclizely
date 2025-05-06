@@ -308,38 +308,52 @@ class Sector:
 
         self._annotations.append(annotation)
 
-    # def line(
-    #     self,
-    #     *,
-    #     r: float | tuple[float, float],
-    #     start: float | None = None,
-    #     end: float | None = None,
-    #     arc: bool = True,
-    #     **kwargs,
-    # ) -> None:
-    #     """Plot line
+    def line(
+        self,
+        *,
+        r: float | tuple[float, float],
+        start: float | None = None,
+        end: float | None = None,
+        arc: bool = True,
+        **kwargs,
+    ) -> None:
+        """Plot line using Plotly shapes with sector-relative coordinates.
 
-    #     Parameters
-    #     ----------
-    #     r : float | tuple[float, float]
-    #         Line radius position (0 - 100). If r is float, (r, r) is set.
-    #     start : float | None, optional
-    #         Start position (x coordinate). If None, `sector.start` is set.
-    #     end : float | None, optional
-    #         End position (x coordinate). If None, `sector.end` is set.
-    #     arc : bool, optional
-    #         If True, plot arc style line for polar projection.
-    #         If False, simply plot linear style line.
-    #     **kwargs : dict, optional
-    #         Shape properties (e.g. `line=dict(color="darkgreen", width=2, dash="dash", ... ) ...`)
-    #         <https://plotly.com/python/reference/layout/shapes/>
-    #     """
-    #     start = self.start if start is None else start
-    #     end = self.end if end is None else end
-    #     rad_lim = (self.x_to_rad(start), self.x_to_rad(end))
-    #     r_lim = r if isinstance(r, (tuple, list)) else (r, r)
-    #     LinePatch = ArcLine if arc else Line
-    #     self._patches.append(LinePatch(rad_lim, r_lim, **kwargs))
+        Parameters
+        ----------
+        r : float | tuple[float, float]
+            Radius position(s). If float, creates constant-radius line.
+        start : float | None, optional
+            Genomic start position. Uses sector start if None.
+        end : float | None, optional
+            Genomic end position. Uses sector end if None.
+        arc : bool, optional
+            If True, creates curved arc line (polar projection).
+            If False, creates straight chord line.
+        **kwargs : dict, optional
+            Line properties (e.g. `line=dict(color="red", width=2, dash="dash")`)
+        """
+        # Set default genomic coordinates
+        start = self.start if start is None else start
+        end = self.end if end is None else end
+        
+        # Convert to polar coordinates
+        rad_lim = (self.x_to_rad(start), self.x_to_rad(end))
+        r_lim = (r, r) if isinstance(r, (float, int)) else r
+        
+        # Generate path based on arc preference
+        path = (
+            PolarSVGPatchBuilder.arc_line(rad_lim, r_lim) if arc 
+            else PolarSVGPatchBuilder.line(rad_lim, r_lim)
+        )
+        
+        # Create shape with defaults and kwargs
+        shape = utils.plot.build_plotly_shape(
+            path, 
+            config.plotly_shape_defaults, 
+            **kwargs
+        )
+        self._shapes.append(shape)
 
     def rect(
         self,
