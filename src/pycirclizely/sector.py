@@ -4,13 +4,14 @@ import math
 import textwrap
 import warnings
 from copy import deepcopy
-from pathlib import Path
-from typing import Any
+# from pathlib import Path
+# from typing import Any
 
 import numpy as np
-from PIL import Image, ImageOps
+# from PIL import Image, ImageOps
 from plotly.graph_objs.layout._annotation import Annotation
 from plotly.graph_objs.layout._shape import Shape
+from plotly.basedatatypes import BaseTraceType
 from pycirclizely import config, utils
 from pycirclizely.patches import PolarSVGPatchBuilder
 from pycirclizely.track import Track
@@ -53,6 +54,7 @@ class Sector:
         # Shapes and annotations for Layout
         self._shapes: list[Shape] = []
         self._annotations: list[Annotation] = []
+        self._traces: list[BaseTraceType] = []
 
     ############################################################
     # Property
@@ -115,13 +117,18 @@ class Sector:
 
     @property
     def shapes(self) -> list[Shape]:
-        """Plot patches"""
+        """Layout shapes"""
         return self._shapes
 
     @property
     def annotations(self) -> list[Annotation]:
-        """Plot functions"""
+        """Layout annotations"""
         return self._annotations
+    
+    @property
+    def traces(self) -> list[BaseTraceType]:
+        """Data traces"""
+        return self._traces
 
     ############################################################
     # Public Method
@@ -236,12 +243,12 @@ class Sector:
 
         # Background shape placed behind other shapes (layer="below")
         fc_behind_kwargs = deepcopy(kwargs)
-        fc_behind_kwargs.update(config.AXIS_FACE_PARAM)
+        fc_behind_kwargs = utils.deep_dict_update(fc_behind_kwargs, config.AXIS_FACE_PARAM)
         self.rect(self.start, self.end, config.R_LIM, **fc_behind_kwargs)
 
         # Edge shape placed in front of other shapes (layer="above")
         ec_front_kwargs = deepcopy(kwargs)
-        ec_front_kwargs.update(config.AXIS_EDGE_PARAM)
+        ec_front_kwargs = utils.deep_dict_update(ec_front_kwargs, config.AXIS_EDGE_PARAM)
         self.rect(self.start, self.end, config.R_LIM, **ec_front_kwargs)
 
     def text(
@@ -301,38 +308,38 @@ class Sector:
 
         self._annotations.append(annotation)
 
-    def line(
-        self,
-        *,
-        r: float | tuple[float, float],
-        start: float | None = None,
-        end: float | None = None,
-        arc: bool = True,
-        **kwargs,
-    ) -> None:
-        """Plot line
+    # def line(
+    #     self,
+    #     *,
+    #     r: float | tuple[float, float],
+    #     start: float | None = None,
+    #     end: float | None = None,
+    #     arc: bool = True,
+    #     **kwargs,
+    # ) -> None:
+    #     """Plot line
 
-        Parameters
-        ----------
-        r : float | tuple[float, float]
-            Line radius position (0 - 100). If r is float, (r, r) is set.
-        start : float | None, optional
-            Start position (x coordinate). If None, `sector.start` is set.
-        end : float | None, optional
-            End position (x coordinate). If None, `sector.end` is set.
-        arc : bool, optional
-            If True, plot arc style line for polar projection.
-            If False, simply plot linear style line.
-        **kwargs : dict, optional
-            Shape properties (e.g. `line=dict(color="darkgreen", width=2, dash="dash", ... ) ...`)
-            <https://plotly.com/python/reference/layout/shapes/>
-        """
-        start = self.start if start is None else start
-        end = self.end if end is None else end
-        rad_lim = (self.x_to_rad(start), self.x_to_rad(end))
-        r_lim = r if isinstance(r, (tuple, list)) else (r, r)
-        LinePatch = ArcLine if arc else Line
-        self._patches.append(LinePatch(rad_lim, r_lim, **kwargs))
+    #     Parameters
+    #     ----------
+    #     r : float | tuple[float, float]
+    #         Line radius position (0 - 100). If r is float, (r, r) is set.
+    #     start : float | None, optional
+    #         Start position (x coordinate). If None, `sector.start` is set.
+    #     end : float | None, optional
+    #         End position (x coordinate). If None, `sector.end` is set.
+    #     arc : bool, optional
+    #         If True, plot arc style line for polar projection.
+    #         If False, simply plot linear style line.
+    #     **kwargs : dict, optional
+    #         Shape properties (e.g. `line=dict(color="darkgreen", width=2, dash="dash", ... ) ...`)
+    #         <https://plotly.com/python/reference/layout/shapes/>
+    #     """
+    #     start = self.start if start is None else start
+    #     end = self.end if end is None else end
+    #     rad_lim = (self.x_to_rad(start), self.x_to_rad(end))
+    #     r_lim = r if isinstance(r, (tuple, list)) else (r, r)
+    #     LinePatch = ArcLine if arc else Line
+    #     self._patches.append(LinePatch(rad_lim, r_lim, **kwargs))
 
     def rect(
         self,
@@ -374,116 +381,6 @@ class Sector:
         path = PolarSVGPatchBuilder.arc_rectangle(radr, width, height)
         shape = utils.plot.build_plotly_shape(path, config.plotly_shape_defaults, **kwargs)
         self._shapes.append(shape)
-
-    def raster(
-        self,
-        img: str | Path | Image.Image,
-        *,
-        size: float = 0.05,
-        x: float | None = None,
-        r: float = 105,
-        rotation: int | float | str | None = None,
-        border_width: int = 0,
-        label: str | None = None,
-        label_pos: str = "bottom",
-        label_margin: float = 0.1,
-        imshow_kws: dict[str, Any] | None = None,
-        text_kws: dict[str, Any] | None = None,
-    ) -> None:
-        """Plot raster image
-
-        This method is experimental. API may change in the future release.
-
-        Parameters
-        ----------
-        img : str | Path | Image
-            Image data (`File Path`|`URL`|`PIL Image`)
-        size : float, optional
-            Image size (ratio to overall figure size)
-        x : float | None, optional
-            X position. If None, sector center x position is set.
-        r : float, optional
-            Radius position
-        rotation : int | float | str | None, optional
-            Image rotation setting.
-            If `None`, no rotate image (default).
-            If `auto`, rotate image by auto set rotation.
-            If `int` or `float` value, rotate image by user-specified value.
-        border_width : int, optional
-            Border width in pixel. By default, 0 is set (no border shown).
-        label : str | None, optional
-            Image label. If None, no label shown.
-        label_pos : str, optional
-            Label plot position (`bottom` or `top`)
-        label_margin : float, optional
-            Label margin
-        imshow_kws : dict[str, Any] | None, optional
-            Axes.imshow properties
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html>
-        text_kws : dict[str, Any] | None, optional
-            Text properties (e.g. `dict(size=10, color="red", ...`)
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.text.html>
-        """
-        imshow_kws = {} if imshow_kws is None else deepcopy(imshow_kws)
-        text_kws = {} if text_kws is None else deepcopy(text_kws)
-
-        # Load image data
-        im = utils.load_image(img)
-
-        # Draw border on image
-        if border_width > 0:
-            im = ImageOps.expand(im, border=border_width, fill="black")
-
-        # Rotate image
-        x = self.center if x is None else x
-        rad = self.x_to_rad(x)
-        if isinstance(rotation, (int, float)):
-            im = im.rotate(rotation, expand=True)
-            rotate_value = rotation
-        elif rotation == "auto":
-            rotate_value: float = get_label_params_by_rad(rad, "horizontal")["rotation"]
-            im = im.rotate(rotate_value, expand=True)
-        elif rotation is None:
-            rotate_value = 0
-        else:
-            raise ValueError(f"{rotation=} is invalid.")
-
-        # Calculate x, y image set position
-        max_r_lim = config.MAX_R + config.R_PLOT_MARGIN
-        im_x: float = np.cos((np.pi / 2) - rad) * (r / max_r_lim)
-        im_y: float = np.sin((np.pi / 2) - rad) * (r / max_r_lim)
-        # Normalize (-1, 1) to (0, 1) axis range
-        im_x = (im_x + 1) / 2
-        im_y = (im_y + 1) / 2
-
-        # TODO: Terrible code to be fixed in the future
-        # Approximate image size calculation logic, not complete
-        scale = 1 - (abs(abs(rotate_value) % 90 - 45) / 45)  # 0 - 1.0
-        size_ratio = 1 + (scale * (np.sqrt(2) - 1))
-        size = size * size_ratio
-
-        def plot_raster(ax: PolarAxes) -> None:
-            # Set inset axes & plot raster image
-            bounds = (im_x - (size / 2), im_y - (size / 2), size, size)
-            axin = ax.inset_axes(bounds, transform=ax.transAxes)
-            axin.axis("off")
-            axin.imshow(im, **imshow_kws)  # type: ignore
-
-            # Plot label
-            if label is not None:
-                text_x = sum(axin.get_xlim()) / 2
-                y_size = max(axin.get_ylim()) - min(axin.get_ylim())
-                if label_pos == "bottom":
-                    text_y = max(axin.get_ylim()) + (y_size * label_margin)
-                    va = "top"
-                elif label_pos == "top":
-                    text_y = min(axin.get_ylim()) - (y_size * label_margin)
-                    va = "bottom"
-                else:
-                    raise ValueError(f"{label_pos=} is invalid ('top' or 'bottom').")
-                axin.text(text_x, text_y, label, ha="center", va=va, **text_kws)
-
-        self._plot_funcs.append(plot_raster)
 
     ############################################################
     # Private Method

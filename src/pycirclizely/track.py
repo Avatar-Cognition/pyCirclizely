@@ -7,14 +7,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
-import pandas as pd
-from PIL import Image
-import plotly.graph_objs as go
+# import pandas as pd
+# from PIL import Image
 from plotly.graph_objs.layout._annotation import Annotation
 from plotly.graph_objs.layout._shape import Shape
 from plotly.basedatatypes import BaseTraceType
 from pycirclizely import config, utils
-from pycirclizely.parser import StackedBarTable
+# from pycirclizely.parser import StackedBarTable
 from pycirclizely.patches import PolarSVGPatchBuilder
 
 if TYPE_CHECKING:
@@ -148,13 +147,18 @@ class Track:
 
     @property
     def shapes(self) -> list[Shape]:
-        """Plot patches"""
+        """Layout shapes"""
         return self._shapes
 
     @property
     def annotations(self) -> list[Annotation]:
-        """Plot functions"""
+        """Layout annotations"""
         return self._annotations
+    
+    @property
+    def traces(self) -> list[BaseTraceType]:
+        """Data traces"""
+        return self._traces
 
     ############################################################
     # Public Method
@@ -190,12 +194,12 @@ class Track:
 
         # Background shape placed behind other shapes (layer="below")
         fc_behind_kwargs = deepcopy(kwargs)
-        fc_behind_kwargs.update(config.AXIS_FACE_PARAM)
+        fc_behind_kwargs = utils.deep_dict_update(fc_behind_kwargs, config.AXIS_FACE_PARAM)
         self.rect(self.start, self.end, ignore_pad=True, **fc_behind_kwargs)
 
         # Edge shape placed in front of other shapes (layer="above")
         ec_front_kwargs = deepcopy(kwargs)
-        ec_front_kwargs.update(config.AXIS_EDGE_PARAM)
+        ec_front_kwargs = utils.deep_dict_update(ec_front_kwargs, config.AXIS_EDGE_PARAM)
         self.rect(self.start, self.end, ignore_pad=True, **ec_front_kwargs)
 
     def text(
@@ -308,120 +312,120 @@ class Track:
         shape = utils.plot.build_plotly_shape(path, config.plotly_shape_defaults, **kwargs)
         self._shapes.append(shape)
 
-    def arrow(
-        self,
-        start: float,
-        end: float,
-        *,
-        r_lim: tuple[float, float] | None = None,
-        head_length: float = 2,
-        shaft_ratio: float = 0.5,
-        **kwargs,
-    ) -> None:
-        """Plot arrow
+    # def arrow(
+    #     self,
+    #     start: float,
+    #     end: float,
+    #     *,
+    #     r_lim: tuple[float, float] | None = None,
+    #     head_length: float = 2,
+    #     shaft_ratio: float = 0.5,
+    #     **kwargs,
+    # ) -> None:
+    #     """Plot arrow
 
-        Parameters
-        ----------
-        start : float
-            Start position (x coordinate)
-        end : float
-            End position (x coordinate)
-        r_lim : tuple[float, float] | None, optional
-            Radius limit range. If None, `track.r_lim` is set.
-        head_length : float, optional
-            Arrow head length (Degree unit)
-        shaft_ratio : float, optional
-            Arrow shaft ratio (0 - 1.0)
-        **kwargs : dict, optional
-            Patch properties (e.g. `fc="red", ec="blue", lw=1.0, ...`)
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
-        """
-        rad_arrow_start = self.x_to_rad(start)
-        rad_arrow_end = self.x_to_rad(end)
-        if r_lim is None:
-            r, dr = min(self.r_plot_lim), self.r_plot_size
-        else:
-            min_range = min(self.r_lim) - config.REL_TOL
-            max_range = max(self.r_lim) + config.REL_TOL
-            if not min_range <= min(r_lim) < max(r_lim) <= max_range:
-                raise ValueError(f"{r_lim=} is invalid track range.\n{self}")
-            r, dr = min(r_lim), max(r_lim) - min(r_lim)
-        arc_arrow = ArcArrow(
-            rad=rad_arrow_start,
-            r=r,
-            drad=rad_arrow_end - rad_arrow_start,
-            dr=dr,
-            head_length=math.radians(head_length),
-            shaft_ratio=shaft_ratio,
-            **kwargs,
-        )
-        self._patches.append(arc_arrow)
+    #     Parameters
+    #     ----------
+    #     start : float
+    #         Start position (x coordinate)
+    #     end : float
+    #         End position (x coordinate)
+    #     r_lim : tuple[float, float] | None, optional
+    #         Radius limit range. If None, `track.r_lim` is set.
+    #     head_length : float, optional
+    #         Arrow head length (Degree unit)
+    #     shaft_ratio : float, optional
+    #         Arrow shaft ratio (0 - 1.0)
+    #     **kwargs : dict, optional
+    #         Patch properties (e.g. `fc="red", ec="blue", lw=1.0, ...`)
+    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
+    #     """
+    #     rad_arrow_start = self.x_to_rad(start)
+    #     rad_arrow_end = self.x_to_rad(end)
+    #     if r_lim is None:
+    #         r, dr = min(self.r_plot_lim), self.r_plot_size
+    #     else:
+    #         min_range = min(self.r_lim) - config.REL_TOL
+    #         max_range = max(self.r_lim) + config.REL_TOL
+    #         if not min_range <= min(r_lim) < max(r_lim) <= max_range:
+    #             raise ValueError(f"{r_lim=} is invalid track range.\n{self}")
+    #         r, dr = min(r_lim), max(r_lim) - min(r_lim)
+    #     arc_arrow = ArcArrow(
+    #         rad=rad_arrow_start,
+    #         r=r,
+    #         drad=rad_arrow_end - rad_arrow_start,
+    #         dr=dr,
+    #         head_length=math.radians(head_length),
+    #         shaft_ratio=shaft_ratio,
+    #         **kwargs,
+    #     )
+    #     self._patches.append(arc_arrow)
 
-    def annotate(
-        self,
-        x: float,
-        label: str,
-        *,
-        min_r: float | None = None,
-        max_r: float | None = None,
-        # label_size: float = 8,
-        shorten: int | None = 20,
-        line_kws: dict[str, Any] | None = None,
-        text_kws: dict[str, Any] | None = None,
-    ) -> None:
-        """Plot annotation label
+    # def annotate(
+    #     self,
+    #     x: float,
+    #     label: str,
+    #     *,
+    #     min_r: float | None = None,
+    #     max_r: float | None = None,
+    #     # label_size: float = 8,
+    #     shorten: int | None = 20,
+    #     line_kws: dict[str, Any] | None = None,
+    #     text_kws: dict[str, Any] | None = None,
+    # ) -> None:
+    #     """Plot annotation label
 
-        The position of annotation labels is automatically adjusted so that there is
-        no overlap between them. The current algorithm for automatic adjustment of
-        overlap label positions is experimental and may be changed in the future.
+    #     The position of annotation labels is automatically adjusted so that there is
+    #     no overlap between them. The current algorithm for automatic adjustment of
+    #     overlap label positions is experimental and may be changed in the future.
 
-        Parameters
-        ----------
-        x : float
-            X coordinate
-        label : str
-            Label
-        min_r : float | None, optional
-            Min radius position of annotation line. If None, `max(self.r_lim)` is set.
-        max_r : float | None, optional
-            Max radius position of annotation line. If None, `min_r + 5` is set.
-        # label_size : float, optional
-        #     Label size
-        shorten : int | None, optional
-            Shorten label if int value is set.
-        line_kws : dict[str, Any] | None, optional
-            Patch properties (e.g. `dict(color="red", lw=1, ...)`)
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
-        text_kws : dict[str, Any] | None, optional
-            Text properties (e.g. `dict(color="red", alpha=0.5, ...)`)
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.text.html>
-        """
-        line_kws = {} if line_kws is None else deepcopy(line_kws)
-        text_kws = {} if text_kws is None else deepcopy(text_kws)
+    #     Parameters
+    #     ----------
+    #     x : float
+    #         X coordinate
+    #     label : str
+    #         Label
+    #     min_r : float | None, optional
+    #         Min radius position of annotation line. If None, `max(self.r_lim)` is set.
+    #     max_r : float | None, optional
+    #         Max radius position of annotation line. If None, `min_r + 5` is set.
+    #     # label_size : float, optional
+    #     #     Label size
+    #     shorten : int | None, optional
+    #         Shorten label if int value is set.
+    #     line_kws : dict[str, Any] | None, optional
+    #         Patch properties (e.g. `dict(color="red", lw=1, ...)`)
+    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
+    #     text_kws : dict[str, Any] | None, optional
+    #         Text properties (e.g. `dict(color="red", alpha=0.5, ...)`)
+    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.text.html>
+    #     """
+    #     line_kws = {} if line_kws is None else deepcopy(line_kws)
+    #     text_kws = {} if text_kws is None else deepcopy(text_kws)
 
-        if shorten:
-            label = label[:shorten] + "..." if len(label) > shorten else label
+    #     if shorten:
+    #         label = label[:shorten] + "..." if len(label) > shorten else label
 
-        # Setup radian, radius coordinates
-        min_r = max(self.r_lim) if min_r is None else min_r
-        max_r = min_r + 5 if max_r is None else max_r
-        if min_r > max_r:
-            ValueError(f"{max_r=} must be larger than {min_r=}.")
-        rad = self.x_to_rad(x)
-        xy, xytext = (rad, min_r), (rad, max_r)
+    #     # Setup radian, radius coordinates
+    #     min_r = max(self.r_lim) if min_r is None else min_r
+    #     max_r = min_r + 5 if max_r is None else max_r
+    #     if min_r > max_r:
+    #         ValueError(f"{max_r=} must be larger than {min_r=}.")
+    #     rad = self.x_to_rad(x)
+    #     xy, xytext = (rad, min_r), (rad, max_r)
 
-        # Setup annotation line & text property
-        line_kws.setdefault("color", "grey")
-        line_kws.setdefault("lw", 0.5)
-        line_kws.update(dict(shrinkA=0, shrinkB=0, patchA=None, patchB=None))
-        line_kws.update(dict(arrowstyle="-", relpos=utils.plot.get_ann_relpos(rad)))
-        text_kws.update(utils.plot.get_label_params_by_rad(rad, "vertical"))
-        text_kws.update(dict(rotation=0, size=label_size))
+    #     # Setup annotation line & text property
+    #     line_kws.setdefault("color", "grey")
+    #     line_kws.setdefault("lw", 0.5)
+    #     line_kws.utils.helper.deep_dict_update(dict(shrinkA=0, shrinkB=0, patchA=None, patchB=None))
+    #     line_kws.utils.helper.deep_dict_update(dict(arrowstyle="-", relpos=utils.plot.get_ann_relpos(rad)))
+    #     text_kws.utils.helper.deep_dict_update(utils.plot.get_label_params_by_rad(rad, "vertical"))
+    #     text_kws.utils.helper.deep_dict_update(dict(rotation=0, size=label_size))
 
-        def plot_annotate(ax: PolarAxes) -> None:
-            ax.annotate(label, xy, xytext, arrowprops=line_kws, **text_kws)
+    #     def plot_annotate(ax: PolarAxes) -> None:
+    #         ax.annotate(label, xy, xytext, arrowprops=line_kws, **text_kws)
 
-        self._plot_funcs.append(plot_annotate)
+    #     self._plot_funcs.append(plot_annotate)
 
     def xticks(
         self,
@@ -670,57 +674,57 @@ class Track:
                     **text_kws,
                 )
 
-    def grid(
-        self,
-        y_grid_num: int | None = 6,
-        x_grid_interval: float | None = None,
-        **kwargs,
-    ) -> None:
-        """Plot grid
+    # def grid(
+    #     self,
+    #     y_grid_num: int | None = 6,
+    #     x_grid_interval: float | None = None,
+    #     **kwargs,
+    # ) -> None:
+    #     """Plot grid
 
-        By default, `color="grey", alpha=0.5, zorder=0` line params are set.
+    #     By default, `color="grey", alpha=0.5, zorder=0` line params are set.
 
-        Parameters
-        ----------
-        y_grid_num : int | None, optional
-            Y-axis grid line number. If None, y-axis grid line is not shown.
-        x_grid_interval : float | None, optional
-            X-axis grid line interval. If None, x-axis grid line is not shown.
-        **kwargs : dict, optional
-            Axes.plot properties (e.g. `color="red", lw=0.5, ls="--", ...`)
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.plot.html>
-        """
-        # Check argument values
-        if y_grid_num is not None and not y_grid_num >= 2:
-            raise ValueError(f"{y_grid_num=} is invalid (y_grid_num >= 2).")
-        if x_grid_interval is not None and not x_grid_interval > 0:
-            raise ValueError(f"{x_grid_interval=} is invalid (x_grid_interval > 0).")
+    #     Parameters
+    #     ----------
+    #     y_grid_num : int | None, optional
+    #         Y-axis grid line number. If None, y-axis grid line is not shown.
+    #     x_grid_interval : float | None, optional
+    #         X-axis grid line interval. If None, x-axis grid line is not shown.
+    #     **kwargs : dict, optional
+    #         Axes.plot properties (e.g. `color="red", lw=0.5, ls="--", ...`)
+    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.plot.html>
+    #     """
+    #     # Check argument values
+    #     if y_grid_num is not None and not y_grid_num >= 2:
+    #         raise ValueError(f"{y_grid_num=} is invalid (y_grid_num >= 2).")
+    #     if x_grid_interval is not None and not x_grid_interval > 0:
+    #         raise ValueError(f"{x_grid_interval=} is invalid (x_grid_interval > 0).")
 
-        # Set default grid line properties
-        default_props = dict(color="grey", alpha=0.5, zorder=0)
-        for name, value in default_props.items():
-            if name not in kwargs:
-                kwargs.update({name: value})
+    #     # Set default grid line properties
+    #     default_props = dict(color="grey", alpha=0.5, zorder=0)
+    #     for name, value in default_props.items():
+    #         if name not in kwargs:
+    #             kwargs.utils.helper.deep_dict_update({name: value})
 
-        # Plot y-axis grid line
-        if y_grid_num is not None:
-            vmin, vmax = 0, y_grid_num - 1
-            for y_grid_idx in range(y_grid_num):
-                x = [self.start, self.end]
-                y: list[float] = [y_grid_idx, y_grid_idx]
-                self.line(x, y, vmin=vmin, vmax=vmax, **kwargs)
+    #     # Plot y-axis grid line
+    #     if y_grid_num is not None:
+    #         vmin, vmax = 0, y_grid_num - 1
+    #         for y_grid_idx in range(y_grid_num):
+    #             x = [self.start, self.end]
+    #             y: list[float] = [y_grid_idx, y_grid_idx]
+    #             self.line(x, y, vmin=vmin, vmax=vmax, **kwargs)
 
-        # Plot x-axis grid line
-        if x_grid_interval is not None:
-            vmin, vmax = 0, 1.0
-            x_grid_idx = 0
-            while True:
-                x_pos = self.start + (x_grid_interval * x_grid_idx)
-                if x_pos > self.end:
-                    break
-                x, y = [x_pos, x_pos], [vmin, vmax]
-                self.line(x, y, vmin=vmin, vmax=vmax, **kwargs)
-                x_grid_idx += 1
+    #     # Plot x-axis grid line
+    #     if x_grid_interval is not None:
+    #         vmin, vmax = 0, 1.0
+    #         x_grid_idx = 0
+    #         while True:
+    #             x_pos = self.start + (x_grid_interval * x_grid_idx)
+    #             if x_pos > self.end:
+    #                 break
+    #             x, y = [x_pos, x_pos], [vmin, vmax]
+    #             self.line(x, y, vmin=vmin, vmax=vmax, **kwargs)
+    #             x_grid_idx += 1
 
     def line(
         self,
@@ -835,7 +839,7 @@ class Track:
 
         # Get and merge defaults with kwargs
         trace_defaults = deepcopy(config.plotly_scatter_defaults)
-        trace_defaults.update(kwargs)
+        trace_defaults = utils.deep_dict_update(trace_defaults, kwargs)
         kwargs = trace_defaults
 
         color = utils.plot.get_default_color(kwargs, target="line")
@@ -957,7 +961,7 @@ class Track:
                 height=r_height[i]
             )
             
-            shape = utils.plot.build_plotly_shape(path, fillcolor=color, line=dict(width=0), **kwargs)
+            shape = utils.plot.build_plotly_shape(path, defaults=dict(fillcolor=color, line=dict(width=0)), **kwargs)
             self._shapes.append(shape)
 
         # Create invisible scatter trace for hover
@@ -973,531 +977,602 @@ class Track:
 
         self._traces.append(hover_trace)
 
-    def stacked_bar(
-        self,
-        table_data: str | Path | pd.DataFrame | StackedBarTable,
-        *,
-        delimiter: str = "\t",
-        width: float = 0.6,
-        cmap: str | dict[str, str] = "tab10",
-        vmax: float | None = None,
-        show_label: bool = True,
-        label_pos: str = "bottom",
-        label_margin: float = 2,
-        bar_kws: dict[str, Any] | None = None,
-        label_kws: dict[str, Any] | None = None,
-    ) -> StackedBarTable:
-        """Plot stacked bar from table data
+    # def stacked_bar(
+    #     self,
+    #     table_data: str | Path | pd.DataFrame | StackedBarTable,
+    #     *,
+    #     delimiter: str = "\t",
+    #     width: float = 0.6,
+    #     cmap: str | dict[str, str] = "tab10",
+    #     vmax: float | None = None,
+    #     show_label: bool = True,
+    #     label_pos: str = "bottom",
+    #     label_margin: float = 2,
+    #     bar_kws: dict[str, Any] | None = None,
+    #     label_kws: dict[str, Any] | None = None,
+    # ) -> StackedBarTable:
+    #     """Plot stacked bar from table data
 
-        Parameters
-        ----------
-        table_data : str | Path | pd.DataFrame | StackedBarTable
-            Table file or Table DataFrame or StackedBarTable
-        delimiter : str, optional
-            Table file delimiter
-        width : float, optional
-            Bar width ratio (0.0 - 1.0)
-        cmap : str | dict[str, str], optional
-            Colormap assigned to each stacked bar.
-            User can set matplotlib's colormap (e.g. `tab10`, `Set3`) or
-            col_name -> color dict (e.g. `dict(A="red", B="blue", C="green", ...)`)
-        vmax : float | None, optional
-            Stacked bar max value.
-            If None, max value in each row values sum is set.
-        show_label : bool, optional
-            Show table row names as labels
-        label_pos : str, optional
-            Label position (`bottom`|`top`)
-        label_margin : float, optional
-            Label margin size
-        bar_kws : dict[str, Any] | None, optional
-            Axes.bar properties (e.g. `dict(ec="black", lw=0.5, hatch="//", ...)`)
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.bar.html>
-        label_kws : dict[str, Any] | None, optional
-            Text properties (e.g. `dict(size=12, orientation="vertical", ...)`)
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.text.html>
+    #     Parameters
+    #     ----------
+    #     table_data : str | Path | pd.DataFrame | StackedBarTable
+    #         Table file or Table DataFrame or StackedBarTable
+    #     delimiter : str, optional
+    #         Table file delimiter
+    #     width : float, optional
+    #         Bar width ratio (0.0 - 1.0)
+    #     cmap : str | dict[str, str], optional
+    #         Colormap assigned to each stacked bar.
+    #         User can set matplotlib's colormap (e.g. `tab10`, `Set3`) or
+    #         col_name -> color dict (e.g. `dict(A="red", B="blue", C="green", ...)`)
+    #     vmax : float | None, optional
+    #         Stacked bar max value.
+    #         If None, max value in each row values sum is set.
+    #     show_label : bool, optional
+    #         Show table row names as labels
+    #     label_pos : str, optional
+    #         Label position (`bottom`|`top`)
+    #     label_margin : float, optional
+    #         Label margin size
+    #     bar_kws : dict[str, Any] | None, optional
+    #         Axes.bar properties (e.g. `dict(ec="black", lw=0.5, hatch="//", ...)`)
+    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.bar.html>
+    #     label_kws : dict[str, Any] | None, optional
+    #         Text properties (e.g. `dict(size=12, orientation="vertical", ...)`)
+    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.text.html>
 
-        Returns
-        -------
-        sb_table : StackedBarTable
-            Stacked bar table
-        """
-        bar_kws = {} if bar_kws is None else deepcopy(bar_kws)
-        label_kws = {} if label_kws is None else deepcopy(label_kws)
+    #     Returns
+    #     -------
+    #     sb_table : StackedBarTable
+    #         Stacked bar table
+    #     """
+    #     bar_kws = {} if bar_kws is None else deepcopy(bar_kws)
+    #     label_kws = {} if label_kws is None else deepcopy(label_kws)
 
-        if not 0.0 <= width <= 1.0:
-            raise ValueError(f"{width=} is invalid (0.0 <= width <= 1.0).")
+    #     if not 0.0 <= width <= 1.0:
+    #         raise ValueError(f"{width=} is invalid (0.0 <= width <= 1.0).")
 
-        # Load table data
-        if isinstance(table_data, StackedBarTable):
-            sb_table = table_data
-        else:
-            sb_table = StackedBarTable(table_data, delimiter=delimiter)
+    #     # Load table data
+    #     if isinstance(table_data, StackedBarTable):
+    #         sb_table = table_data
+    #     else:
+    #         sb_table = StackedBarTable(table_data, delimiter=delimiter)
 
-        # Make column name & color dict
-        if isinstance(cmap, str):
-            col_name2color = sb_table.get_col_name2color(cmap)
-        else:
-            col_name2color = cmap
+    #     # Make column name & color dict
+    #     if isinstance(cmap, str):
+    #         col_name2color = sb_table.get_col_name2color(cmap)
+    #     else:
+    #         col_name2color = cmap
 
-        # Calculate bar plot parameters
-        x = sb_table.calc_bar_label_x_list(self.size)
-        width = (self.size / len(sb_table.row_names)) * width
-        vmax = sb_table.row_sum_vmax if vmax is None else vmax
-        heights, bottoms = sb_table.stacked_bar_heights, sb_table.stacked_bar_bottoms
+    #     # Calculate bar plot parameters
+    #     x = sb_table.calc_bar_label_x_list(self.size)
+    #     width = (self.size / len(sb_table.row_names)) * width
+    #     vmax = sb_table.row_sum_vmax if vmax is None else vmax
+    #     heights, bottoms = sb_table.stacked_bar_heights, sb_table.stacked_bar_bottoms
 
-        # Plot bars
-        for col_name, height, bottom in zip(sb_table.col_names, heights, bottoms):
-            color = col_name2color[col_name]
-            self.bar(x, height, width, bottom, vmax=vmax, fc=color, **bar_kws)
+    #     # Plot bars
+    #     for col_name, height, bottom in zip(sb_table.col_names, heights, bottoms):
+    #         color = col_name2color[col_name]
+    #         self.bar(x, height, width, bottom, vmax=vmax, fc=color, **bar_kws)
 
-        # Plot bar labels
-        if show_label:
-            x_list = sb_table.calc_bar_label_x_list(self.size)
-            row_name2sum = sb_table.row_name2sum
-            for label, x in zip(sb_table.row_names, x_list):
-                # Calculate label r position
-                if label_pos == "top":
-                    bar_r_height = self.r_size * (row_name2sum[label] / vmax)
-                    r = min(self.r_lim) + bar_r_height + label_margin
-                    outer = True
-                elif label_pos == "bottom":
-                    r = min(self.r_lim) - label_margin
-                    outer = False
-                else:
-                    raise ValueError(f"{label_pos=} is invalid ('top' or 'bottom').")
+    #     # Plot bar labels
+    #     if show_label:
+    #         x_list = sb_table.calc_bar_label_x_list(self.size)
+    #         row_name2sum = sb_table.row_name2sum
+    #         for label, x in zip(sb_table.row_names, x_list):
+    #             # Calculate label r position
+    #             if label_pos == "top":
+    #                 bar_r_height = self.r_size * (row_name2sum[label] / vmax)
+    #                 r = min(self.r_lim) + bar_r_height + label_margin
+    #                 outer = True
+    #             elif label_pos == "bottom":
+    #                 r = min(self.r_lim) - label_margin
+    #                 outer = False
+    #             else:
+    #                 raise ValueError(f"{label_pos=} is invalid ('top' or 'bottom').")
 
-                # Set label text properties
-                if label_kws.get("orientation") is None:
-                    label_kws["orientation"] = "horizontal"
-                params = utils.plot.get_label_params_by_rad(
-                    self.x_to_rad(x), label_kws["orientation"], outer
-                )
-                label_kws.update(params)
+    #             # Set label text properties
+    #             if label_kws.get("orientation") is None:
+    #                 label_kws["orientation"] = "horizontal"
+    #             params = utils.plot.get_label_params_by_rad(
+    #                 self.x_to_rad(x), label_kws["orientation"], outer
+    #             )
+    #             label_kws.utils.helper.deep_dict_update(params)
 
-                self.text(label, x, r, adjust_rotation=False, **label_kws)
+    #             self.text(label, x, r, adjust_rotation=False, **label_kws)
 
-        return sb_table
+    #     return sb_table
 
-    def stacked_barh(
-        self,
-        table_data: str | Path | pd.DataFrame | StackedBarTable,
-        *,
-        delimiter: str = "\t",
-        width: float = 0.6,
-        cmap: str | dict[str, str] = "tab10",
-        bar_kws: dict[str, Any] | None = None,
-    ) -> StackedBarTable:
-        """Plot horizontal stacked bar from table data
+    # def stacked_barh(
+    #     self,
+    #     table_data: str | Path | pd.DataFrame | StackedBarTable,
+    #     *,
+    #     delimiter: str = "\t",
+    #     width: float = 0.6,
+    #     cmap: str | dict[str, str] = "tab10",
+    #     bar_kws: dict[str, Any] | None = None,
+    # ) -> StackedBarTable:
+    #     """Plot horizontal stacked bar from table data
 
-        Parameters
-        ----------
-        table_data : str | Path | pd.DataFrame | StackedBarTable
-            Table file or Table DataFrame or StackedBarTable
-        delimiter : str, optional
-            Table file delimiter
-        width : float, optional
-            Bar width ratio (0.0 - 1.0)
-        cmap : str | dict[str, str], optional
-            Colormap assigned to each stacked bar.
-            User can set matplotlib's colormap (e.g. `tab10`, `Set3`) or
-            col_name -> color dict (e.g. `dict(A="red", B="blue", C="green", ...)`)
-        bar_kws : dict[str, Any] | None, optional
-            Patch properties for bar plot (e.g. `dict(ec="black, lw=0.2, ...)`)
+    #     Parameters
+    #     ----------
+    #     table_data : str | Path | pd.DataFrame | StackedBarTable
+    #         Table file or Table DataFrame or StackedBarTable
+    #     delimiter : str, optional
+    #         Table file delimiter
+    #     width : float, optional
+    #         Bar width ratio (0.0 - 1.0)
+    #     cmap : str | dict[str, str], optional
+    #         Colormap assigned to each stacked bar.
+    #         User can set matplotlib's colormap (e.g. `tab10`, `Set3`) or
+    #         col_name -> color dict (e.g. `dict(A="red", B="blue", C="green", ...)`)
+    #     bar_kws : dict[str, Any] | None, optional
+    #         Patch properties for bar plot (e.g. `dict(ec="black, lw=0.2, ...)`)
 
-        Returns
-        -------
-        sb_table : StackedBarTable
-            Stacked bar table
-        """
-        bar_kws = {} if bar_kws is None else deepcopy(bar_kws)
+    #     Returns
+    #     -------
+    #     sb_table : StackedBarTable
+    #         Stacked bar table
+    #     """
+    #     bar_kws = {} if bar_kws is None else deepcopy(bar_kws)
 
-        if not 0.0 <= width <= 1.0:
-            raise ValueError(f"{width=} is invalid (0.0 <= width <= 1.0).")
+    #     if not 0.0 <= width <= 1.0:
+    #         raise ValueError(f"{width=} is invalid (0.0 <= width <= 1.0).")
 
-        # Load table data
-        if isinstance(table_data, StackedBarTable):
-            sb_table = table_data
-        else:
-            sb_table = StackedBarTable(table_data, delimiter=delimiter)
+    #     # Load table data
+    #     if isinstance(table_data, StackedBarTable):
+    #         sb_table = table_data
+    #     else:
+    #         sb_table = StackedBarTable(table_data, delimiter=delimiter)
 
-        # Make column name & color dict
-        if isinstance(cmap, str):
-            col_name2color = sb_table.get_col_name2color(cmap)
-        else:
-            col_name2color = cmap
+    #     # Make column name & color dict
+    #     if isinstance(cmap, str):
+    #         col_name2color = sb_table.get_col_name2color(cmap)
+    #     else:
+    #         col_name2color = cmap
 
-        # Calculate bar plot parameters
-        r_lim_list = sb_table.calc_barh_r_lim_list(self.r_plot_lim, width)
-        heights, bottoms = sb_table.stacked_bar_heights, sb_table.stacked_bar_bottoms
+    #     # Calculate bar plot parameters
+    #     r_lim_list = sb_table.calc_barh_r_lim_list(self.r_plot_lim, width)
+    #     heights, bottoms = sb_table.stacked_bar_heights, sb_table.stacked_bar_bottoms
 
-        # Plot bars
-        for col_name, height, bottom in zip(sb_table.col_names, heights, bottoms):
-            color = col_name2color[col_name]
-            for r_lim, h, b in zip(r_lim_list, height, bottom):
-                self.rect(b, b + h, r_lim=r_lim, fc=color, **bar_kws)
+    #     # Plot bars
+    #     for col_name, height, bottom in zip(sb_table.col_names, heights, bottoms):
+    #         color = col_name2color[col_name]
+    #         for r_lim, h, b in zip(r_lim_list, height, bottom):
+    #             self.rect(b, b + h, r_lim=r_lim, fc=color, **bar_kws)
 
-        return sb_table
+    #     return sb_table
 
-    def fill_between(
-        self,
-        x: list[float] | np.ndarray,
-        y1: list[float] | np.ndarray,
-        y2: float | list[float] | np.ndarray = 0,
-        *,
-        vmin: float = 0,
-        vmax: float | None = None,
-        arc: bool = True,
-        **kwargs,
-    ) -> None:
-        """Fill the area between two horizontal(y1, y2) curves
+    # def fill_between(
+    #     self,
+    #     x: list[float] | np.ndarray,
+    #     y1: list[float] | np.ndarray,
+    #     y2: float | list[float] | np.ndarray = 0,
+    #     *,
+    #     vmin: float = 0,
+    #     vmax: float | None = None,
+    #     arc: bool = True,
+    #     **kwargs,
+    # ) -> None:
+    #     """Fill the area between two horizontal(y1, y2) curves
 
-        Parameters
-        ----------
-        x : list[float] | np.ndarray
-            X coordinates
-        y1 : list[float] | np.ndarray
-            Y coordinates (first curve definition)
-            Y coordinate[s] (second curve definition)
-        vmin : float, optional
-            Y min value
-        vmax : float | None, optional
-            Y max value. If None, `max(y1 + y2)` is set.
-        arc : bool, optional
-            If True, plot arc style line for polar projection.
-            If False, simply plot linear style line.
-        **kwargs : dict, optional
-            Axes.fill_between properties (e.g. `fc="red", ec="black", lw=0.1, ...`)
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.fill_between.html>
-        """
-        rad = list(map(self.x_to_rad, x))
-        if isinstance(y2, (list, tuple, np.ndarray)):
-            y_all = list(y1) + list(y2)
-        else:
-            y_all = list(y1) + [y2]
-            y2 = [float(y2)] * len(x)
-        vmin = min(y_all) if vmin is None else vmin
-        vmax = max(y_all) if vmax is None else vmax
-        self._check_value_min_max(y_all, vmin, vmax)
+    #     Parameters
+    #     ----------
+    #     x : list[float] | np.ndarray
+    #         X coordinates
+    #     y1 : list[float] | np.ndarray
+    #         Y coordinates (first curve definition)
+    #         Y coordinate[s] (second curve definition)
+    #     vmin : float, optional
+    #         Y min value
+    #     vmax : float | None, optional
+    #         Y max value. If None, `max(y1 + y2)` is set.
+    #     arc : bool, optional
+    #         If True, plot arc style line for polar projection.
+    #         If False, simply plot linear style line.
+    #     **kwargs : dict, optional
+    #         Axes.fill_between properties (e.g. `fc="red", ec="black", lw=0.1, ...`)
+    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.fill_between.html>
+    #     """
+    #     rad = list(map(self.x_to_rad, x))
+    #     if isinstance(y2, (list, tuple, np.ndarray)):
+    #         y_all = list(y1) + list(y2)
+    #     else:
+    #         y_all = list(y1) + [y2]
+    #         y2 = [float(y2)] * len(x)
+    #     vmin = min(y_all) if vmin is None else vmin
+    #     vmax = max(y_all) if vmax is None else vmax
+    #     self._check_value_min_max(y_all, vmin, vmax)
 
-        r2 = [self._y_to_r(v, vmin, vmax) for v in y2]
-        r = [self._y_to_r(v, vmin, vmax) for v in y1]
-        if arc:
-            plot_rad, plot_r2 = self._to_arc_radr(rad, r2)
-            _, plot_r = self._to_arc_radr(rad, r)
-        else:
-            plot_rad, plot_r, plot_r2 = rad, r, r2
+    #     r2 = [self._y_to_r(v, vmin, vmax) for v in y2]
+    #     r = [self._y_to_r(v, vmin, vmax) for v in y1]
+    #     if arc:
+    #         plot_rad, plot_r2 = self._to_arc_radr(rad, r2)
+    #         _, plot_r = self._to_arc_radr(rad, r)
+    #     else:
+    #         plot_rad, plot_r, plot_r2 = rad, r, r2
 
-        def plot_fill_between(ax: PolarAxes) -> None:
-            ax.fill_between(plot_rad, plot_r, plot_r2, **kwargs)  # type: ignore
+    #     def plot_fill_between(ax: PolarAxes) -> None:
+    #         ax.fill_between(plot_rad, plot_r, plot_r2, **kwargs)  # type: ignore
 
-        self._plot_funcs.append(plot_fill_between)
+    #     self._plot_funcs.append(plot_fill_between)
 
-    def heatmap(
-        self,
-        data: list | np.ndarray,
-        *,
-        vmin: float | None = None,
-        vmax: float | None = None,
-        start: float | None = None,
-        end: float | None = None,
-        width: float | None = None,
-        cmap: str | Colormap = "bwr",
-        show_value: bool = False,
-        rect_kws: dict[str, Any] | None = None,
-        text_kws: dict[str, Any] | None = None,
-    ) -> None:
-        """Plot heatmap
+    # def heatmap(
+    #     self,
+    #     data: list | np.ndarray,
+    #     *,
+    #     vmin: float | None = None,
+    #     vmax: float | None = None,
+    #     start: float | None = None,
+    #     end: float | None = None,
+    #     width: float | None = None,
+    #     cmap: str | Colormap = "bwr",
+    #     show_value: bool = False,
+    #     rect_kws: dict[str, Any] | None = None,
+    #     text_kws: dict[str, Any] | None = None,
+    # ) -> None:
+    #     """Plot heatmap
 
-        Parameters
-        ----------
-        data : list | np.ndarray
-            Numerical list, numpy 1d or 2d array
-        vmin : float | None, optional
-            Min value for heatmap plot. If None, `np.min(data)` is set.
-        vmax : float | None, optional
-            Max value for heatmap plot. If None, `np.max(data)` is set.
-        start : float | None, optional
-            Start position for heatmap plot (x coordinate).
-            If None, `track.start` is set.
-        end : float | None, optional
-            End position for heatmap plot (x coordinate).
-            If None, `track.end` is set.
-        width : float | None, optional
-            Heatmap rectangle x width size.
-            Normally heatmap plots squares of equal width. In some cases,
-            it is necessary to reduce the width of only the last column data square.
-            At that time, width can be set under the following conditions.
-            `(col_num - 1) * width < end - start < col_num * width`
-        cmap : str | Colormap, optional
-            Colormap (e.g. `viridis`, `Spectral`, `Reds`, `Greys`)
-            <https://matplotlib.org/stable/tutorials/colors/colormaps.html>
-        show_value : bool, optional
-            If True, show data value on heatmap rectangle
-        rect_kws : dict[str, Any] | None, optional
-            Patch properties (e.g. `dict(ec="black", lw=0.5, ...)`)
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
-        text_kws : dict[str, Any] | None, optional
-            Text properties (e.g. `dict(size=6, color="red", ...`)
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.text.html>
-        """
-        rect_kws = {} if rect_kws is None else deepcopy(rect_kws)
-        text_kws = {} if text_kws is None else deepcopy(text_kws)
+    #     Parameters
+    #     ----------
+    #     data : list | np.ndarray
+    #         Numerical list, numpy 1d or 2d array
+    #     vmin : float | None, optional
+    #         Min value for heatmap plot. If None, `np.min(data)` is set.
+    #     vmax : float | None, optional
+    #         Max value for heatmap plot. If None, `np.max(data)` is set.
+    #     start : float | None, optional
+    #         Start position for heatmap plot (x coordinate).
+    #         If None, `track.start` is set.
+    #     end : float | None, optional
+    #         End position for heatmap plot (x coordinate).
+    #         If None, `track.end` is set.
+    #     width : float | None, optional
+    #         Heatmap rectangle x width size.
+    #         Normally heatmap plots squares of equal width. In some cases,
+    #         it is necessary to reduce the width of only the last column data square.
+    #         At that time, width can be set under the following conditions.
+    #         `(col_num - 1) * width < end - start < col_num * width`
+    #     cmap : str | Colormap, optional
+    #         Colormap (e.g. `viridis`, `Spectral`, `Reds`, `Greys`)
+    #         <https://matplotlib.org/stable/tutorials/colors/colormaps.html>
+    #     show_value : bool, optional
+    #         If True, show data value on heatmap rectangle
+    #     rect_kws : dict[str, Any] | None, optional
+    #         Patch properties (e.g. `dict(ec="black", lw=0.5, ...)`)
+    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
+    #     text_kws : dict[str, Any] | None, optional
+    #         Text properties (e.g. `dict(size=6, color="red", ...`)
+    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.text.html>
+    #     """
+    #     rect_kws = {} if rect_kws is None else deepcopy(rect_kws)
+    #     text_kws = {} if text_kws is None else deepcopy(text_kws)
 
-        # Check whether array is 1d or 2d (If 1d, reshape 2d)
-        data = np.array(data)
-        if data.ndim == 1:
-            data = data.reshape((1, -1))
-        elif data.ndim != 2:
-            raise ValueError(f"{data=} is not 1d or 2d array!!")
+    #     # Check whether array is 1d or 2d (If 1d, reshape 2d)
+    #     data = np.array(data)
+    #     if data.ndim == 1:
+    #         data = data.reshape((1, -1))
+    #     elif data.ndim != 2:
+    #         raise ValueError(f"{data=} is not 1d or 2d array!!")
 
-        # Set default value for None properties
-        vmin = np.min(data) if vmin is None else vmin
-        vmax = np.max(data) if vmax is None else vmax
-        start = self.start if start is None else start
-        end = self.end if end is None else end
-        self._check_value_min_max(data, vmin, vmax)
+    #     # Set default value for None properties
+    #     vmin = np.min(data) if vmin is None else vmin
+    #     vmax = np.max(data) if vmax is None else vmax
+    #     start = self.start if start is None else start
+    #     end = self.end if end is None else end
+    #     self._check_value_min_max(data, vmin, vmax)
 
-        # Calculate radius & x position range list of heatmap rectangle
-        row_num, col_num = data.shape
-        unit_r_size = self.r_plot_size / row_num
-        unit_x_size = (end - start) / col_num
-        if width is not None:
-            if (col_num - 1) * width < end - start < col_num * width:
-                unit_x_size = width
-            else:
-                raise ValueError(f"{width=} is invalid ({start=}, {end=})")
+    #     # Calculate radius & x position range list of heatmap rectangle
+    #     row_num, col_num = data.shape
+    #     unit_r_size = self.r_plot_size / row_num
+    #     unit_x_size = (end - start) / col_num
+    #     if width is not None:
+    #         if (col_num - 1) * width < end - start < col_num * width:
+    #             unit_x_size = width
+    #         else:
+    #             raise ValueError(f"{width=} is invalid ({start=}, {end=})")
 
-        r_range_list: list[tuple[float, float]] = []
-        for i in range(row_num):
-            max_range = max(self.r_plot_lim) - (unit_r_size * i)
-            min_range = max_range - unit_r_size
-            r_range_list.append((min_range, max_range))
-        x_range_list: list[tuple[float, float]] = []
-        for i in range(col_num):
-            min_range = start + (unit_x_size * i)
-            max_range = min_range + unit_x_size
-            # Avoid max_range exceeds `track.end` value
-            if max_range > self.end:
-                max_range = self.end
-            x_range_list.append((min_range, max_range))
+    #     r_range_list: list[tuple[float, float]] = []
+    #     for i in range(row_num):
+    #         max_range = max(self.r_plot_lim) - (unit_r_size * i)
+    #         min_range = max_range - unit_r_size
+    #         r_range_list.append((min_range, max_range))
+    #     x_range_list: list[tuple[float, float]] = []
+    #     for i in range(col_num):
+    #         min_range = start + (unit_x_size * i)
+    #         max_range = min_range + unit_x_size
+    #         # Avoid max_range exceeds `track.end` value
+    #         if max_range > self.end:
+    #             max_range = self.end
+    #         x_range_list.append((min_range, max_range))
 
-        # Plot heatmap
-        colormap = cmap if isinstance(cmap, Colormap) else mpl.colormaps[cmap]  # type: ignore
-        norm = utils.plot.Normalize(vmin=vmin, vmax=vmax)
-        for row_idx, row in enumerate(data):
-            for col_idx, v in enumerate(row):
-                # Plot heatmap rectangle
-                rect_start, rect_end = x_range_list[col_idx]
-                rect_r_lim = r_range_list[row_idx]
-                color = colormap(norm(v))
-                rect_kws.update(dict(fc=color, facecolor=color))
-                self.rect(rect_start, rect_end, r_lim=rect_r_lim, **rect_kws)
+    #     # Plot heatmap
+    #     colormap = cmap if isinstance(cmap, Colormap) else mpl.colormaps[cmap]  # type: ignore
+    #     norm = plot.Normalize(vmin=vmin, vmax=vmax)
+    #     for row_idx, row in enumerate(data):
+    #         for col_idx, v in enumerate(row):
+    #             # Plot heatmap rectangle
+    #             rect_start, rect_end = x_range_list[col_idx]
+    #             rect_r_lim = r_range_list[row_idx]
+    #             color = colormap(norm(v))
+    #             rect_kws.utils.helper.deep_dict_update(dict(fc=color, facecolor=color))
+    #             self.rect(rect_start, rect_end, r_lim=rect_r_lim, **rect_kws)
 
-                if show_value:
-                    # Plot value text on heatmap rectangle
-                    text_value = f"{v:.2f}" if isinstance(v, float) else str(v)
-                    text_x = (rect_end + rect_start) / 2
-                    text_r = sum(rect_r_lim) / 2
-                    self.text(text_value, text_x, text_r, **text_kws)
+    #             if show_value:
+    #                 # Plot value text on heatmap rectangle
+    #                 text_value = f"{v:.2f}" if isinstance(v, float) else str(v)
+    #                 text_x = (rect_end + rect_start) / 2
+    #                 text_r = sum(rect_r_lim) / 2
+    #                 self.text(text_value, text_x, text_r, **text_kws)
 
-    def raster(
-        self,
-        img: str | Path | Image.Image,
-        *,
-        w: float = 1.0,
-        h: float = 1.0,
-        rotate: bool = True,
-        **kwargs,
-    ) -> None:
-        """Plot raster image
+    # def tree(
+    #     self,
+    #     tree_data: str | Path | Tree,
+    #     *,
+    #     format: str = "newick",
+    #     outer: bool = True,
+    #     align_leaf_label: bool = True,
+    #     ignore_branch_length: bool = False,
+    #     leaf_label_size: float = 12,
+    #     leaf_label_rmargin: float = 2.0,
+    #     reverse: bool = False,
+    #     ladderize: bool = False,
+    #     line_kws: dict[str, Any] | None = None,
+    #     align_line_kws: dict[str, Any] | None = None,
+    #     label_formatter: Callable[[str], str] | None = None,
+    # ) -> TreeViz:
+    #     """Plot tree
 
-        Parameters
-        ----------
-        img : str | Path | Image.Image
-            Image data (`File Path`|`URL`|`PIL Image`)
-        w : float, optional
-            Width ratio (`0.0 - 1.0`)
-        h : float, optional
-            Height ratio (`0.0 - 1.0`)
-        rotate : bool, optional
-            If True, rotate image 180 degrees if track is in lower location
-            (`-270 <= degree < -90`|`90 <= degree < 270`)
-        **kwargs : dict, optional
-            Axes.pcolormesh properties
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.pcolormesh.html>
-        """
-        # Check range of value
-        if not 0.0 < w <= 1.0:
-            raise ValueError(f"{w=} is invalid (0.0 < w <= 1.0).")
-        if not 0.0 < h <= 1.0:
-            raise ValueError(f"{h=} is invalid (0.0 < h <= 1.0).")
+    #     It is recommended that the track(sector) size be the same as the number of
+    #     leaf nodes in the tree, to make it easier to combine with `bar` and `heatmap`.
 
-        # Calculate radian (size, start, end)
-        rad_size = self.rad_size * w
-        rad_pad = self.rad_size * ((1.0 - w) / 2)
-        rad_start, rad_end = min(self.rad_lim) + rad_pad, max(self.rad_lim) - rad_pad
-        # Calculate radius (size, start, end)
-        r_size = self.r_size * h
-        r_pad = self.r_size * ((1.0 - h) / 2)
-        r_start, r_end = min(self.r_lim) + r_pad, max(self.r_lim) - r_pad
+    #     Parameters
+    #     ----------
+    #     tree_data : str | Path | Tree
+    #         Tree data (`File`|`File URL`|`Tree Object`|`Tree String`)
+    #     format : str, optional
+    #         Tree format (`newick`|`phyloxml`|`nexus`|`nexml`|`cdao`)
+    #     outer : bool, optional
+    #         If True, plot tree on outer side. If False, plot tree on inner side.
+    #     align_leaf_label: bool, optional
+    #         If True, align leaf label.
+    #     ignore_branch_length : bool, optional
+    #         If True, ignore branch length for plotting tree.
+    #     leaf_label_size : float, optional
+    #         Leaf label size
+    #     leaf_label_rmargin : float, optional
+    #         Leaf label radius margin
+    #     reverse : bool, optional
+    #         If True, reverse tree
+    #     ladderize : bool, optional
+    #         If True, ladderize tree
+    #     line_kws : dict[str, Any] | None, optional
+    #         Patch properties (e.g. `dict(color="red", lw=1, ls="dashed", ...)`)
+    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
+    #     align_line_kws : dict[str, Any] | None, optional
+    #         Patch properties (e.g. `dict(lw=1, ls="dotted", alpha=1.0, ...)`)
+    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
+    #     label_formatter : Callable[[str], str] | None, optional
+    #         User-defined label text format function to change plot label text content.
+    #         For example, if you want to change underscore of the label to space,
+    #         set `lambda t: t.replace("_", " ")`.
 
-        # Load image
-        img = utils.load_image(img)
+    #     Returns
+    #     -------
+    #     tv : TreeViz
+    #         TreeViz instance
+    #     """
+    #     tv = TreeViz(
+    #         tree_data,
+    #         format=format,
+    #         outer=outer,
+    #         align_leaf_label=align_leaf_label,
+    #         ignore_branch_length=ignore_branch_length,
+    #         leaf_label_size=leaf_label_size,
+    #         leaf_label_rmargin=leaf_label_rmargin,
+    #         reverse=reverse,
+    #         ladderize=ladderize,
+    #         line_kws=line_kws,
+    #         align_line_kws=align_line_kws,
+    #         label_formatter=label_formatter,
+    #         track=self,
+    #     )
+    #     self._trees.append(tv)
 
-        # Rotate image 180 degrees if track is in lower location
-        track_center_deg = sum(self.deg_lim) / 2
-        if rotate and utils.plot.is_lower_loc(track_center_deg):
-            img = img.rotate(180)
+    #     return tv
 
-        # Resize image
-        pixel_w = int(rad_size / (np.pi / 1000))
-        pixel_h = int(r_size * 10)
-        resize_img = img.resize((pixel_w, pixel_h))
+    # def genomic_features(
+    #     self,
+    #     features: SeqFeature | list[SeqFeature],
+    #     *,
+    #     plotstyle: str = "box",
+    #     r_lim: tuple[float, float] | None = None,
+    #     facecolor_handler: Callable[[SeqFeature], str] | None = None,
+    #     **kwargs,
+    # ) -> None:
+    #     """Plot genomic features
 
-        # Setup radian & radius positions for plotting image by pcolormesh
-        rad_list = np.linspace(rad_start, rad_end, resize_img.width)
-        r_list = np.linspace(r_end, r_start, resize_img.height)
+    #     Parameters
+    #     ----------
+    #     features : SeqFeature | list[SeqFeature]
+    #         Biopython's SeqFeature or SeqFeature list
+    #     plotstyle : str, optional
+    #         Plot style (`box` or `arrow`)
+    #     r_lim : tuple[float, float] | None, optional
+    #         Radius limit range. If None, `track.r_plot_lim` is set.
+    #     facecolor_handler : Callable[[SeqFeature], str] | None, optional
+    #         User-defined function to handle facecolor
+    #     **kwargs : dict, optional
+    #         Patch properties (e.g. `fc="red", ec="blue", lw=1.0, ...`)
+    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
+    #     """
+    #     if isinstance(features, SeqFeature):
+    #         features = [features]
 
-        def plot_raster(ax: PolarAxes):
-            ax.pcolormesh(rad_list, r_list, np.array(resize_img), **kwargs)
+    #     if r_lim is None:
+    #         r_lim = self.r_plot_lim
+    #     else:
+    #         if not min(self.r_lim) <= min(r_lim) < max(r_lim) <= max(self.r_lim):
+    #             raise ValueError(f"{r_lim=} is invalid track range.\n{self}")
 
-        self._plot_funcs.append(plot_raster)
+    #     for feature in features:
+    #         # Set qualifier tag facecolor if exists
+    #         tag_color = feature.qualifiers.get("facecolor", [None])[0]
+    #         if tag_color is not None:
+    #             kwargs.utils.helper.deep_dict_update(dict(fc=tag_color, facecolor=tag_color))
+    #         # Set facecolor by user-defined function
+    #         if facecolor_handler is not None:
+    #             color = facecolor_handler(feature)
+    #             kwargs.utils.helper.deep_dict_update(dict(fc=color, facecolor=color))
+    #         # Plot feature
+    #         try:
+    #             start = int(str(feature.location.parts[0].start))
+    #             end = int(str(feature.location.parts[-1].end))
+    #         except ValueError:
+    #             print(f"Failed to parse feature's start-end position.\n{feature}")
+    #             continue
+    #         if feature.location.strand == -1:
+    #             start, end = end, start
+    #         if plotstyle == "box":
+    #             self.rect(start, end, r_lim=r_lim, **kwargs)
+    #         elif plotstyle == "arrow":    # def tree(
+    #     self,
+    #     tree_data: str | Path | Tree,
+    #     *,
+    #     format: str = "newick",
+    #     outer: bool = True,
+    #     align_leaf_label: bool = True,
+    #     ignore_branch_length: bool = False,
+    #     leaf_label_size: float = 12,
+    #     leaf_label_rmargin: float = 2.0,
+    #     reverse: bool = False,
+    #     ladderize: bool = False,
+    #     line_kws: dict[str, Any] | None = None,
+    #     align_line_kws: dict[str, Any] | None = None,
+    #     label_formatter: Callable[[str], str] | None = None,
+    # ) -> TreeViz:
+    #     """Plot tree
 
-    def tree(
-        self,
-        tree_data: str | Path | Tree,
-        *,
-        format: str = "newick",
-        outer: bool = True,
-        align_leaf_label: bool = True,
-        ignore_branch_length: bool = False,
-        leaf_label_size: float = 12,
-        leaf_label_rmargin: float = 2.0,
-        reverse: bool = False,
-        ladderize: bool = False,
-        line_kws: dict[str, Any] | None = None,
-        align_line_kws: dict[str, Any] | None = None,
-        label_formatter: Callable[[str], str] | None = None,
-    ) -> TreeViz:
-        """Plot tree
+    #     It is recommended that the track(sector) size be the same as the number of
+    #     leaf nodes in the tree, to make it easier to combine with `bar` and `heatmap`.
 
-        It is recommended that the track(sector) size be the same as the number of
-        leaf nodes in the tree, to make it easier to combine with `bar` and `heatmap`.
+    #     Parameters
+    #     ----------
+    #     tree_data : str | Path | Tree
+    #         Tree data (`File`|`File URL`|`Tree Object`|`Tree String`)
+    #     format : str, optional
+    #         Tree format (`newick`|`phyloxml`|`nexus`|`nexml`|`cdao`)
+    #     outer : bool, optional
+    #         If True, plot tree on outer side. If False, plot tree on inner side.
+    #     align_leaf_label: bool, optional
+    #         If True, align leaf label.
+    #     ignore_branch_length : bool, optional
+    #         If True, ignore branch length for plotting tree.
+    #     leaf_label_size : float, optional
+    #         Leaf label size
+    #     leaf_label_rmargin : float, optional
+    #         Leaf label radius margin
+    #     reverse : bool, optional
+    #         If True, reverse tree
+    #     ladderize : bool, optional
+    #         If True, ladderize tree
+    #     line_kws : dict[str, Any] | None, optional
+    #         Patch properties (e.g. `dict(color="red", lw=1, ls="dashed", ...)`)
+    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
+    #     align_line_kws : dict[str, Any] | None, optional
+    #         Patch properties (e.g. `dict(lw=1, ls="dotted", alpha=1.0, ...)`)
+    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
+    #     label_formatter : Callable[[str], str] | None, optional
+    #         User-defined label text format function to change plot label text content.
+    #         For example, if you want to change underscore of the label to space,
+    #         set `lambda t: t.replace("_", " ")`.
 
-        Parameters
-        ----------
-        tree_data : str | Path | Tree
-            Tree data (`File`|`File URL`|`Tree Object`|`Tree String`)
-        format : str, optional
-            Tree format (`newick`|`phyloxml`|`nexus`|`nexml`|`cdao`)
-        outer : bool, optional
-            If True, plot tree on outer side. If False, plot tree on inner side.
-        align_leaf_label: bool, optional
-            If True, align leaf label.
-        ignore_branch_length : bool, optional
-            If True, ignore branch length for plotting tree.
-        leaf_label_size : float, optional
-            Leaf label size
-        leaf_label_rmargin : float, optional
-            Leaf label radius margin
-        reverse : bool, optional
-            If True, reverse tree
-        ladderize : bool, optional
-            If True, ladderize tree
-        line_kws : dict[str, Any] | None, optional
-            Patch properties (e.g. `dict(color="red", lw=1, ls="dashed", ...)`)
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
-        align_line_kws : dict[str, Any] | None, optional
-            Patch properties (e.g. `dict(lw=1, ls="dotted", alpha=1.0, ...)`)
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
-        label_formatter : Callable[[str], str] | None, optional
-            User-defined label text format function to change plot label text content.
-            For example, if you want to change underscore of the label to space,
-            set `lambda t: t.replace("_", " ")`.
+    #     Returns
+    #     -------
+    #     tv : TreeViz
+    #         TreeViz instance
+    #     """
+    #     tv = TreeViz(
+    #         tree_data,
+    #         format=format,
+    #         outer=outer,
+    #         align_leaf_label=align_leaf_label,
+    #         ignore_branch_length=ignore_branch_length,
+    #         leaf_label_size=leaf_label_size,
+    #         leaf_label_rmargin=leaf_label_rmargin,
+    #         reverse=reverse,
+    #         ladderize=ladderize,
+    #         line_kws=line_kws,
+    #         align_line_kws=align_line_kws,
+    #         label_formatter=label_formatter,
+    #         track=self,
+    #     )
+    #     self._trees.append(tv)
 
-        Returns
-        -------
-        tv : TreeViz
-            TreeViz instance
-        """
-        tv = TreeViz(
-            tree_data,
-            format=format,
-            outer=outer,
-            align_leaf_label=align_leaf_label,
-            ignore_branch_length=ignore_branch_length,
-            leaf_label_size=leaf_label_size,
-            leaf_label_rmargin=leaf_label_rmargin,
-            reverse=reverse,
-            ladderize=ladderize,
-            line_kws=line_kws,
-            align_line_kws=align_line_kws,
-            label_formatter=label_formatter,
-            track=self,
-        )
-        self._trees.append(tv)
+    #     return tv
 
-        return tv
+    # def genomic_features(
+    #     self,
+    #     features: SeqFeature | list[SeqFeature],
+    #     *,
+    #     plotstyle: str = "box",
+    #     r_lim: tuple[float, float] | None = None,
+    #     facecolor_handler: Callable[[SeqFeature], str] | None = None,
+    #     **kwargs,
+    # ) -> None:
+    #     """Plot genomic features
 
-    def genomic_features(
-        self,
-        features: SeqFeature | list[SeqFeature],
-        *,
-        plotstyle: str = "box",
-        r_lim: tuple[float, float] | None = None,
-        facecolor_handler: Callable[[SeqFeature], str] | None = None,
-        **kwargs,
-    ) -> None:
-        """Plot genomic features
+    #     Parameters
+    #     ----------
+    #     features : SeqFeature | list[SeqFeature]
+    #         Biopython's SeqFeature or SeqFeature list
+    #     plotstyle : str, optional
+    #         Plot style (`box` or `arrow`)
+    #     r_lim : tuple[float, float] | None, optional
+    #         Radius limit range. If None, `track.r_plot_lim` is set.
+    #     facecolor_handler : Callable[[SeqFeature], str] | None, optional
+    #         User-defined function to handle facecolor
+    #     **kwargs : dict, optional
+    #         Patch properties (e.g. `fc="red", ec="blue", lw=1.0, ...`)
+    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
+    #     """
+    #     if isinstance(features, SeqFeature):
+    #         features = [features]
 
-        Parameters
-        ----------
-        features : SeqFeature | list[SeqFeature]
-            Biopython's SeqFeature or SeqFeature list
-        plotstyle : str, optional
-            Plot style (`box` or `arrow`)
-        r_lim : tuple[float, float] | None, optional
-            Radius limit range. If None, `track.r_plot_lim` is set.
-        facecolor_handler : Callable[[SeqFeature], str] | None, optional
-            User-defined function to handle facecolor
-        **kwargs : dict, optional
-            Patch properties (e.g. `fc="red", ec="blue", lw=1.0, ...`)
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
-        """
-        if isinstance(features, SeqFeature):
-            features = [features]
+    #     if r_lim is None:
+    #         r_lim = self.r_plot_lim
+    #     else:
+    #         if not min(self.r_lim) <= min(r_lim) < max(r_lim) <= max(self.r_lim):
+    #             raise ValueError(f"{r_lim=} is invalid track range.\n{self}")
 
-        if r_lim is None:
-            r_lim = self.r_plot_lim
-        else:
-            if not min(self.r_lim) <= min(r_lim) < max(r_lim) <= max(self.r_lim):
-                raise ValueError(f"{r_lim=} is invalid track range.\n{self}")
+    #     for feature in features:
+    #         # Set qualifier tag facecolor if exists
+    #         tag_color = feature.qualifiers.get("facecolor", [None])[0]
+    #         if tag_color is not None:
+    #             kwargs.utils.helper.deep_dict_update(dict(fc=tag_color, facecolor=tag_color))
+    #         # Set facecolor by user-defined function
+    #         if facecolor_handler is not None:
+    #             color = facecolor_handler(feature)
+    #             kwargs.utils.helper.deep_dict_update(dict(fc=color, facecolor=color))
+    #         # Plot feature
+    #         try:
+    #             start = int(str(feature.location.parts[0].start))
+    #             end = int(str(feature.location.parts[-1].end))
+    #         except ValueError:
+    #             print(f"Failed to parse feature's start-end position.\n{feature}")
+    #             continue
+    #         if feature.location.strand == -1:
+    #             start, end = end, start
+    #         if plotstyle == "box":
+    #             self.rect(start, end, r_lim=r_lim, **kwargs)
+    #         elif plotstyle == "arrow":
+    #             self.arrow(start, end, r_lim=r_lim, **kwargs)
+    #         else:
+    #             raise ValueError(f"{plotstyle=} is invalid ('box' or 'arrow').")
 
-        for feature in features:
-            # Set qualifier tag facecolor if exists
-            tag_color = feature.qualifiers.get("facecolor", [None])[0]
-            if tag_color is not None:
-                kwargs.update(dict(fc=tag_color, facecolor=tag_color))
-            # Set facecolor by user-defined function
-            if facecolor_handler is not None:
-                color = facecolor_handler(feature)
-                kwargs.update(dict(fc=color, facecolor=color))
-            # Plot feature
-            try:
-                start = int(str(feature.location.parts[0].start))
-                end = int(str(feature.location.parts[-1].end))
-            except ValueError:
-                print(f"Failed to parse feature's start-end position.\n{feature}")
-                continue
-            if feature.location.strand == -1:
-                start, end = end, start
-            if plotstyle == "box":
-                self.rect(start, end, r_lim=r_lim, **kwargs)
-            elif plotstyle == "arrow":
-                self.arrow(start, end, r_lim=r_lim, **kwargs)
-            else:
-                raise ValueError(f"{plotstyle=} is invalid ('box' or 'arrow').")
+    #             self.arrow(start, end, r_lim=r_lim, **kwargs)
+    #         else:
+    #             raise ValueError(f"{plotstyle=} is invalid ('box' or 'arrow').")
 
     ############################################################
     # Private Method

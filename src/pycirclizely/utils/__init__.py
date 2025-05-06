@@ -11,6 +11,7 @@ from pycirclizely.utils.helper import (
                                              calc_group_spaces,
                                              is_pseudo_feature,
                                              load_image,
+                                             deep_dict_update
 )
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "calc_group_spaces",
     "is_pseudo_feature",
     "load_image",
+    "deep_dict_update"
 ]

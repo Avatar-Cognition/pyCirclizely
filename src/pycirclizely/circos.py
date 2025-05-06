@@ -3,12 +3,10 @@ from __future__ import annotations
 import itertools
 import math
 import textwrap
-import warnings
-from collections import defaultdict
 from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
-from typing import Any
+# from typing import Any
 
 import numpy as np
 import plotly.graph_objects as go
@@ -243,12 +241,12 @@ class Circos:
 
         # Background shape placed behind other shapes (layer="below")
         fc_behind_kwargs = deepcopy(kwargs)
-        fc_behind_kwargs.update(config.AXIS_FACE_PARAM)
+        fc_behind_kwargs = utils.deep_dict_update(fc_behind_kwargs, config.AXIS_FACE_PARAM)
         self.rect(**fc_behind_kwargs)
 
         # Edge shape placed in front of other shapes (layer="above")
         ec_front_kwargs = deepcopy(kwargs)
-        ec_front_kwargs.update(config.AXIS_EDGE_PARAM)
+        ec_front_kwargs = utils.deep_dict_update(ec_front_kwargs, config.AXIS_EDGE_PARAM)
         self.rect(**ec_front_kwargs)
 
     def text(
@@ -304,39 +302,34 @@ class Circos:
 
         self._annotations.append(annotation)
 
-    # def plot_text(ax: PolarAxes) -> None:
-    #     ax.text(math.radians(deg), r, text, **kwargs)
+    # def line(
+    #     self,
+    #     *,
+    #     r: float | tuple[float, float],
+    #     deg_lim: tuple[float, float] | None = None,
+    #     arc: bool = True,
+    #     **kwargs,
+    # ) -> None:
+    #     """Plot line
 
-    # self._plot_funcs.append(plot_text)
-
-    def line(
-        self,
-        *,
-        r: float | tuple[float, float],
-        deg_lim: tuple[float, float] | None = None,
-        arc: bool = True,
-        **kwargs,
-    ) -> None:
-        """Plot line
-
-        Parameters
-        ----------
-        r : float | tuple[float, float]
-            Line radius position (0 - 100). If r is float, (r, r) is set.
-        deg_lim : tuple[float, float] | None, optional
-            Degree limit region (-360 - 360). If None, `circos.deg_lim` is set.
-        arc : bool, optional
-            If True, plot arc style line for polar projection.
-            If False, simply plot linear style line.
-        **kwargs : dict, optional
-            Patch properties (e.g. `color="red", lw=3, ...`)
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
-        """
-        deg_lim = self.deg_lim if deg_lim is None else deg_lim
-        rad_lim = (math.radians(min(deg_lim)), math.radians(max(deg_lim)))
-        r_lim = r if isinstance(r, (tuple, list)) else (r, r)
-        LinePatch = ArcLine if arc else Line
-        # self._patches.append(LinePatch(rad_lim, r_lim, **kwargs))
+    #     Parameters
+    #     ----------
+    #     r : float | tuple[float, float]
+    #         Line radius position (0 - 100). If r is float, (r, r) is set.
+    #     deg_lim : tuple[float, float] | None, optional
+    #         Degree limit region (-360 - 360). If None, `circos.deg_lim` is set.
+    #     arc : bool, optional
+    #         If True, plot arc style line for polar projection.
+    #         If False, simply plot linear style line.
+    #     **kwargs : dict, optional
+    #         Patch properties (e.g. `color="red", lw=3, ...`)
+    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
+    #     """
+    #     deg_lim = self.deg_lim if deg_lim is None else deg_lim
+    #     rad_lim = (math.radians(min(deg_lim)), math.radians(max(deg_lim)))
+    #     r_lim = r if isinstance(r, (tuple, list)) else (r, r)
+    #     LinePatch = ArcLine if arc else Line
+    #     # self._patches.append(LinePatch(rad_lim, r_lim, **kwargs))
 
     def rect(
         self,
@@ -435,9 +428,9 @@ class Circos:
 
     #     # Set patch kwargs & default linewidth as 0.1
     #     # If linewidth=0 is set, twisted part is almost invisible
-    #     kwargs.update(dict(color=color, alpha=alpha))
+    #     kwargs.utils.helper.deep_dict_update(dict(color=color, alpha=alpha))
     #     if "lw" not in kwargs and "linewidth" not in kwargs:
-    #         kwargs.update(dict(lw=0.1))
+    #         kwargs.utils.helper.deep_dict_update(dict(lw=0.1))
 
     #     if not allow_twist:
     #         # Resolve twist
@@ -512,7 +505,7 @@ class Circos:
     #     r2 = sector2.get_lowest_r() if r2 is None else r2
     #     rad_pos1, rad_pos2 = sector1.x_to_rad(pos1), sector2.x_to_rad(pos2)
 
-    #     kwargs.update(color=color)
+    #     kwargs.utils.helper.deep_dict_update(color=color)
 
     #     bezier_curve_line = BezierCurveLine(
     #         rad_pos1,
@@ -527,63 +520,63 @@ class Circos:
     #     )
     #     self._patches.append(bezier_curve_line)
 
-    def colorbar(
-        self,
-        bounds: tuple[float, float, float, float] = (1.02, 0.3, 0.02, 0.4),
-        *,
-        vmin: float = 0,
-        vmax: float = 1,
-        cmap: str | Colormap = "bwr",
-        orientation: str = "vertical",
-        label: str | None = None,
-        colorbar_kws: dict[str, Any] | None = None,
-        label_kws: dict[str, Any] | None = None,
-        tick_kws: dict[str, Any] | None = None,
-    ) -> None:
-        """Plot colorbar
+    # def colorbar(
+    #     self,
+    #     bounds: tuple[float, float, float, float] = (1.02, 0.3, 0.02, 0.4),
+    #     *,
+    #     vmin: float = 0,
+    #     vmax: float = 1,
+    #     cmap: str | Colormap = "bwr",
+    #     orientation: str = "vertical",
+    #     label: str | None = None,
+    #     colorbar_kws: dict[str, Any] | None = None,
+    #     label_kws: dict[str, Any] | None = None,
+    #     tick_kws: dict[str, Any] | None = None,
+    # ) -> None:
+    #     """Plot colorbar
 
-        Parameters
-        ----------
-        bounds : tuple[float, float, float, float], optional
-            Colorbar bounds tuple (`x`, `y`, `width`, `height`)
-        vmin : float, optional
-            Colorbar min value
-        vmax : float, optional
-            Colorbar max value
-        cmap : str | Colormap, optional
-            Colormap (e.g. `viridis`, `Spectral`, `Reds`, `Greys`)
-            <https://matplotlib.org/stable/tutorials/colors/colormaps.html>
-        orientation : str, optional
-            Colorbar orientation (`vertical`|`horizontal`)
-        label : str | None, optional
-            Colorbar label. If None, no label shown.
-        colorbar_kws : dict[str, Any] | None, optional
-            Colorbar properties (e.g. `dict(format="%.1f", ...)`)
-            <https://matplotlib.org/stable/api/colorbar_api.html>
-        label_kws : dict[str, Any] | None, optional
-            Text properties (e.g. `dict(size=15, color="red", ...)`)
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.text.html>
-        tick_kws : dict[str, Any] | None, optional
-            Axes.tick_params properties (e.g. `dict(labelsize=12, colors="red", ...)`)
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.tick_params.html>
-        """
-        colorbar_kws = {} if colorbar_kws is None else deepcopy(colorbar_kws)
-        label_kws = {} if label_kws is None else deepcopy(label_kws)
-        tick_kws = {} if tick_kws is None else deepcopy(tick_kws)
+    #     Parameters
+    #     ----------
+    #     bounds : tuple[float, float, float, float], optional
+    #         Colorbar bounds tuple (`x`, `y`, `width`, `height`)
+    #     vmin : float, optional
+    #         Colorbar min value
+    #     vmax : float, optional
+    #         Colorbar max value
+    #     cmap : str | Colormap, optional
+    #         Colormap (e.g. `viridis`, `Spectral`, `Reds`, `Greys`)
+    #         <https://matplotlib.org/stable/tutorials/colors/colormaps.html>
+    #     orientation : str, optional
+    #         Colorbar orientation (`vertical`|`horizontal`)
+    #     label : str | None, optional
+    #         Colorbar label. If None, no label shown.
+    #     colorbar_kws : dict[str, Any] | None, optional
+    #         Colorbar properties (e.g. `dict(format="%.1f", ...)`)
+    #         <https://matplotlib.org/stable/api/colorbar_api.html>
+    #     label_kws : dict[str, Any] | None, optional
+    #         Text properties (e.g. `dict(size=15, color="red", ...)`)
+    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.text.html>
+    #     tick_kws : dict[str, Any] | None, optional
+    #         Axes.tick_params properties (e.g. `dict(labelsize=12, colors="red", ...)`)
+    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.tick_params.html>
+    #     """
+    #     colorbar_kws = {} if colorbar_kws is None else deepcopy(colorbar_kws)
+    #     label_kws = {} if label_kws is None else deepcopy(label_kws)
+    #     tick_kws = {} if tick_kws is None else deepcopy(tick_kws)
 
-        def plot_colorbar(ax: PolarAxes) -> None:
-            axin: Axes = ax.inset_axes(bounds)
-            norm = utils.plot.Normalize(vmin=vmin, vmax=vmax)
-            cb = Colorbar(
-                axin,
-                cmap=cmap,  # type: ignore
-                norm=norm,
-                orientation=orientation,  # type: ignore
-                **colorbar_kws,
-            )
-            axin.tick_params(**tick_kws)
-            if label:
-                cb.set_label(label, **label_kws)
+    #     def plot_colorbar(ax: PolarAxes) -> None:
+    #         axin: Axes = ax.inset_axes(bounds)
+    #         norm = utils.plot.Normalize(vmin=vmin, vmax=vmax)
+    #         cb = Colorbar(
+    #             axin,
+    #             cmap=cmap,  # type: ignore
+    #             norm=norm,
+    #             orientation=orientation,  # type: ignore
+    #             **colorbar_kws,
+    #         )
+    #         axin.tick_params(**tick_kws)
+    #         if label:
+    #             cb.set_label(label, **label_kws)
 
         # self._plot_funcs.append(plot_colorbar)
 
@@ -610,7 +603,7 @@ class Circos:
             Plotly figure object
         """
         layout_dict = self._initialize_plotly_layout(figsize=figsize, dpi=dpi)
-        layout_dict.update(kwargs)
+        layout_dict = utils.deep_dict_update(layout_dict, kwargs)
 
         layout_dict["shapes"] = self._get_all_shapes()
         layout_dict["annotations"] = self._get_all_annotations()
@@ -618,43 +611,43 @@ class Circos:
 
         return go.Figure(data=data_dict, layout=go.Layout(layout_dict))
 
-    def savefig(
-        self,
-        savefile: str | Path,
-        *,
-        dpi: int = 100,
-        figsize: tuple[float, float] = (8, 8),
-        pad_inches: float = 0.5,
-    ) -> None:
-        """Save figure to file
+    # def savefig(
+    #     self,
+    #     savefile: str | Path,
+    #     *,
+    #     dpi: int = 100,
+    #     figsize: tuple[float, float] = (8, 8),
+    #     pad_inches: float = 0.5,
+    # ) -> None:
+    #     """Save figure to file
 
-        Parameters
-        ----------
-        savefile : str | Path
-            Save file (`*.png`|`*.jpg`|`*.svg`|`*.pdf`)
-        dpi : int, optional
-            DPI
-        figsize : tuple[float, float], optional
-            Figure size
-        pad_inches : float, optional
-            Padding inches
+    #     Parameters
+    #     ----------
+    #     savefile : str | Path
+    #         Save file (`*.png`|`*.jpg`|`*.svg`|`*.pdf`)
+    #     dpi : int, optional
+    #         DPI
+    #     figsize : tuple[float, float], optional
+    #         Figure size
+    #     pad_inches : float, optional
+    #         Padding inches
 
-        Warnings
-        --------
-        To plot a figure that settings a user-defined legend, subtracks, or annotations,
-        call `fig.savefig()` instead of `gv.savefig()`.
-        """
-        # fig = self.plotfig(dpi=dpi, figsize=figsize)
-        # fig.savefig(
-        #     fname=savefile,  # type: ignore
-        #     dpi=dpi,
-        #     pad_inches=pad_inches,
-        #     bbox_inches="tight",
-        # )
-        # # Clear & close figure to suppress memory leak
-        # if config.clear_savefig:
-        #     fig.clear()
-        #     plt.close(fig)
+    #     Warnings
+    #     --------
+    #     To plot a figure that settings a user-defined legend, subtracks, or annotations,
+    #     call `fig.savefig()` instead of `gv.savefig()`.
+    #     """
+    #     fig = self.plotfig(dpi=dpi, figsize=figsize)
+    #     fig.savefig(
+    #         fname=savefile,  # type: ignore
+    #         dpi=dpi,
+    #         pad_inches=pad_inches,
+    #         bbox_inches="tight",
+    #     )
+    #     # Clear & close figure to suppress memory leak
+    #     if config.clear_savefig:
+    #         fig.clear()
+    #         plt.close(fig)
 
     ############################################################
     # Private Method

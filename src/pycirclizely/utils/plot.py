@@ -7,7 +7,7 @@ from typing import Literal
 import numpy as np
 from pycirclizely import config
 from plotly.graph_objs import graph_objs as go
-from .helper import ColorCycler
+from .helper import ColorCycler, deep_dict_update
 
 def get_default_color(kwargs: dict, target: str = "line") -> str:
     """
@@ -185,7 +185,7 @@ def get_plotly_label_params(
         orientation_defaults = config.plotly_text_orientation_defaults.get(
             orientation, {}
         )
-        annotation.update(orientation_defaults)
+        annotation = deep_dict_update(annotation, orientation_defaults)
 
         # Handle outer/inner alignment
         if not outer:
@@ -202,7 +202,7 @@ def get_plotly_label_params(
             annotation["yanchor"] = "middle"
 
     # Override with user-provided kwargs
-    annotation.update(kwargs)
+    annotation = deep_dict_update(annotation, kwargs)
 
     if adjust_rotation:
         rotation = np.degrees(rad)
@@ -224,14 +224,14 @@ def get_plotly_label_params(
 
 def build_plotly_shape(path: str, defaults: dict = {}, **kwargs) -> dict:
     shape_defaults = deepcopy(defaults)
-    shape_defaults.update(**kwargs)
+    shape_defaults = deep_dict_update(shape_defaults, kwargs)
     return {"type": "path", "path": path, **shape_defaults}
 
 
 def build_scatter_trace(x: list, y: list, mode: str, **kwargs) -> go.Scatter:
     scatter_config = deepcopy(config.plotly_scatter_defaults)
     scatter_config["mode"] = mode
-    scatter_config.update(kwargs)
+    scatter_config = deep_dict_update(scatter_config, kwargs)
     
     return go.Scatter(x=x, y=y, **scatter_config)
 

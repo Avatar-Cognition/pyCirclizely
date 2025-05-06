@@ -288,7 +288,7 @@ class TreeViz:
             # Get target node x, r coordinate
             x, r = self.name2xr[str(node.name)]
 
-            kwargs.update(size=size, orientation=orientation)
+            kwargs.utils.helper.deep_dict_update(size=size, orientation=orientation)
             self.track.parent_sector.text(label, x, r + 1.0, **kwargs)
 
     def highlight(
@@ -390,7 +390,7 @@ class TreeViz:
             <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.text.html>
         """
         self.search_target_node_name(target_node_label)
-        self._node2label_props[target_node_label].update(kwargs)
+        self._node2label_props[target_node_label].utils.helper.deep_dict_update(kwargs)
 
     def set_node_line_props(
         self,
@@ -426,7 +426,7 @@ class TreeViz:
                 node_name = str(descendent_node.name)
                 self._node2line_props[node_name] = kwargs
                 if apply_label_color and "color" in kwargs:
-                    self._node2label_props[node_name].update(color=kwargs["color"])
+                    self._node2label_props[node_name].utils.helper.deep_dict_update(color=kwargs["color"])
         else:
             self._node2line_props[str(clade.name)] = kwargs
 
@@ -635,7 +635,7 @@ class TreeViz:
                 child_x, child_r = self.name2xr[str(child_node.name)]
                 # Set node color if exists
                 _line_kws = deepcopy(self._line_kws)
-                _line_kws.update(self._node2line_props[str(child_node.name)])
+                _line_kws.utils.helper.deep_dict_update(self._node2line_props[str(child_node.name)])
                 # Plot horizontal line
                 h_line_points = (parent_x, child_x), (parent_r, parent_r)
                 self.track._simpleline(*h_line_points, **_line_kws)
@@ -648,7 +648,7 @@ class TreeViz:
                     end_r = max(r_plot_lim) if self._outer else min(r_plot_lim)
                     v_align_line_points = (child_x, child_x), (child_r, end_r)
                     _align_line_kws = deepcopy(self._align_line_kws)
-                    _align_line_kws.update(dict(color=_line_kws["color"]))
+                    _align_line_kws.utils.helper.deep_dict_update(dict(color=_line_kws["color"]))
                     self.track._simpleline(*v_align_line_points, **_align_line_kws)
 
     def _plot_tree_label(self) -> None:
@@ -668,8 +668,8 @@ class TreeViz:
             _text_kws = deepcopy(text_kws)
             rad = self.track.x_to_rad(x)
             params = utils.plot.get_label_params_by_rad(rad, "vertical", self._outer)
-            _text_kws.update(params)
-            _text_kws.update(self._node2label_props[label])
+            _text_kws.utils.helper.deep_dict_update(params)
+            _text_kws.utils.helper.deep_dict_update(self._node2label_props[label])
 
             # Apply label text format function if defined
             if self._label_formatter is not None:
