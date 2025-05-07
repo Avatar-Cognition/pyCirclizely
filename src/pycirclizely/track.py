@@ -777,7 +777,7 @@ class Track:
 
         color = utils.plot.get_default_color(kwargs, target="line")
         kwargs["line"] = {"color": color}
-        kwargs["hoverlabel"] = {"bgcolor": color}
+        kwargs.setdefault("hoverlabel", {"bgcolor": color})
 
         if 'text' not in kwargs:
             hovertext = utils.plot.default_hovertext(x, y, sector_name=self._parent_sector._name)
@@ -854,9 +854,9 @@ class Track:
         trace_defaults = utils.deep_dict_update(trace_defaults, kwargs)
         kwargs = trace_defaults
 
-        color = utils.plot.get_default_color(kwargs, target="line")
+        color = utils.plot.get_default_color(kwargs, target="marker")
         kwargs["line"] = {"color": color}
-        kwargs["hoverlabel"] = {"bgcolor": color}
+        kwargs.setdefault("hoverlabel", {"bgcolor": color})
 
         # Convert to polar coordinates
         rad = [self.x_to_rad(pos) for pos in x]
@@ -882,7 +882,7 @@ class Track:
         self,
         x: list[float] | np.ndarray,
         height: list[float] | np.ndarray,
-        width: float = 0.8,
+        width: float | list[float] | np.ndarray = 0.8,
         bottom: float | list[float] | np.ndarray = 0,
         align: str = "center",
         *,
@@ -891,16 +891,16 @@ class Track:
         **kwargs,
     ) -> None:
         """Plot bar chart using Plotly shapes with hover information from scatter traces.
-        
+
         Parameters
         ----------
         x : list[float] | np.ndarray
             Bar x coordinates (genomic positions)
         height : list[float] | np.ndarray
             Bar heights
-        width : float, optional
-            Bar width in genomic coordinates (default: 0.8)
-        bottom : float | list[float] | np.ndarray, optional
+        width : float or list[float], optional
+            Bar widths in genomic coordinates (default: 0.8)
+        bottom : float or list[float], optional
             Bar bottom y-value(s) (default: 0)
         align : str, optional
             Bar alignment ("center" or "edge") (default: "center")
@@ -914,69 +914,87 @@ class Track:
         if len(x) != len(height):
             raise ValueError(f"x and height lengths must match ({len(x)} vs {len(height)})")
 
-        # Convert bottom to numpy array
-        bottom = np.array(bottom) if isinstance(bottom, (list, tuple, np.ndarray)) else np.full(len(x), bottom)
+        # Convert inputs to arrays
+        x = np.asarray(x)
+        height = np.asarray(height)
+        bottom = np.full(len(x), bottom) if np.isscalar(bottom) else np.asarray(bottom)
 
         # Calculate top and vmax
-        top = np.array(height) + bottom
-        vmax = float(max(top)) if vmax is None else vmax
+        top = height + bottom
+        vmax = float(np.max(top)) if vmax is None else vmax
 
         # Value range checks
         self._check_value_min_max(bottom, vmin, vmax)
         self._check_value_min_max(top, vmin, vmax)
 
         # Convert to polar coordinates
-        rad = [self.x_to_rad(pos) for pos in x]
+        rad = np.array([self.x_to_rad(pos) for pos in x])
         r_bottom = np.array([self._y_to_r(v, vmin, vmax) for v in bottom])
         r_height = np.array([self._y_to_r(v, vmin, vmax) for v in top]) - r_bottom
-        rad_width = self.rad_size * (width / self.size)
+
+        # Handle variable width
+        if isinstance(width, (list, tuple, np.ndarray)):
+            width = np.asarray(width)
+            if len(width) != len(x):
+                raise ValueError("If `width` is an array, it must match the length of `x`")
+            rad_width = self.rad_size * (width / self.size)
+        else:
+            width = float(width)
+            width = np.full(len(x), width)
+            rad_width = np.full(len(x), self.rad_size * (width[0] / self.size))
 
         color = utils.plot.get_default_color(kwargs, target="line")
 
-        # Create hover points at center-top of each bar
-        hover_x, hover_y, hover_text = [], [], []
+        hover_x, hover_y, hover_text, start_positions, end_positions = [], [], [], [], []
+
         for i in range(len(x)):
-            # Calculate bar center position
+            bar_width = width[i]
+            bar_rad_width = rad_width[i]
+
             if align == "center":
                 center_rad = rad[i]
-                start_pos = x[i] - width/2
-                end_pos = x[i] + width/2
-            elif align == "edge":
-                center_rad = rad[i] + rad_width/2
+                start_pos = x[i] - bar_width / 2
+                end_pos = x[i] + bar_width / 2
+                rad_start = rad[i] - bar_rad_width / 2
+                rad_end = rad[i] + bar_rad_width / 2
+            else:
+                center_rad = rad[i] + bar_rad_width / 2
                 start_pos = x[i]
-                end_pos = x[i] + width
-            
-            # Position at top-center of bar
+                end_pos = x[i] + bar_width
+                rad_start = rad[i]
+                rad_end = rad[i] + bar_rad_width
+
+            # Top center of bar for hover
             top_r = r_bottom[i] + r_height[i]
             cx, cy = PolarSVGPatchBuilder._polar_to_cart(center_rad, top_r)
-            
             hover_x.append(cx)
             hover_y.append(cy)
-            hover_text.append(
-                f"Sector: {self._parent_sector._name}<br>"
-                f"Start: {start_pos:.2f}<br>"
-                f"End: {end_pos:.2f}<br>"
-                f"Value: {height[i]:.2f}"
-            )
+            start_positions.append(start_pos)
+            end_positions.append(end_pos)
 
-            # Create the bar shape
-            if align == "center":
-                rad_start = rad[i] - rad_width/2
-                rad_end = rad[i] + rad_width/2
-            else:
-                rad_start = rad[i]
-                rad_end = rad[i] + rad_width
-                
+            # Build SVG arc rectangle path
             path = PolarSVGPatchBuilder.arc_rectangle(
                 radr=(rad_start, r_bottom[i]),
                 width=rad_end - rad_start,
                 height=r_height[i]
             )
-            
+
             shape = utils.plot.build_plotly_shape(path, defaults=dict(fillcolor=color, line=dict(width=0)), **kwargs)
             self._shapes.append(shape)
 
-        # Create invisible scatter trace for hover
+        if "text" in kwargs:
+            hover_text = kwargs["text"]
+            if len(hover_text) != len(x):
+                raise ValueError("Length of custom `text` must match the number of bars.")
+        else:
+            hover_text = utils.plot.default_hovertext(
+                x=start_positions,
+                y=height,
+                x2=end_positions,
+                sector_name=self._parent_sector._name,
+            )
+
+        # Invisible scatter for hovertext
         hover_trace = utils.plot.build_scatter_trace(
             hover_x,
             hover_y,
@@ -986,8 +1004,8 @@ class Track:
             hoverinfo='text',
             hoverlabel={"bgcolor": color},
         )
-
         self._traces.append(hover_trace)
+
 
     # def stacked_bar(
     #     self,
@@ -1155,59 +1173,121 @@ class Track:
 
     #     return sb_table
 
-    # def fill_between(
-    #     self,
-    #     x: list[float] | np.ndarray,
-    #     y1: list[float] | np.ndarray,
-    #     y2: float | list[float] | np.ndarray = 0,
-    #     *,
-    #     vmin: float = 0,
-    #     vmax: float | None = None,
-    #     arc: bool = True,
-    #     **kwargs,
-    # ) -> None:
-    #     """Fill the area between two horizontal(y1, y2) curves
+    def fill_between(
+        self,
+        x: list[float] | np.ndarray,
+        y1: list[float] | np.ndarray,
+        y2: float | list[float] | np.ndarray = 0,
+        *,
+        vmin: float = 0,
+        vmax: float | None = None,
+        arc: bool = True,
+        **kwargs,
+    ) -> None:
+        """Fill the area between two curves with SVG paths at plotly.
 
-    #     Parameters
-    #     ----------
-    #     x : list[float] | np.ndarray
-    #         X coordinates
-    #     y1 : list[float] | np.ndarray
-    #         Y coordinates (first curve definition)
-    #         Y coordinate[s] (second curve definition)
-    #     vmin : float, optional
-    #         Y min value
-    #     vmax : float | None, optional
-    #         Y max value. If None, `max(y1 + y2)` is set.
-    #     arc : bool, optional
-    #         If True, plot arc style line for polar projection.
-    #         If False, simply plot linear style line.
-    #     **kwargs : dict, optional
-    #         Axes.fill_between properties (e.g. `fc="red", ec="black", lw=0.1, ...`)
-    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.fill_between.html>
-    #     """
-    #     rad = list(map(self.x_to_rad, x))
-    #     if isinstance(y2, (list, tuple, np.ndarray)):
-    #         y_all = list(y1) + list(y2)
-    #     else:
-    #         y_all = list(y1) + [y2]
-    #         y2 = [float(y2)] * len(x)
-    #     vmin = min(y_all) if vmin is None else vmin
-    #     vmax = max(y_all) if vmax is None else vmax
-    #     self._check_value_min_max(y_all, vmin, vmax)
+        Parameters
+        ----------
+        x : list[float] | np.ndarray
+            Genomic positions along the track
+        y1 : list[float] | np.ndarray
+            Upper boundary values to plot
+        y2 : float | list[float] | np.ndarray, optional
+            Lower boundary values or constant baseline (default: 0)
+        vmin : float, optional
+            Minimum value for radial scaling (default: 0)
+        vmax : float | None, optional
+            Maximum value for radial scaling. If None, uses max(y1 + y2)
+        arc : bool, optional
+            If True, creates curved arc fills (polar projection)
+            If False, creates straight chord fills
+        **kwargs : dict, optional
+            Fill properties (e.g. `fillcolor="red", line=dict(color="black", width=0.5)`)
+            See: <https://plotly.com/python/reference/scatter/#scatter-fill>
+        """
+        # Input validation
+        x = np.asarray(x)
+        y1 = np.asarray(y1)
+        y2 = np.full_like(y1, y2) if isinstance(y2, (int, float)) else np.asarray(y2)
 
-    #     r2 = [self._y_to_r(v, vmin, vmax) for v in y2]
-    #     r = [self._y_to_r(v, vmin, vmax) for v in y1]
-    #     if arc:
-    #         plot_rad, plot_r2 = self._to_arc_radr(rad, r2)
-    #         _, plot_r = self._to_arc_radr(rad, r)
-    #     else:
-    #         plot_rad, plot_r, plot_r2 = rad, r, r2
+        if len(x) != len(y1) or len(x) != len(y2):
+            raise ValueError(f"Input lengths must match ({len(x)}, {len(y1)}, {len(y2)})")
 
-    #     def plot_fill_between(ax: PolarAxes) -> None:
-    #         ax.fill_between(plot_rad, plot_r, plot_r2, **kwargs)  # type: ignore
+        y_all = np.concatenate([y1, y2])
+        vmin = y_all.min() if vmin is None else vmin
+        vmax = y_all.max() if vmax is None else vmax
+        self._check_value_min_max(y_all, vmin, vmax)
 
-    #     self._plot_funcs.append(plot_fill_between)
+        # Convert to polar coordinates
+        rad = [self.x_to_rad(pos) for pos in x]
+        vmax = max(np.max(y1), np.max(y2)) if vmax is None else vmax
+        r1 = [self._y_to_r(v, vmin, vmax) for v in y1]
+        r2 = [self._y_to_r(v, vmin, vmax) for v in y2]
+
+        # Handle aesthetics
+        color = utils.plot.get_default_color(kwargs, target="fillcolor")
+        kwargs.update({"fillcolor": color})
+        kwargs.setdefault("hoverlabel", {"bgcolor": color})
+
+        if 'text' not in kwargs:
+            hovertext = utils.plot.default_hovertext(x, y1, sector_name=self._parent_sector._name)
+        else:
+            hovertext = kwargs["text"]
+
+        if arc:
+            # Create dense interpolated points for smooth arcs
+            dense_rad = np.linspace(rad[0], rad[-1], num=100)
+            dense_r1 = np.interp(dense_rad, rad, r1)
+            dense_r2 = np.interp(dense_rad, rad, r2)
+            
+            # Convert to Cartesian coordinates
+            upper_points = [PolarSVGPatchBuilder._polar_to_cart(theta, rho) 
+                        for theta, rho in zip(dense_rad, dense_r1)]
+            lower_points = [PolarSVGPatchBuilder._polar_to_cart(theta, rho) 
+                        for theta, rho in zip(reversed(dense_rad), reversed(dense_r2))]
+            
+            # Create hover text only at original vertices
+            full_hovertext = [None] * len(upper_points)
+            vertex_indices = [int(i * (len(upper_points)-1)/(len(x)-1)) for i in range(len(x))]
+            for idx, text in zip(vertex_indices, hovertext):
+                full_hovertext[idx] = text
+        else:
+            # Straight line segments
+            upper_points = [PolarSVGPatchBuilder._polar_to_cart(theta, rho) 
+                        for theta, rho in zip(rad, r1)]
+            lower_points = [PolarSVGPatchBuilder._polar_to_cart(theta, rho) 
+                        for theta, rho in zip(reversed(rad), reversed(r2))]
+            full_hovertext = hovertext * 2
+
+        # Build trace
+        trace = {
+            'type': 'scatter',
+            'x': [p[0] for p in upper_points] + [p[0] for p in lower_points],
+            'y': [p[1] for p in upper_points] + [p[1] for p in lower_points],
+            'fill': 'toself',
+            'mode': 'lines',
+            'hoverinfo': 'text',
+            'text': full_hovertext,
+            'showlegend': False
+        }
+        
+        trace.update(kwargs)
+        self._traces.append(trace)
+
+        # Add invisible scatter points for hovertext at original positions
+        cx, cy = zip(*[PolarSVGPatchBuilder._polar_to_cart(theta, rho) for theta, rho in zip(rad, r1)])
+        hover_trace = {
+            "type": "scatter",
+            "x": cx,
+            "y": cy,
+            "mode": "markers",
+            "marker": {"opacity": 0, "size": 10},
+            "text": hovertext,
+            "hoverinfo": "text",
+            "hoverlabel": {"bgcolor": color},
+            "showlegend": False,
+        }
+        self._traces.append(hover_trace)
 
     # def heatmap(
     #     self,

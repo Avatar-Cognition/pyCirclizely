@@ -1,5 +1,5 @@
 import numpy as np
-from typing import ClassVar, Tuple, List
+from typing import ClassVar, Tuple
 from pycirclizely import config
 
 class PolarSVGPatchBuilder:

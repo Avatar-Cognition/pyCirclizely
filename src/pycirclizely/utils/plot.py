@@ -25,8 +25,9 @@ def get_default_color(kwargs: dict, target: str = "line") -> str:
     str
         A color string (e.g., "#1f77b4").
     """
-    target_dict = kwargs.get(target, {})
-    color = target_dict.get("color")
+    color = kwargs.get(target, {})
+    if isinstance(color, dict):
+        color = color.get("color")
 
     if color is None:
         color = ColorCycler.get_color()
@@ -215,7 +216,7 @@ def get_plotly_label_params(
         elif orientation == "vertical":
             # Point text radially (90° offset from horizontal)
             rotation = (rotation + 90) % 360
-            # ADDED FLIPPING FOR VERTICAL TEXT
+            # Flip for vertical text
             if 90 < rotation <= 270:
                 rotation += 180
 
@@ -241,38 +242,23 @@ def build_scatter_trace(x: list, y: list, mode: str, **kwargs) -> go.Scatter:
 def default_hovertext(
     x: list[float],
     y: list[float],
+    x2: list[float] | None = None,
     sector_name: str | None = None,
     value_format: str = ".2f",
 ) -> list[str]:
-    """
-    Generate default hovertext for Plotly traces.
-
-    Parameters
-    ----------
-    x : list[float]
-        List of x-axis (e.g., genomic position or angle) values.
-    y : list[float]
-        List of y-axis (e.g., data value) values.
-    sector_name : str, optional
-        Name of the sector to include in the hover text.
-    value_format : str, optional
-        Format string for the y values (default is ".2f").
-
-    Returns
-    -------
-    list[str]
-        List of formatted hover text strings.
-    """
     hovertext = []
-    for xi, yi in zip(x, y):
+    for i, (xi, yi) in enumerate(zip(x, y)):
         parts = []
         if sector_name:
             parts.append(f"Sector: {sector_name}")
-        parts.append(f"Position: {xi}")
+        if x2 is not None:
+            xi2 = x2[i]
+            parts.append(f"Position: {xi}–{xi2}")
+        else:
+            parts.append(f"Position: {xi}")
         parts.append(f"Value: {format(yi, value_format)}")
         hovertext.append("<br>".join(parts))
     return hovertext
-
 
 class Normalize:
     def __init__(self, vmin, vmax, clip=False):
