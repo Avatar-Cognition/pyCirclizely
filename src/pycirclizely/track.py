@@ -249,6 +249,18 @@ class Track:
         annotation = utils.plot.get_plotly_label_params(
             rad, adjust_rotation, orientation, outer, only_rotation=True, **kwargs
         )
+  
+        if orientation == "vertical":
+            font_size = annotation['font']['size']
+            padding = (font_size * 0.1) + (len(str(text)) * font_size * 0.05)
+            padding_angle = plotly_rad + np.pi/4 - 0.7
+            
+            # Convert to Cartesian displacement
+            dx = padding * np.cos(padding_angle)
+            dy = padding * np.sin(padding_angle)
+        
+            x_pos += dx
+            y_pos += dy
 
         annotation.update(
             {

@@ -215,7 +215,9 @@ def get_plotly_label_params(
         elif orientation == "vertical":
             # Point text radially (90° offset from horizontal)
             rotation = (rotation + 90) % 360
-            # No flipping needed for vertical text
+            # ADDED FLIPPING FOR VERTICAL TEXT
+            if 90 < rotation <= 270:
+                rotation += 180
 
         annotation.update({"textangle": rotation})
 
