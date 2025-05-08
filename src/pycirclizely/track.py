@@ -777,44 +777,31 @@ class Track:
 
         color = utils.plot.get_default_color(kwargs, target="line")
         kwargs["line"] = {"color": color}
-        kwargs.setdefault("hoverlabel", {"bgcolor": color})
 
-        if 'text' not in kwargs:
-            hovertext = utils.plot.default_hovertext(x, y, sector_name=self._parent_sector._name)
-        else:
-            hovertext = kwargs["text"]
+        # Generate hover text
+        hovertext = (kwargs["text"] if 'text' in kwargs 
+                else utils.plot.default_hovertext(x, y, sector_name=self._parent_sector._name))
 
-        if arc:
-            # For smooth arcs - dense points but sparse hover
-            dense_rad = np.linspace(rad[0], rad[-1], num=100)
-            dense_r = np.interp(dense_rad, rad, r)
-            x_vals, y_vals = [], []
-            for theta, rho in zip(dense_rad, dense_r):
-                cx, cy = PolarSVGPatchBuilder._polar_to_cart(theta, rho)
-                x_vals.append(cx)
-                y_vals.append(cy)
-            
-            # Create hover text only at original vertices
-            full_hovertext = [None] * len(x_vals)
-            vertex_indices = [int(i * (len(x_vals)-1)/(len(x)-1)) for i in range(len(x))]
-            for idx, text in zip(vertex_indices, hovertext):
-                full_hovertext[idx] = text
-        else:
-            # Straight lines - direct mapping
-            x_vals, y_vals = [], []
-            for theta, rho in zip(rad, r):
-                cx, cy = PolarSVGPatchBuilder._polar_to_cart(theta, rho)
-                x_vals.append(cx)
-                y_vals.append(cy)
-            full_hovertext = hovertext
+        path = PolarSVGPatchBuilder.multi_segment_path(rad, r, arc)
 
-        # Build trace with proper hover handling
+        # Add shape to layout
+        shape = utils.plot.build_plotly_shape(path, defaults=config.plotly_shape_defaults, **kwargs)
+        self._shapes.append(shape)
+
+        # Build invisible trace with proper hover handling
+        x_vals, y_vals = [], []
+        for theta, rho in zip(rad, r):
+            cx, cy = PolarSVGPatchBuilder._polar_to_cart(theta, rho)
+            x_vals.append(cx)
+            y_vals.append(cy)
+
         trace = utils.plot.build_scatter_trace(
             x=x_vals,
             y=y_vals,
-            mode='lines',
-            text=full_hovertext,
-            **kwargs
+            mode="markers",
+            marker=dict(size=20, opacity=0),
+            text=hovertext,
+            hoverlabel={"bgcolor": color},
         )
         
         self._traces.append(trace)
@@ -945,8 +932,8 @@ class Track:
 
         color = utils.plot.get_default_color(kwargs, target="line")
 
+        # Generate bar shapes and hover text locations
         hover_x, hover_y, hover_text, start_positions, end_positions = [], [], [], [], []
-
         for i in range(len(x)):
             bar_width = width[i]
             bar_rad_width = rad_width[i]
@@ -964,7 +951,7 @@ class Track:
                 rad_start = rad[i]
                 rad_end = rad[i] + bar_rad_width
 
-            # Top center of bar for hover
+            # Find top center of bar for hover
             top_r = r_bottom[i] + r_height[i]
             cx, cy = PolarSVGPatchBuilder._polar_to_cart(center_rad, top_r)
             hover_x.append(cx)
@@ -982,6 +969,7 @@ class Track:
             shape = utils.plot.build_plotly_shape(path, defaults=dict(fillcolor=color, line=dict(width=0)), **kwargs)
             self._shapes.append(shape)
 
+        # Get hovertext
         if "text" in kwargs:
             hover_text = kwargs["text"]
             if len(hover_text) != len(x):
@@ -994,14 +982,13 @@ class Track:
                 sector_name=self._parent_sector._name,
             )
 
-        # Invisible scatter for hovertext
+        # Invisible scatter for hovertext at top point of bar
         hover_trace = utils.plot.build_scatter_trace(
             hover_x,
             hover_y,
             mode='markers',
             text=hover_text,
             marker=dict(size=20, opacity=0),
-            hoverinfo='text',
             hoverlabel={"bgcolor": color},
         )
         self._traces.append(hover_trace)
@@ -1223,70 +1210,32 @@ class Track:
         vmax = max(np.max(y1), np.max(y2)) if vmax is None else vmax
         r1 = [self._y_to_r(v, vmin, vmax) for v in y1]
         r2 = [self._y_to_r(v, vmin, vmax) for v in y2]
-
+        
         # Handle aesthetics
         color = utils.plot.get_default_color(kwargs, target="fillcolor")
         kwargs.update({"fillcolor": color})
-        kwargs.setdefault("hoverlabel", {"bgcolor": color})
 
-        if 'text' not in kwargs:
-            hovertext = utils.plot.default_hovertext(x, y1, sector_name=self._parent_sector._name)
-        else:
-            hovertext = kwargs["text"]
+        # Generate filled shape
+        path = PolarSVGPatchBuilder.build_filled_path(rad, r1, r2, arc=arc)
+        shape = utils.plot.build_plotly_shape(path, defaults=dict(fillcolor=color, line=dict(width=0)), **kwargs)
 
-        if arc:
-            # Create dense interpolated points for smooth arcs
-            dense_rad = np.linspace(rad[0], rad[-1], num=100)
-            dense_r1 = np.interp(dense_rad, rad, r1)
-            dense_r2 = np.interp(dense_rad, rad, r2)
-            
-            # Convert to Cartesian coordinates
-            upper_points = [PolarSVGPatchBuilder._polar_to_cart(theta, rho) 
-                        for theta, rho in zip(dense_rad, dense_r1)]
-            lower_points = [PolarSVGPatchBuilder._polar_to_cart(theta, rho) 
-                        for theta, rho in zip(reversed(dense_rad), reversed(dense_r2))]
-            
-            # Create hover text only at original vertices
-            full_hovertext = [None] * len(upper_points)
-            vertex_indices = [int(i * (len(upper_points)-1)/(len(x)-1)) for i in range(len(x))]
-            for idx, text in zip(vertex_indices, hovertext):
-                full_hovertext[idx] = text
-        else:
-            # Straight line segments
-            upper_points = [PolarSVGPatchBuilder._polar_to_cart(theta, rho) 
-                        for theta, rho in zip(rad, r1)]
-            lower_points = [PolarSVGPatchBuilder._polar_to_cart(theta, rho) 
-                        for theta, rho in zip(reversed(rad), reversed(r2))]
-            full_hovertext = hovertext * 2
-
-        # Build trace
-        trace = {
-            'type': 'scatter',
-            'x': [p[0] for p in upper_points] + [p[0] for p in lower_points],
-            'y': [p[1] for p in upper_points] + [p[1] for p in lower_points],
-            'fill': 'toself',
-            'mode': 'lines',
-            'hoverinfo': 'text',
-            'text': full_hovertext,
-            'showlegend': False
-        }
+        # Append to shape list
+        self._shapes.append(shape)
         
-        trace.update(kwargs)
-        self._traces.append(trace)
+        # Get hovertext
+        hovertext = (kwargs["text"] if 'text' in kwargs 
+                else utils.plot.default_hovertext(x, y1, sector_name=self._parent_sector._name))
 
         # Add invisible scatter points for hovertext at original positions
-        cx, cy = zip(*[PolarSVGPatchBuilder._polar_to_cart(theta, rho) for theta, rho in zip(rad, r1)])
-        hover_trace = {
-            "type": "scatter",
-            "x": cx,
-            "y": cy,
-            "mode": "markers",
-            "marker": {"opacity": 0, "size": 10},
-            "text": hovertext,
-            "hoverinfo": "text",
-            "hoverlabel": {"bgcolor": color},
-            "showlegend": False,
-        }
+        hover_x, hover_y = zip(*[PolarSVGPatchBuilder._polar_to_cart(theta, rho) for theta, rho in zip(rad, r1)])
+        hover_trace = utils.plot.build_scatter_trace(
+            hover_x,
+            hover_y,
+            mode='markers',
+            text=hovertext,
+            marker=dict(size=20, opacity=0),
+            hoverlabel={"bgcolor": color},
+        )
         self._traces.append(hover_trace)
 
     # def heatmap(

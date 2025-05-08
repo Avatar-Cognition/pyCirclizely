@@ -344,7 +344,7 @@ class Sector:
         # Generate path based on arc preference
         path = (
             PolarSVGPatchBuilder.arc_line(rad_lim, r_lim) if arc 
-            else PolarSVGPatchBuilder.line(rad_lim, r_lim)
+            else PolarSVGPatchBuilder.straight_line(rad_lim, r_lim)
         )
         
         # Create shape with defaults and kwargs

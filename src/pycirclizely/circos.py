@@ -334,7 +334,7 @@ class Circos:
         
         path = (
             PolarSVGPatchBuilder.arc_line(rad_lim, r_lim) if arc 
-            else PolarSVGPatchBuilder.line(rad_lim, r_lim)
+            else PolarSVGPatchBuilder.straight_line(rad_lim, r_lim)
         )
             
         shape = utils.plot.build_plotly_shape(path, config.plotly_shape_defaults, **kwargs)
