@@ -87,6 +87,14 @@ plotly_shape_defaults = {
     "layer": "above",
 }
 
+# Plotly link defaults
+plotly_link_defaults = {
+    "fillcolor": "grey",
+    "opacity": 0.5,
+    "line": {"width": 0.2, "color": "white"},
+    "layer": "above",
+}
+
 # Text orientation-specific overrides
 plotly_text_orientation_defaults = {
     "horizontal": {

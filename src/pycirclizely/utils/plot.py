@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from enum import IntEnum
 import math
 from copy import deepcopy
 from typing import Literal
@@ -273,3 +274,17 @@ class Normalize:
         if self.clip:
             return max(0.0, min(1.0, normed))
         return normed
+    
+class LinkDirection(IntEnum):
+    NONE = 0
+    FORWARD = 1
+    REVERSE = -1
+    BIDIRECTIONAL = 2
+
+    def arrow(self) -> str:
+        return {
+            LinkDirection.NONE: "-",         # You can customize this if needed
+            LinkDirection.FORWARD: "->",
+            LinkDirection.REVERSE: "<-",
+            LinkDirection.BIDIRECTIONAL: "<->",
+        }[self]

@@ -14,6 +14,7 @@ from plotly.graph_objs.layout._annotation import Annotation
 from plotly.graph_objs.layout._shape import Shape
 from plotly.basedatatypes import BaseTraceType
 from pycirclizely import config, utils
+from pycirclizely.utils.plot import LinkDirection
 from pycirclizely.parser import Bed
 from pycirclizely.patches import PolarSVGPatchBuilder
 from pycirclizely.sector import Sector
@@ -228,6 +229,24 @@ class Circos:
                     color = cytoband_cmap.get(str(rec.score), "white")
                     track.rect(rec.start, rec.end, fc=color)
 
+    def get_sector(self, name: str) -> Sector:
+        """Get sector by name
+
+        Parameters
+        ----------
+        name : str
+            Sector name
+
+        Returns
+        -------
+        sector : Sector
+            Sector
+        """
+        name2sector = {s.name: s for s in self.sectors}
+        if name not in name2sector:
+            raise ValueError(f"{name=} sector not found.")
+        return name2sector[name]
+
     def axis(self, **kwargs) -> None:
         """Plot axis
 
@@ -377,89 +396,94 @@ class Circos:
         shape = utils.plot.build_plotly_shape(path, config.plotly_shape_defaults, **kwargs)
         self._shapes.append(shape)
 
-    # def link(
-    #     self,
-    #     sector_region1: tuple[str, float, float],
-    #     sector_region2: tuple[str, float, float],
-    #     r1: float | None = None,
-    #     r2: float | None = None,
-    #     *,
-    #     color: str = "grey",
-    #     alpha: float = 0.5,
-    #     height_ratio: float = 0.5,
-    #     direction: int = 0,
-    #     arrow_length_ratio: float = 0.05,
-    #     allow_twist: bool = True,
-    #     **kwargs,
-    # ) -> None:
-    #     """Plot link to specified region within or between sectors
 
-    #     Parameters
-    #     ----------
-    #     sector_region1 : tuple[str, float, float]
-    #         Link sector region1 (name, start, end)
-    #     sector_region2 : tuple[str, float, float]
-    #         Link sector region2 (name, start, end)
-    #     r1 : float | None, optional
-    #         Link radius end position for sector_region1.
-    #         If None, lowest radius position of track in target sector is set.
-    #     r2 : float | None, optional
-    #         Link radius end position for sector_region2.
-    #         If None, lowest radius position of track in target sector is set.
-    #     color : str, optional
-    #         Link color
-    #     alpha : float, optional
-    #         Link color alpha (transparency) value
-    #     height_ratio : float, optional
-    #         Bezier curve height ratio
-    #     direction : int, optional
-    #         `0`: No direction edge shape (Default)
-    #         `1`: Forward direction arrow edge shape (region1 -> region2)
-    #         `-1`: Reverse direction arrow edge shape (region1 <- region2)
-    #         `2`: Bidirectional arrow edge shape (region1 <-> region2)
-    #     arrow_length_ratio : float, optional
-    #         Direction arrow length ratio
-    #     allow_twist : bool, optional
-    #         If False, twisted link is automatically resolved.
-    #         <http://circos.ca/documentation/tutorials/links/twists/images>
-    #     **kwargs : dict, optional
-    #         Patch properties (e.g. `ec="red", lw=1.0, hatch="//", ...`)
-    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
-    #     """
-    #     # Set data for plot link
-    #     name1, start1, end1 = sector_region1
-    #     name2, start2, end2 = sector_region2
-    #     sector1, sector2 = self.get_sector(name1), self.get_sector(name2)
-    #     r1 = sector1.get_lowest_r() if r1 is None else r1
-    #     r2 = sector2.get_lowest_r() if r2 is None else r2
-    #     rad_start1, rad_end1 = sector1.x_to_rad(start1), sector1.x_to_rad(end1)
-    #     rad_start2, rad_end2 = sector2.x_to_rad(start2), sector2.x_to_rad(end2)
+    def link(
+        self,
+        sector_region1: tuple[str, float, float],
+        sector_region2: tuple[str, float, float],
+        r1: float | None = None,
+        r2: float | None = None,
+        *,
+        height_ratio: float = 0.5,
+        direction: LinkDirection = LinkDirection.NONE,
+        arrow_length_ratio: float = 0.05,
+        allow_twist: bool = True,
+        **kwargs,
+    ) -> None:
+        """Plot curved links between genomic regions using SVG paths.
 
-    #     # Set patch kwargs & default linewidth as 0.1
-    #     # If linewidth=0 is set, twisted part is almost invisible
-    #     kwargs.utils.helper.deep_dict_update(dict(color=color, alpha=alpha))
-    #     if "lw" not in kwargs and "linewidth" not in kwargs:
-    #         kwargs.utils.helper.deep_dict_update(dict(lw=0.1))
+        Parameters
+        ----------
+        sector_region1 : tuple[str, float, float]
+            First region (sector_name, start, end)
+        sector_region2 : tuple[str, float, float]
+            Second region (sector_name, start, end)
+        r1 : float | None, optional
+            Radius for first region (None uses track bottom)
+        r2 : float | None, optional
+            Radius for second region (None uses track bottom)
+        height_ratio : float, optional
+            Controls curve height (default: 0.5)
+        direction : int, optional
+            0=no arrow, 1=forward, -1=reverse, 2=bidirectional
+        arrow_length_ratio : float, optional
+            Arrow size relative to link length
+        allow_twist : bool, optional
+            Whether to allow twisted ribbons
+        **kwargs : dict, optional
+            Shape properties (e.g. `fillcolor="red", line=dict(color="blue", width=2)`)
+            Hover text for link (e.g. `hovertext="Link: ..."`).
+            See: <https://plotly.com/python/reference/layout/shapes/>
+        """
+        # Extract regions
+        name1, start1, end1 = sector_region1
+        name2, start2, end2 = sector_region2
 
-    #     if not allow_twist:
-    #         # Resolve twist
-    #         if (rad_end1 - rad_start1) * (rad_end2 - rad_start2) > 0:
-    #             rad_start2, rad_end2 = rad_end2, rad_start2
+        # Get default hovertext or pop from kwargs
+        arrow_symbol = LinkDirection(direction).arrow()
+        hovertext = kwargs.pop(
+            'hovertext', 
+            f"Link: {name1}:{start1}-{end1} {arrow_symbol} {name2}:{start2}-{end2}"
+        )
 
-    #     # Create bezier curve path patch
-    #     bezier_curve_link = BezierCurveLink(
-    #         rad_start1,
-    #         rad_end1,
-    #         r1,
-    #         rad_start2,
-    #         rad_end2,
-    #         r2,
-    #         height_ratio,
-    #         direction,
-    #         arrow_length_ratio,
-    #         **kwargs,
-    #     )
-    #     self._patches.append(bezier_curve_link)
+        # Get sectors and calculate positions
+        sector1, sector2 = self.get_sector(name1), self.get_sector(name2)
+        r1 = sector1.get_lowest_r() if r1 is None else r1
+        r2 = sector2.get_lowest_r() if r2 is None else r2
+        rad_start1, rad_end1 = sector1.x_to_rad(start1), sector1.x_to_rad(end1)
+        rad_start2, rad_end2 = sector2.x_to_rad(start2), sector2.x_to_rad(end2)
+
+        # Handle twist resolution
+        if not allow_twist:
+            if (rad_end1 - rad_start1) * (rad_end2 - rad_start2) > 0:
+                rad_start2, rad_end2 = rad_end2, rad_start2
+
+        # Create Bezier curve path
+        path = PolarSVGPatchBuilder.bezier_ribbon_path(
+            rad_start1, rad_end1, r1,
+            rad_start2, rad_end2, r2,
+            height_ratio,
+            direction,
+            arrow_length_ratio
+        )
+
+        shape = utils.plot.build_plotly_shape(path, defaults=config.plotly_link_defaults, **kwargs)
+        self._shapes.append(shape)
+
+        # Add invisible scatter points for hovertext at link positions
+        hover_x, hover_y = zip(*[
+            PolarSVGPatchBuilder._polar_to_cart((rad_start1 + rad_end1) / 2, r1),
+            PolarSVGPatchBuilder._polar_to_cart((rad_start2 + rad_end2) / 2, r2)
+        ])
+        hover_trace = utils.plot.build_scatter_trace(
+            hover_x,
+            hover_y,
+            mode='markers',
+            text=hovertext,
+            marker=dict(size=20, opacity=0),
+            hoverlabel={"bgcolor": shape['fillcolor']},
+        )
+        self._traces.append(hover_trace)
 
     # def link_line(
     #     self,
@@ -468,7 +492,6 @@ class Circos:
     #     r1: float | None = None,
     #     r2: float | None = None,
     #     *,
-    #     color: str = "black",
     #     height_ratio: float = 0.5,
     #     direction: int = 0,
     #     arrow_height: float = 3.0,
@@ -489,8 +512,6 @@ class Circos:
     #     r2 : float | None, optional
     #         Link line radius end position for sector_pos2.
     #         If None, lowest radius position of track in target sector is set.
-    #     color : str, optional
-    #         Link line color
     #     height_ratio : float, optional
     #         Bezier curve height ratio
     #     direction : int, optional

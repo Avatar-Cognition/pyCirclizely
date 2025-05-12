@@ -1218,8 +1218,6 @@ class Track:
         # Generate filled shape
         path = PolarSVGPatchBuilder.build_filled_path(rad, r1, r2, arc=arc)
         shape = utils.plot.build_plotly_shape(path, defaults=dict(fillcolor=color, line=dict(width=0)), **kwargs)
-
-        # Append to shape list
         self._shapes.append(shape)
         
         # Get hovertext
