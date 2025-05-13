@@ -11,7 +11,7 @@ from typing import ClassVar
 # Fundamental Plot Parameters
 MIN_R = 0
 MAX_R = 100
-R_PLOT_MARGIN = 10
+R_PLOT_MARGIN = 15
 ARC_POINTS = 100
 R_LIM = (MIN_R, MAX_R)
 AXIS_FACE_PARAM = dict(layer="below", line=dict(color="rgba(0,0,0,0)"))
