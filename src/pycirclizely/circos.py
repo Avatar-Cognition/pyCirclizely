@@ -6,7 +6,6 @@ import textwrap
 from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
-# from typing import Any
 
 import numpy as np
 import plotly.graph_objects as go
@@ -381,11 +380,10 @@ class Circos:
             See: <https://plotly.com/python/reference/layout/shapes/>
         """
         deg_lim = self.deg_lim if deg_lim is None else deg_lim
-        rad_lim = (np.radians(min(deg_lim)), np.radians(max(deg_lim)))
+        rad_start = math.radians(deg_lim[0])
+        rad_end = math.radians(deg_lim[1])
 
-        # Convert to Plotly's coordinate system
-        plotly_rad_lim = [-(rad - np.pi / 2) for rad in rad_lim]
-        min_rad, max_rad = min(plotly_rad_lim), max(plotly_rad_lim)
+        min_rad, max_rad = min(rad_start, rad_end), max(rad_start, rad_end)
 
         # Build rectangle path
         radr = (min_rad, min(r_lim))
@@ -485,70 +483,70 @@ class Circos:
         )
         self._traces.append(hover_trace)
 
-    # def link_line(
-    #     self,
-    #     sector_pos1: tuple[str, float],
-    #     sector_pos2: tuple[str, float],
-    #     r1: float | None = None,
-    #     r2: float | None = None,
-    #     *,
-    #     height_ratio: float = 0.5,
-    #     direction: int = 0,
-    #     arrow_height: float = 3.0,
-    #     arrow_width: float = 2.0,
-    #     **kwargs,
-    # ) -> None:
-    #     """Plot link line to specified position within or between sectors
+    def link_line(
+        self,
+        sector_pos1: tuple[str, float],
+        sector_pos2: tuple[str, float],
+        r1: float | None = None,
+        r2: float | None = None,
+        *,
+        height_ratio: float = 0.5,
+        direction: int = 0,
+        arrow_height: float = 3.0,
+        arrow_width: float = 2.0,
+        **kwargs,
+    ) -> None:
+        """Plot link line to specified position within or between sectors
 
-    #     Parameters
-    #     ----------
-    #     sector_pos1 : tuple[str, float]
-    #         Link line sector position1 (name, position)
-    #     sector_pos2 : tuple[str, float]
-    #         Link line sector position2 (name, position)
-    #     r1 : float | None, optional
-    #         Link line radius end position for sector_pos1.
-    #         If None, lowest radius position of track in target sector is set.
-    #     r2 : float | None, optional
-    #         Link line radius end position for sector_pos2.
-    #         If None, lowest radius position of track in target sector is set.
-    #     height_ratio : float, optional
-    #         Bezier curve height ratio
-    #     direction : int, optional
-    #         `0`: No direction edge shape (Default)
-    #         `1`: Forward direction arrow edge shape (pos1 -> pos2)
-    #         `-1`: Reverse direction arrow edge shape (pos1 <- pos2)
-    #         `2`: Bidirectional arrow edge shape (pos1 <-> pos2)
-    #     arrow_height : float, optional
-    #         Arrow height size (Radius unit)
-    #     arrow_width : float, optional
-    #         Arrow width size (Degree unit)
-    #     **kwargs : dict, optional
-    #         Patch properties (e.g. `lw=1.0, ls="dashed", ...`)
-    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
-    #     """
-    #     # Set data for plot link
-    #     name1, pos1 = sector_pos1
-    #     name2, pos2 = sector_pos2
-    #     sector1, sector2 = self.get_sector(name1), self.get_sector(name2)
-    #     r1 = sector1.get_lowest_r() if r1 is None else r1
-    #     r2 = sector2.get_lowest_r() if r2 is None else r2
-    #     rad_pos1, rad_pos2 = sector1.x_to_rad(pos1), sector2.x_to_rad(pos2)
+        Parameters
+        ----------
+        sector_pos1 : tuple[str, float]
+            Link line sector position1 (name, position)
+        sector_pos2 : tuple[str, float]
+            Link line sector position2 (name, position)
+        r1 : float | None, optional
+            Link line radius end position for sector_pos1.
+            If None, lowest radius position of track in target sector is set.
+        r2 : float | None, optional
+            Link line radius end position for sector_pos2.
+            If None, lowest radius position of track in target sector is set.
+        height_ratio : float, optional
+            Bezier curve height ratio
+        direction : int, optional
+            `0`: No direction edge shape (Default)
+            `1`: Forward direction arrow edge shape (pos1 -> pos2)
+            `-1`: Reverse direction arrow edge shape (pos1 <- pos2)
+            `2`: Bidirectional arrow edge shape (pos1 <-> pos2)
+        arrow_height : float, optional
+            Arrow height size (Radius unit)
+        arrow_width : float, optional
+            Arrow width size (Degree unit)
+        **kwargs : dict, optional
+            Patch properties (e.g. `lw=1.0, ls="dashed", ...`)
+            <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
+        """
+        # Set data for plot link
+        name1, pos1 = sector_pos1
+        name2, pos2 = sector_pos2
+        sector1, sector2 = self.get_sector(name1), self.get_sector(name2)
+        r1 = sector1.get_lowest_r() if r1 is None else r1
+        r2 = sector2.get_lowest_r() if r2 is None else r2
+        rad_pos1, rad_pos2 = sector1.x_to_rad(pos1), sector2.x_to_rad(pos2)
 
-    #     kwargs.utils.helper.deep_dict_update(color=color)
+        kwargs.utils.helper.deep_dict_update(color=color)
 
-    #     bezier_curve_line = BezierCurveLine(
-    #         rad_pos1,
-    #         r1,
-    #         rad_pos2,
-    #         r2,
-    #         height_ratio,
-    #         direction,
-    #         arrow_height,
-    #         arrow_width,
-    #         **kwargs,
-    #     )
-    #     self._patches.append(bezier_curve_line)
+        bezier_curve_line = BezierCurveLine(
+            rad_pos1,
+            r1,
+            rad_pos2,
+            r2,
+            height_ratio,
+            direction,
+            arrow_height,
+            arrow_width,
+            **kwargs,
+        )
+        self._patches.append(bezier_curve_line)
 
     # def colorbar(
     #     self,
