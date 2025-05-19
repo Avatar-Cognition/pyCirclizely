@@ -176,32 +176,24 @@ def get_plotly_label_params(
     adjust_rotation: bool,
     orientation: str,
     outer: bool = True,
-    only_rotation: bool = False,
     **kwargs,
 ) -> dict:
     # Start with global defaults
     annotation = deepcopy(config.plotly_annotation_defaults)
 
-    if not only_rotation:
-        # Apply orientation-specific defaults
-        orientation_defaults = config.plotly_text_orientation_defaults.get(
-            orientation, {}
-        )
-        annotation = deep_dict_update(annotation, orientation_defaults)
-
-        # Handle outer/inner alignment
-        if not outer:
-            if orientation == "horizontal":
-                annotation["yanchor"] = (
-                    "bottom" if annotation["yanchor"] == "top" else "top"
-                )
-            elif orientation == "vertical":
-                annotation["xanchor"] = (
-                    "right" if annotation["xanchor"] == "left" else "left"
-                )
-        else:
-            annotation["xanchor"] = "center"
-            annotation["yanchor"] = "middle"
+    # Handle outer/inner alignment
+    if not outer:
+        if orientation == "horizontal":
+            annotation["yanchor"] = (
+                "bottom" if annotation["yanchor"] == "top" else "top"
+            )
+        elif orientation == "vertical":
+            annotation["xanchor"] = (
+                "right" if annotation["xanchor"] == "left" else "left"
+            )
+    else:
+        annotation["xanchor"] = "center"
+        annotation["yanchor"] = "middle"
 
     # Override with user-provided kwargs
     annotation = deep_dict_update(annotation, kwargs)

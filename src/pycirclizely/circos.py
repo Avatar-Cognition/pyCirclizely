@@ -465,7 +465,7 @@ class Circos:
             arrow_length_ratio
         )
 
-        shape = utils.plot.build_plotly_shape(path, defaults=config.plotly_link_defaults, **kwargs)
+        shape = utils.plot.build_plotly_shape(path, defaults=config.plotly_ribbonlink_defaults, **kwargs)
         self._shapes.append(shape)
 
         # Add invisible scatter points for hovertext at link positions
@@ -493,7 +493,7 @@ class Circos:
         height_ratio: float = 0.5,
         direction: int = 0,
         arrow_height: float = 3.0,
-        arrow_width: float = 2.0,
+        arrow_width: float = 0.05,
         **kwargs,
     ) -> None:
         """Plot link line to specified position within or between sectors
@@ -522,31 +522,54 @@ class Circos:
         arrow_width : float, optional
             Arrow width size (Degree unit)
         **kwargs : dict, optional
-            Patch properties (e.g. `lw=1.0, ls="dashed", ...`)
-            <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
+            Shape properties (e.g. `fillcolor="red", line=dict(color="blue", width=2)`)
+            Hover text for link (e.g. `hovertext="Link: ..."`).
+            See: <https://plotly.com/python/reference/layout/shapes/>
         """
         # Set data for plot link
         name1, pos1 = sector_pos1
         name2, pos2 = sector_pos2
+
+        # Get default hovertext or pop from kwargs
+        arrow_symbol = LinkDirection(direction).arrow()
+        hovertext = kwargs.pop(
+            'hovertext', 
+            f"Link: {name1}:{pos1} {arrow_symbol} {name2}:{pos2}"
+        )
+
+        # Get coordinates
         sector1, sector2 = self.get_sector(name1), self.get_sector(name2)
         r1 = sector1.get_lowest_r() if r1 is None else r1
         r2 = sector2.get_lowest_r() if r2 is None else r2
         rad_pos1, rad_pos2 = sector1.x_to_rad(pos1), sector2.x_to_rad(pos2)
 
-        kwargs.utils.helper.deep_dict_update(color=color)
-
-        bezier_curve_line = BezierCurveLine(
-            rad_pos1,
-            r1,
-            rad_pos2,
-            r2,
+        # Create Bezier curve path
+        path = PolarSVGPatchBuilder.bezier_line_path(
+            rad_pos1, r1,
+            rad_pos2, r2,
             height_ratio,
             direction,
             arrow_height,
             arrow_width,
-            **kwargs,
         )
-        self._patches.append(bezier_curve_line)
+
+        shape = utils.plot.build_plotly_shape(path, defaults=config.plotly_linelink_defaults, **kwargs)
+        self._shapes.append(shape)
+
+        # Add invisible scatter points for hovertext at link positions
+        hover_x, hover_y = zip(*[
+            PolarSVGPatchBuilder._polar_to_cart(rad_pos1, r1),
+            PolarSVGPatchBuilder._polar_to_cart(rad_pos2, r2)
+        ])
+        hover_trace = utils.plot.build_scatter_trace(
+            hover_x,
+            hover_y,
+            mode='markers',
+            text=hovertext,
+            marker=dict(size=20, opacity=0),
+            hoverlabel={"bgcolor": shape['line']['color']},
+        )
+        self._traces.append(hover_trace)
 
     # def colorbar(
     #     self,

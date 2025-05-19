@@ -192,6 +192,48 @@ class PolarSVGPatchBuilder:
         return path
     
     @classmethod
+    def bezier_line_path(
+        cls,
+        rad1: float, r1: float,
+        rad2: float, r2: float,
+        height_ratio: float,
+        direction: int = 0,
+        arrow_height: float = 3.0,
+        arrow_width: float = 0.05,
+    ) -> str:
+        """Create SVG path for a complete link line."""
+
+        # Handle different directions
+        if direction in (-1, 2):
+            # Start at arrow base on region1 and appply reverse arrow
+            arrow_r1 = r1 - arrow_height
+            left_base = rad1 + arrow_width / 2
+            right_base = rad1 - arrow_width / 2
+            arrow_start = cls._polar_to_cart(left_base, arrow_r1)
+            path = f"M {arrow_start[0]},{arrow_start[1]}"
+            path += cls._arrow_path(right_base, left_base, arrow_r1, r1)
+            tip_point = cls._polar_to_cart(rad1, r1)
+            path += f" M {tip_point[0]},{tip_point[1]}"
+            
+        else:
+            start_point = cls._polar_to_cart(rad1, r1)
+            path = f"M {start_point[0]},{start_point[1]}"
+        
+        # Append Bezier curve to region2 (end1 → end2)
+        path += " " + cls._bezier_segment(rad1, r1, rad2, r2, height_ratio)
+        
+        # Handle forward arrow (pointing to middle of region2)
+        if direction in (1, 2):
+            arrow_r2 = r2 - arrow_height
+            left_base = rad2 + arrow_width / 2
+            right_base = rad2 - arrow_width / 2
+            arrow_start = cls._polar_to_cart(left_base, arrow_r2)
+            path += f" M {arrow_start[0]},{arrow_start[1]}"
+            path += cls._arrow_path(right_base, left_base, arrow_r2, r2)
+        
+        return path
+    
+    @classmethod
     def _bezier_segment(
         cls,
         rad1: float, r1: float,

@@ -247,7 +247,7 @@ class Track:
         y_pos = r * np.sin(plotly_rad)
 
         annotation = utils.plot.get_plotly_label_params(
-            rad, adjust_rotation, orientation, outer, only_rotation=True, **kwargs
+            rad, adjust_rotation, orientation, outer, **kwargs
         )
   
         if orientation == "vertical":
