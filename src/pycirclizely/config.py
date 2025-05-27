@@ -88,7 +88,7 @@ plotly_shape_defaults = {
 }
 
 # Plotly ribbon link defaults
-plotly_ribbonlink_defaults = {
+plotly_arrow_defaults = {
     "fillcolor": "grey",
     "opacity": 0.5,
     "line": {"width": 0.2, "color": "white"},

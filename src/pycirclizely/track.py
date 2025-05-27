@@ -325,54 +325,59 @@ class Track:
         shape = utils.plot.build_plotly_shape(path, config.plotly_shape_defaults, **kwargs)
         self._shapes.append(shape)
 
-    # def arrow(
-    #     self,
-    #     start: float,
-    #     end: float,
-    #     *,
-    #     r_lim: tuple[float, float] | None = None,
-    #     head_length: float = 2,
-    #     shaft_ratio: float = 0.5,
-    #     **kwargs,
-    # ) -> None:
-    #     """Plot arrow
+    def arrow(
+        self,
+        start: float,
+        end: float,
+        *,
+        r_lim: tuple[float, float] | None = None,
+        head_length: float = 2,
+        shaft_ratio: float = 0.5,
+        **kwargs,
+    ) -> None:
+        """Plot arrow using SVG path
 
-    #     Parameters
-    #     ----------
-    #     start : float
-    #         Start position (x coordinate)
-    #     end : float
-    #         End position (x coordinate)
-    #     r_lim : tuple[float, float] | None, optional
-    #         Radius limit range. If None, `track.r_lim` is set.
-    #     head_length : float, optional
-    #         Arrow head length (Degree unit)
-    #     shaft_ratio : float, optional
-    #         Arrow shaft ratio (0 - 1.0)
-    #     **kwargs : dict, optional
-    #         Patch properties (e.g. `fc="red", ec="blue", lw=1.0, ...`)
-    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
-    #     """
-    #     rad_arrow_start = self.x_to_rad(start)
-    #     rad_arrow_end = self.x_to_rad(end)
-    #     if r_lim is None:
-    #         r, dr = min(self.r_plot_lim), self.r_plot_size
-    #     else:
-    #         min_range = min(self.r_lim) - config.REL_TOL
-    #         max_range = max(self.r_lim) + config.REL_TOL
-    #         if not min_range <= min(r_lim) < max(r_lim) <= max_range:
-    #             raise ValueError(f"{r_lim=} is invalid track range.\n{self}")
-    #         r, dr = min(r_lim), max(r_lim) - min(r_lim)
-    #     arc_arrow = ArcArrow(
-    #         rad=rad_arrow_start,
-    #         r=r,
-    #         drad=rad_arrow_end - rad_arrow_start,
-    #         dr=dr,
-    #         head_length=math.radians(head_length),
-    #         shaft_ratio=shaft_ratio,
-    #         **kwargs,
-    #     )
-    #     self._patches.append(arc_arrow)
+        Parameters
+        ----------
+        start : float
+            Start position (x coordinate)
+        end : float
+            End position (x coordinate)
+        r_lim : tuple[float, float] | None, optional
+            Radius limit range. If None, `track.r_lim` is set.
+        head_length : float, optional
+            Arrow head length (Degree unit)
+        shaft_ratio : float, optional
+            Arrow shaft ratio (0 - 1.0)
+        **kwargs : dict, optional
+            Patch properties (e.g. `fill="red", line_color="blue", line_width=1.0, ...`)
+        """
+        # Convert positions to radians
+        rad_arrow_start = self.x_to_rad(start)
+        rad_arrow_end = self.x_to_rad(end)
+        
+        # Handle radius limits
+        if r_lim is None:
+            r, dr = min(self.r_plot_lim), self.r_plot_size
+        else:
+            min_range = min(self.r_lim) - config.REL_TOL
+            max_range = max(self.r_lim) + config.REL_TOL
+            if not min_range <= min(r_lim) < max(r_lim) <= max_range:
+                raise ValueError(f"{r_lim=} is invalid track range.\n{self}")
+            r, dr = min(r_lim), max(r_lim) - min(r_lim)
+        
+        # Create SVG path for the arrow
+        path = PolarSVGPatchBuilder.arc_arrow(
+            rad=rad_arrow_start,
+            r=r,
+            drad=rad_arrow_end - rad_arrow_start,
+            dr=dr,
+            head_length=math.radians(head_length),
+            shaft_ratio=shaft_ratio,
+        )
+        shape = utils.plot.build_plotly_shape(path, 
+                defaults={**config.plotly_arrow_defaults, "opacity": 1}, **kwargs)
+        self._shapes.append(shape)
 
     # def annotate(
     #     self,

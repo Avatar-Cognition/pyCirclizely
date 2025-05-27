@@ -1,4 +1,3 @@
-import math
 import numpy as np
 from typing import ClassVar, Tuple
 from pycirclizely import config
@@ -112,6 +111,62 @@ class PolarSVGPatchBuilder:
         return f"M {start[0]} {start[1]} L {end[0]} {end[1]}"
     
     @classmethod
+    def arc_arrow(
+        cls,
+        rad: float,
+        r: float,
+        drad: float,
+        dr: float,
+        head_length: float = np.pi / 90,
+        shaft_ratio: float = 0.5,
+    ) -> str:
+        """
+        Create an arc-shaped arrow with proper path closure.
+        """
+        # Calculate shaft dimensions
+        shaft_size = dr * shaft_ratio
+        r_shaft_bottom = r + ((dr - shaft_size) / 2)
+        r_shaft_upper = r + dr - ((dr - shaft_size) / 2)
+
+        # Determine direction and adjust head length
+        is_forward = drad >= 0
+        abs_drad = abs(drad)
+        head_length = min(head_length, abs_drad)
+        
+        # Calculate key positions
+        if is_forward:
+            rad_shaft_tip = rad + (abs_drad - head_length)
+            rad_arrow_tip = rad + abs_drad
+        else:
+            rad_shaft_tip = rad - (abs_drad - head_length)
+            rad_arrow_tip = rad - abs_drad
+
+        # Build the bottom shaft
+        bottom_shaft = cls.arc_line(
+            rad_lim=(rad, rad_shaft_tip),
+            r_lim=(r_shaft_bottom, r_shaft_bottom)
+        )
+        
+        # Build the arrowhead
+        arrow_bottom_tip = cls._polar_to_cart(rad_shaft_tip, r)
+        arrowhead = cls._arrow_path(
+            rad_start=rad_shaft_tip,
+            angle=rad_arrow_tip,
+            r_base=r + dr,
+            r_tip=(r + (r + dr)) / 2
+        )
+        arrow_path = f"L {arrow_bottom_tip[0]} {arrow_bottom_tip[1]} {arrowhead}"
+
+        # Build the upper shaft (remove the 'M' command)
+        upper_shaft = cls.arc_line(
+            rad_lim=(rad_shaft_tip, rad),
+            r_lim=(r_shaft_upper, r_shaft_upper)
+        ).replace("M", "L", 1)
+
+        path = f"{bottom_shaft} {arrow_path} {upper_shaft} Z"        
+        return path
+
+    @classmethod
     def build_filled_path(
         cls,
         rad: list[float],
@@ -160,7 +215,7 @@ class PolarSVGPatchBuilder:
             # Start at arrow base on region1 and appply reverse arrow
             start_point = cls._polar_to_cart(rad1_start, arrow_r1)
             path = f"M {start_point[0]},{start_point[1]}"
-            path += cls._arrow_path(rad1_end, rad1_start, arrow_r1, r1)
+            path += cls._arrow_path(rad1_end, (rad1_end + rad1_start)/2, arrow_r1, r1)
         else:
             start_point = cls._polar_to_cart(rad1_start, r1)
             path = f"M {start_point[0]},{start_point[1]}"
@@ -175,7 +230,7 @@ class PolarSVGPatchBuilder:
         
         # Handle forward arrow (pointing to middle of region2)
         if direction in (1, 2):
-            path += cls._arrow_path(rad2_start, rad2_end, arrow_r2, r2)
+            path += cls._arrow_path(rad2_start, (rad2_start + rad2_end)/2, arrow_r2, r2)
         else:
             path += " " + cls.arc_line((rad2_end, rad2_start), (r2, r2)).split(" ", 1)[1]
         
@@ -211,7 +266,7 @@ class PolarSVGPatchBuilder:
             right_base = rad1 - arrow_width / 2
             arrow_start = cls._polar_to_cart(left_base, arrow_r1)
             path = f"M {arrow_start[0]},{arrow_start[1]}"
-            path += cls._arrow_path(right_base, left_base, arrow_r1, r1)
+            path += cls._arrow_path(right_base, (right_base + left_base)/2, arrow_r1, r1)
             tip_point = cls._polar_to_cart(rad1, r1)
             path += f" M {tip_point[0]},{tip_point[1]}"
             
@@ -229,7 +284,7 @@ class PolarSVGPatchBuilder:
             right_base = rad2 - arrow_width / 2
             arrow_start = cls._polar_to_cart(left_base, arrow_r2)
             path += f" M {arrow_start[0]},{arrow_start[1]}"
-            path += cls._arrow_path(right_base, left_base, arrow_r2, r2)
+            path += cls._arrow_path(right_base, (right_base + left_base)/2, arrow_r2, r2)
         
         return path
     
@@ -257,9 +312,8 @@ class PolarSVGPatchBuilder:
         return f" C {ctrl[0]},{ctrl[1]} {ctrl[0]},{ctrl[1]} {p2[0]},{p2[1]}"
     
     @classmethod
-    def _arrow_path(cls, rad_start: float, rad_end: float, r_base: float, r_tip: float) -> str:
+    def _arrow_path(cls, rad_start: float, angle: float, r_base: float, r_tip: float) -> str:
         """Create properly oriented arrow at specified angle with proper closure."""
-        angle = (rad_start + rad_end)/2  # Middle of target region
         
         # Calculate all points
         p_end = cls._polar_to_cart(rad_start, r_base)
