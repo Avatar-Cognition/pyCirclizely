@@ -78,6 +78,8 @@ plotly_annotation_defaults = {
         "color": "black",
     },
     "showarrow": False,
+    "xanchor": "center",
+    "yanchor": "middle"
 }
 
 # Plotly shape defaults

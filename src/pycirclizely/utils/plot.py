@@ -181,20 +181,6 @@ def get_plotly_label_params(
     # Start with global defaults
     annotation = deepcopy(config.plotly_annotation_defaults)
 
-    # Handle outer/inner alignment
-    if not outer:
-        if orientation == "horizontal":
-            annotation["yanchor"] = (
-                "bottom" if annotation["yanchor"] == "top" else "top"
-            )
-        elif orientation == "vertical":
-            annotation["xanchor"] = (
-                "right" if annotation["xanchor"] == "left" else "left"
-            )
-    else:
-        annotation["xanchor"] = "center"
-        annotation["yanchor"] = "middle"
-
     # Override with user-provided kwargs
     annotation = deep_dict_update(annotation, kwargs)
 

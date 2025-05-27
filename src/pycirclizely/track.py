@@ -251,15 +251,25 @@ class Track:
             rad, adjust_rotation, orientation, outer, **kwargs
         )
   
-        if orientation == "vertical" and axis:
+        if axis:
             font_size = annotation['font']['size']
-            padding = (font_size * 0.1) + (len(str(text)) * font_size * 0.05)
-            padding_angle = plotly_rad + np.pi/4 - 0.7
+            padding = (font_size * 0.05) + (font_size * len(str(text)) * 0.09)
+            
+            # Adjust padding angle based on outer/inner positioning
+            if outer:
+                padding_angle = plotly_rad + np.pi/4 - 0.7
+            else:
+                padding_angle = plotly_rad - np.pi/4 + 0.7
             
             # Convert to Cartesian displacement
             dx = padding * np.cos(padding_angle)
             dy = padding * np.sin(padding_angle)
-        
+            
+            # Reverse direction for inner ticks
+            if not outer:
+                dx = -dx
+                dy = -dy
+            
             x_pos += dx
             y_pos += dy
 
@@ -453,7 +463,7 @@ class Track:
         tick_length: float = 2,
         outer: bool = True,
         show_bottom_line: bool = False,
-        label_margin: float = 1.7,
+        label_margin: float = 1,
         label_orientation: str = "horizontal",
         line_kws: dict[str, Any] | None = None,
         text_kws: dict[str, Any] | None = None,
@@ -517,7 +527,7 @@ class Track:
                     adj_r,
                     orientation=label_orientation,
                     outer=outer,
-                    axis = True,
+                    axis=True,
                     **text_kws,
                 )
 

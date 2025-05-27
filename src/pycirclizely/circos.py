@@ -465,7 +465,7 @@ class Circos:
             arrow_length_ratio
         )
 
-        shape = utils.plot.build_plotly_shape(path, defaults=config.plotly_ribbonlink_defaults, **kwargs)
+        shape = utils.plot.build_plotly_shape(path, defaults=config.plotly_arrow_defaults, **kwargs)
         self._shapes.append(shape)
 
         # Add invisible scatter points for hovertext at link positions
