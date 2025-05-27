@@ -212,6 +212,7 @@ class Track:
         orientation: str = "horizontal",
         ignore_range_error: bool = False,
         outer: bool = True,
+        axis: bool = False,
         **kwargs,
     ) -> None:
         """Plot text within a track. Uses genomic coordinates (x) mapped to radians.
@@ -250,7 +251,7 @@ class Track:
             rad, adjust_rotation, orientation, outer, **kwargs
         )
   
-        if orientation == "vertical":
+        if orientation == "vertical" and axis:
             font_size = annotation['font']['size']
             padding = (font_size * 0.1) + (len(str(text)) * font_size * 0.05)
             padding_angle = plotly_rad + np.pi/4 - 0.7
@@ -511,6 +512,7 @@ class Track:
                     adj_r,
                     orientation=label_orientation,
                     outer=outer,
+                    axis = True,
                     **text_kws,
                 )
 
@@ -681,8 +683,9 @@ class Track:
                     x_text,
                     r_pos,
                     orientation=label_orientation,
-                    outer=True,
                     ignore_range_error=True,
+                    outer=True,
+                    axis= True,
                     **text_kws,
                 )
 
