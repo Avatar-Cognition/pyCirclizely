@@ -1709,7 +1709,7 @@ class Track:
         plotly_rad_end = -(rad_end - np.pi / 2)
 
         if np.isclose(plotly_rad_start, plotly_rad_end):
-            # Special case: straight radial line (tick!)
+            # Special case: straight radial line (for ticks in axis)
             x0 = r_lim[0] * np.cos(plotly_rad_start)
             y0 = r_lim[0] * np.sin(plotly_rad_start)
             x1 = r_lim[1] * np.cos(plotly_rad_end)
@@ -1719,7 +1719,7 @@ class Track:
         else:
             # General arc line
             path = PolarSVGPatchBuilder.arc_line(
-                rad_lim=(plotly_rad_start, plotly_rad_end), r_lim=r_lim
+                rad_lim=(rad_start, rad_end), r_lim=r_lim
             )
 
         # Build and add shape
