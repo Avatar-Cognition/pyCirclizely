@@ -212,7 +212,7 @@ class Track:
         orientation: str = "horizontal",
         ignore_range_error: bool = False,
         outer: bool = True,
-        axis: bool = False,
+        axis: str | bool = False,
         **kwargs,
     ) -> None:
         """Plot text within a track. Uses genomic coordinates (x) mapped to radians.
@@ -250,37 +250,28 @@ class Track:
         annotation = utils.plot.get_plotly_label_params(
             rad, adjust_rotation, orientation, outer, **kwargs
         )
-  
+
         if axis:
             font_size = annotation['font']['size']
             padding = (font_size * 0.05) + (font_size * len(str(text)) * 0.09)
             
-            # Adjust padding angle based on outer/inner positioning
-            if outer:
-                padding_angle = plotly_rad + np.pi/4 - 0.7
+            if axis == 'x':
+                # X-axis labels (circular ticks)
+                padding_angle = plotly_rad + np.pi/4 - 0.8 if outer else plotly_rad - np.pi/4 + 0.8
+                dx = padding * np.cos(padding_angle)
+                dy = padding * np.sin(padding_angle)
+                if not outer:
+                    dx, dy = -dx, -dy
             else:
-                padding_angle = plotly_rad - np.pi/4 + 0.7
-            
-            # Convert to Cartesian displacement
-            dx = padding * np.cos(padding_angle)
-            dy = padding * np.sin(padding_angle)
-            
-            # Reverse direction for inner ticks
-            if not outer:
-                dx = -dx
-                dy = -dy
-            
+                # Y-axis labels (radial ticks)
+                tangent_angle = plotly_rad + (np.pi/2 if outer else -np.pi/2 + 0.2)
+                dx = padding * np.cos(tangent_angle)
+                dy = padding * np.sin(tangent_angle)
+                
             x_pos += dx
             y_pos += dy
 
-        annotation.update(
-            {
-                "x": x_pos,
-                "y": y_pos,
-                "text": text,
-            }
-        )
-
+        annotation.update({"x": x_pos, "y": y_pos, "text": text})
         self._annotations.append(annotation)
 
     def rect(
@@ -527,7 +518,7 @@ class Track:
                     adj_r,
                     orientation=label_orientation,
                     outer=outer,
-                    axis=True,
+                    axis="x",
                     **text_kws,
                 )
 
@@ -625,8 +616,8 @@ class Track:
         vmin: float = 0,
         vmax: float | None = None,
         side: str = "right",
-        tick_length: float = 1,
-        label_margin: float = 1.7,
+        tick_length: float = 2,
+        label_margin: float = 1,
         label_orientation: str = "horizontal",
         line_kws: dict[str, Any] | None = None,
         text_kws: dict[str, Any] | None = None,
@@ -681,15 +672,17 @@ class Track:
             if side == "right":
                 x_lim = (self.end, self.end + x_tick_length)
                 x_text = self.end + (x_tick_length + x_label_margin)
+                outer = False
             elif side == "left":
                 x_lim = (self.start, self.start - x_tick_length)
                 x_text = self.start - (x_tick_length + x_label_margin)
+                outer = True
             else:
                 raise ValueError(f"{side=} is invalid ('right' or 'left').")
 
             # Plot yticks
             if tick_length > 0:
-                self._simpleline(x_lim, (r_pos, r_pos), **line_kws)
+                self._simpleline(x_lim, (r_pos, r_pos), ignore_range_error=True, **line_kws)
 
             # Plot labels
             if label != "":
@@ -699,8 +692,8 @@ class Track:
                     r_pos,
                     orientation=label_orientation,
                     ignore_range_error=True,
-                    outer=True,
-                    axis= True,
+                    outer=outer,
+                    axis="y",
                     **text_kws,
                 )
 
@@ -1698,11 +1691,13 @@ class Track:
         self,
         x_lim: tuple[float, float],
         r_lim: tuple[float, float],
+        ignore_range_error=False,
         **kwargs,
     ) -> None:
         """Plot a line between two positions at specified radial distances."""
         # Convert genomic positions to radians
-        rad_start, rad_end = map(self.x_to_rad, x_lim)
+        rad_start = self.x_to_rad(x_lim[0], ignore_range_error=ignore_range_error)
+        rad_end = self.x_to_rad(x_lim[1], ignore_range_error=ignore_range_error)
 
         # Convert to Plotly's coordinate system (0=up, clockwise)
         plotly_rad_start = -(rad_start - np.pi / 2)
