@@ -937,12 +937,22 @@ class Track:
             width = float(width)
             width = np.full(len(x), width)
             rad_width = np.full(len(x), self.rad_size * (width[0] / self.size))
-
-        color = utils.plot.get_default_color(kwargs, target="line")
+        
+        # Support for multiple colors, one for each bar
+        if "colors" in kwargs:
+            colors = kwargs.pop("colors")
+            if len(colors) != len(x):
+                raise ValueError("Length of `colors` must match the number of bars.")
+            default_line = 1
+        else:
+            color = utils.plot.get_default_color(kwargs, target="fillcolor")
+            colors = [color] * len(x)
+            default_line = 0
 
         # Generate bar shapes and hover text locations
         hover_x, hover_y, hover_text, start_positions, end_positions = [], [], [], [], []
         for i in range(len(x)):
+            color = colors[i]
             bar_width = width[i]
             bar_rad_width = rad_width[i]
 
@@ -974,7 +984,7 @@ class Track:
                 height=r_height[i]
             )
 
-            shape = utils.plot.build_plotly_shape(path, defaults=dict(fillcolor=color, line=dict(width=0)), **kwargs)
+            shape = utils.plot.build_plotly_shape(path, defaults=dict(fillcolor=color, line=dict(color=color, width=default_line)), **kwargs)
             self._shapes.append(shape)
 
         # Get hovertext
@@ -997,7 +1007,7 @@ class Track:
             mode='markers',
             text=hover_text,
             marker=dict(size=20, opacity=0),
-            hoverlabel={"bgcolor": color},
+            hoverlabel={"bgcolor": colors},
         )
         self._traces.append(hover_trace)
 

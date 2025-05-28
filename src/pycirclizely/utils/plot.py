@@ -27,6 +27,7 @@ def get_default_color(kwargs: dict, target: str = "line") -> str:
         A color string (e.g., "#1f77b4").
     """
     color = kwargs.get(target, {})
+
     if isinstance(color, dict):
         color = color.get("color")
 

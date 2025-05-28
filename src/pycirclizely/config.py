@@ -114,7 +114,7 @@ plotly_linelink_defaults = {
 
 plotly_scatter_defaults = {
     'marker': {
-        'size': 6,
+        'size': 4,
         'opacity': 1.0,
     },
     'line': {
