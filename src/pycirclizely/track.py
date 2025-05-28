@@ -697,57 +697,54 @@ class Track:
                     **text_kws,
                 )
 
-    # def grid(
-    #     self,
-    #     y_grid_num: int | None = 6,
-    #     x_grid_interval: float | None = None,
-    #     **kwargs,
-    # ) -> None:
-    #     """Plot grid
+    def grid(
+        self,
+        y_grid_num: int | None = 6,
+        x_grid_interval: float | None = None,
+        **kwargs,
+    ) -> None:
+        """Plot grid
 
-    #     By default, `color="grey", alpha=0.5, zorder=0` line params are set.
+        By default, `color="grey", alpha=0.5, zorder=0` line params are set.
 
-    #     Parameters
-    #     ----------
-    #     y_grid_num : int | None, optional
-    #         Y-axis grid line number. If None, y-axis grid line is not shown.
-    #     x_grid_interval : float | None, optional
-    #         X-axis grid line interval. If None, x-axis grid line is not shown.
-    #     **kwargs : dict, optional
-    #         Axes.plot properties (e.g. `color="red", lw=0.5, ls="--", ...`)
-    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.plot.html>
-    #     """
-    #     # Check argument values
-    #     if y_grid_num is not None and not y_grid_num >= 2:
-    #         raise ValueError(f"{y_grid_num=} is invalid (y_grid_num >= 2).")
-    #     if x_grid_interval is not None and not x_grid_interval > 0:
-    #         raise ValueError(f"{x_grid_interval=} is invalid (x_grid_interval > 0).")
+        Parameters
+        ----------
+        y_grid_num : int | None, optional
+            Y-axis grid line number. If None, y-axis grid line is not shown.
+        x_grid_interval : float | None, optional
+            X-axis grid line interval. If None, x-axis grid line is not shown.
+        **kwargs : dict, optional
+            Line properties (e.g. `line=dict(color="red", width=2, dash="dash")`)
+            See: <https://plotly.com/python/reference/layout/shapes/>
+        """
+        # Check argument values
+        if y_grid_num is not None and not y_grid_num >= 2:
+            raise ValueError(f"{y_grid_num=} is invalid (y_grid_num >= 2).")
+        if x_grid_interval is not None and not x_grid_interval > 0:
+            raise ValueError(f"{x_grid_interval=} is invalid (x_grid_interval > 0).")
 
-    #     # Set default grid line properties
-    #     default_props = dict(color="grey", alpha=0.5, zorder=0)
-    #     for name, value in default_props.items():
-    #         if name not in kwargs:
-    #             kwargs.utils.helper.deep_dict_update({name: value})
+        # Set default grid line properties
+        kwargs = utils.deep_dict_update(config.plotly_grid_defaults, kwargs)
 
-    #     # Plot y-axis grid line
-    #     if y_grid_num is not None:
-    #         vmin, vmax = 0, y_grid_num - 1
-    #         for y_grid_idx in range(y_grid_num):
-    #             x = [self.start, self.end]
-    #             y: list[float] = [y_grid_idx, y_grid_idx]
-    #             self.line(x, y, vmin=vmin, vmax=vmax, **kwargs)
+        # Plot y-axis grid line
+        if y_grid_num is not None:
+            vmin, vmax = 0, y_grid_num - 1
+            for y_grid_idx in range(y_grid_num):
+                x = [self.start, self.end]
+                y: list[float] = [y_grid_idx, y_grid_idx]
+                self.line(x, y, vmin=vmin, vmax=vmax, **kwargs)
 
-    #     # Plot x-axis grid line
-    #     if x_grid_interval is not None:
-    #         vmin, vmax = 0, 1.0
-    #         x_grid_idx = 0
-    #         while True:
-    #             x_pos = self.start + (x_grid_interval * x_grid_idx)
-    #             if x_pos > self.end:
-    #                 break
-    #             x, y = [x_pos, x_pos], [vmin, vmax]
-    #             self.line(x, y, vmin=vmin, vmax=vmax, **kwargs)
-    #             x_grid_idx += 1
+        # Plot x-axis grid line
+        if x_grid_interval is not None:
+            vmin, vmax = 0, 1.0
+            x_grid_idx = 0
+            while True:
+                x_pos = self.start + (x_grid_interval * x_grid_idx)
+                if x_pos > self.end:
+                    break
+                x, y = [x_pos, x_pos], [vmin, vmax]
+                self.line(x, y, vmin=vmin, vmax=vmax, **kwargs)
+                x_grid_idx += 1
 
     def line(
         self,
@@ -787,10 +784,10 @@ class Track:
         r = [self._y_to_r(val, vmin, vmax) for val in y]
 
         color = utils.plot.get_default_color(kwargs, target="line")
-        kwargs["line"] = {"color": color}
+        kwargs = utils.deep_dict_update(kwargs, {"line": {"color": color}})
 
         # Generate hover text
-        hovertext = (kwargs["text"] if 'text' in kwargs 
+        hovertext = (kwargs.pop("text") if 'text' in kwargs 
                 else utils.plot.default_hovertext(x, y, sector_name=self._parent_sector._name))
 
         path = PolarSVGPatchBuilder.multi_segment_path(rad, r, arc)
@@ -853,7 +850,7 @@ class Track:
         kwargs = trace_defaults
 
         color = utils.plot.get_default_color(kwargs, target="marker")
-        kwargs["line"] = {"color": color}
+        kwargs = utils.deep_dict_update(kwargs, {"line": {"color": color}})
         kwargs.setdefault("hoverlabel", {"bgcolor": color})
 
         # Convert to polar coordinates

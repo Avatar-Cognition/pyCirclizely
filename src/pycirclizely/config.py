@@ -89,6 +89,15 @@ plotly_shape_defaults = {
     "layer": "above",
 }
 
+# Plotly grid defaults
+plotly_grid_defaults = {
+    "fillcolor": None,
+    "line": {"color": "grey", "width": 1},
+    "opacity": 0.5,
+    "layer": "below",
+    "text": None
+}
+
 # Plotly ribbon link defaults
 plotly_arrow_defaults = {
     "fillcolor": "grey",
