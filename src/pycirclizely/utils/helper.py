@@ -195,3 +195,10 @@ def is_pseudo_feature(feature: SeqFeature) -> bool:
     """
     quals = feature.qualifiers
     return True if "pseudo" in quals or "pseudogene" in quals else False
+
+def precise_position(val: float, position_precision: int) -> float:
+    """Round positions while preserving important decimals."""
+    # First round to handle floating-point artifacts
+    rounded = round(val, position_precision + 2)
+    # Then round to target precision
+    return round(rounded, position_precision)

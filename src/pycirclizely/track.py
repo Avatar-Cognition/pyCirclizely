@@ -3,7 +3,6 @@ from __future__ import annotations
 import math
 import textwrap
 from copy import deepcopy
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
@@ -951,6 +950,7 @@ class Track:
             default_line = 0
 
         # Generate bar shapes and hover text locations
+        position_precision = max(1, min(10, int(6 - math.log10(self.size))))
         hover_x, hover_y, hover_text, start_positions, end_positions = [], [], [], [], []
         for i in range(len(x)):
             color = colors[i]
@@ -959,8 +959,8 @@ class Track:
 
             if align == "center":
                 center_rad = rad[i]
-                start_pos = x[i] - bar_width / 2
-                end_pos = x[i] + bar_width / 2
+                start_pos = utils.precise_position(x[i] - bar_width / 2, position_precision)
+                end_pos = utils.precise_position(x[i] + bar_width / 2, position_precision)
                 rad_start = rad[i] - bar_rad_width / 2
                 rad_end = rad[i] + bar_rad_width / 2
             else:
