@@ -253,10 +253,10 @@ class Track:
 
         if axis:
             font_size = annotation['font']['size']
-            padding = (font_size * 0.05) + (font_size * len(str(text)) * 0.09)
             
             if axis == 'x':
                 # X-axis labels (circular ticks)
+                padding = (font_size * 0.05) + (font_size * len(str(text)) * 0.09 if orientation == 'vertical' else 0)
                 padding_angle = plotly_rad + np.pi/4 - 0.8 if outer else plotly_rad - np.pi/4 + 0.8
                 dx = padding * np.cos(padding_angle)
                 dy = padding * np.sin(padding_angle)
@@ -264,6 +264,7 @@ class Track:
                     dx, dy = -dx, -dy
             else:
                 # Y-axis labels (radial ticks)
+                padding = (font_size * 0.05) + (font_size * len(str(text)) * 0.09)
                 tangent_angle = plotly_rad + (np.pi/2 if outer else -np.pi/2 + 0.2)
                 dx = padding * np.cos(tangent_angle)
                 dy = padding * np.sin(tangent_angle)

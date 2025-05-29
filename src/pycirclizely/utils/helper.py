@@ -12,51 +12,62 @@ from typing import Optional, Dict, Any
 import collections.abc
 
 class ColorCycler:
-    """Color cycler class using Plotly qualitative palettes."""
-
-    _counter: int = 0
-    _palette_name: str = "Plotly"
-    _colors: list[str] = qualitative.Plotly  # Default palette
+    """Color cycler class using Plotly qualitative palettes with per-palette counters."""
+    
+    _palette_counters = {}  # Stores counters for each palette
+    _current_palette = "Plotly"
+    _palette_colors = {"Plotly": qualitative.Plotly}  # Default palette
 
     def __new__(cls, n: Optional[int] = None) -> str:
         """Return a color from the cycle, same as get_color."""
         return cls.get_color(n)
 
     @classmethod
-    def reset_cycle(cls) -> None:
-        """Reset the color cycle counter."""
-        cls._counter = 0
+    def reset_cycle(cls, palette_name: Optional[str] = None) -> None:
+        """Reset the color cycle counter for a specific palette or all palettes."""
+        if palette_name is None:
+            cls._palette_counters = {}
+        else:
+            cls._palette_counters[palette_name] = 0
 
     @classmethod
     def set_palette(cls, name: str) -> None:
-        """Set the color palette by name (e.g. 'Plotly', 'D3', 'Dark24')."""
+        """Set the current color palette by name."""
         if not hasattr(qualitative, name):
             raise ValueError(f"Palette '{name}' not found in plotly.colors.qualitative")
-        cls._colors = getattr(qualitative, name)
-        cls._palette_name = name
-        cls._counter = 0
+        if name not in cls._palette_colors:
+            cls._palette_colors[name] = getattr(qualitative, name)
+        cls._current_palette = name
 
     @classmethod
     def get_color(cls, n: Optional[int] = None) -> str:
-        """Get a color from the palette, either by index or the next in the cycle."""
+        """Get a color from the current palette, either by index or the next in the cycle."""
+        colors = cls._palette_colors[cls._current_palette]
+        
         if n is None:
-            n = cls._counter
-            cls._counter += 1
-        return cls._colors[n % len(cls._colors)]
+            # Initialize counter if it doesn't exist for this palette
+            if cls._current_palette not in cls._palette_counters:
+                cls._palette_counters[cls._current_palette] = 0
+            
+            n = cls._palette_counters[cls._current_palette]
+            cls._palette_counters[cls._current_palette] += 1
+        
+        return colors[n % len(colors)]
 
     @classmethod
     def get_color_list(cls, n: Optional[int] = None) -> list[str]:
-        """Get a list of `n` colors from the palette (cycled if n > palette size)."""
+        """Get a list of `n` colors from the current palette."""
+        colors = cls._palette_colors[cls._current_palette]
         if n is None:
-            return cls._colors.copy()
+            return colors.copy()
         if n <= 0:
             raise ValueError(f"{n=} is invalid number (Must be 'n > 0').")
-        return [cls._colors[i % len(cls._colors)] for i in range(n)]
+        return [colors[i % len(colors)] for i in range(n)]
 
     @classmethod
     def current_palette_name(cls) -> str:
         """Get the name of the current color palette."""
-        return cls._palette_name
+        return cls._current_palette
 
 def deep_dict_update(orig_dict: Dict[str, Any], new_dict: Dict[str, Any]) -> Dict[str, Any]:
     """ From deep-dict-update package https://pypi.org/project/deep-dict-update/
