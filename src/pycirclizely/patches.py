@@ -14,18 +14,6 @@ class PolarSVGPatchBuilder:
         x = r * np.cos(adjusted_theta)
         y = r * np.sin(adjusted_theta)
         return (x, y)
-    
-    @staticmethod
-    def _svg_path_from_points(
-        points: list[tuple[float, float]], closed: bool = False
-    ) -> str:
-        if not points:
-            return ""
-        path = [f"M {points[0][0]} {points[0][1]}"]
-        path += [f"L {x} {y}" for x, y in points[1:]]
-        if closed:
-            path.append("Z")
-        return " ".join(path)
 
     @classmethod
     def arc_rectangle(cls, radr: Tuple[float, float], width: float, height: float) -> str:
@@ -175,26 +163,25 @@ class PolarSVGPatchBuilder:
         arc: bool = True,
         closed: bool = True
     ) -> str:
-        upper = cls.interpolate_polar_curve(rad, r1, arc=arc)
-        lower = cls.interpolate_polar_curve(list(reversed(rad)), list(reversed(r2)), arc=arc)
-        return cls._svg_path_from_points(upper + lower, closed=closed)
-
-    @classmethod
-    def interpolate_polar_curve(cls, rad: list[float], r: list[float], arc: bool = True) -> list[tuple[float, float]]:
-        """
-        Generate interpolated polar points from radial and angular data.
-        Used for smooth path building.
-
-        Returns a list of (x, y) tuples.
-        """
-        if arc:
-            dense_rad = np.linspace(rad[0], rad[-1], cls.n_points)
-            dense_r = np.interp(dense_rad, rad, r)
-        else:
-            dense_rad = np.array(rad)
-            dense_r = np.array(r)
+        """Build a closed path between two polar curves."""
+        # Create upper path (from first to last point)
+        upper_path = cls.multi_segment_path(rad, r1, arc=arc)
         
-        return [cls._polar_to_cart(theta, radius) for theta, radius in zip(dense_rad, dense_r)]
+        # Create lower path (from last to first point)
+        reversed_rad = list(reversed(rad))
+        reversed_r2 = list(reversed(r2))
+        lower_path = cls.multi_segment_path(reversed_rad, reversed_r2, arc=arc)
+        
+        # Combine paths (remove the initial 'M' from the lower path)
+        if lower_path.startswith('M'):
+            lower_path = 'L' + lower_path[1:]
+        
+        # Combine and close if needed
+        combined_path = f"{upper_path} {lower_path}"
+        if closed:
+            combined_path += " Z"
+            
+        return combined_path
         
     @classmethod
     def bezier_ribbon_path(

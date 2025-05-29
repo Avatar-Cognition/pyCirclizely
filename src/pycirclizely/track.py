@@ -1226,10 +1226,9 @@ class Track:
 
         # Convert to polar coordinates
         rad = [self.x_to_rad(pos) for pos in x]
-        vmax = max(np.max(y1), np.max(y2)) if vmax is None else vmax
         r1 = [self._y_to_r(v, vmin, vmax) for v in y1]
         r2 = [self._y_to_r(v, vmin, vmax) for v in y2]
-        
+
         # Handle aesthetics
         color = utils.plot.get_default_color(kwargs, target="fillcolor")
         kwargs.update({"fillcolor": color})
@@ -1243,7 +1242,7 @@ class Track:
         hovertext = (kwargs["text"] if 'text' in kwargs 
                 else utils.plot.default_hovertext(x, y1, sector_name=self._parent_sector._name))
 
-        # Add invisible scatter points for hovertext at original positions
+        # Add invisible scatter points for hovertext
         hover_x, hover_y = zip(*[PolarSVGPatchBuilder._polar_to_cart(theta, rho) for theta, rho in zip(rad, r1)])
         hover_trace = utils.plot.build_scatter_trace(
             hover_x,
@@ -1656,44 +1655,6 @@ class Track:
         norm = utils.plot.Normalize(vmin, vmax)
         r = min(self.r_plot_lim) + (self.r_plot_size * norm(y))
         return r
-
-    def _to_arc_radr(
-        self,
-        rad: list[float] | np.ndarray,
-        r: list[float] | np.ndarray,
-    ) -> tuple[list[float], list[float]]:
-        """Convert radian & radius to arc radian & arc radius
-
-        Parameters
-        ----------
-        rad : list[float] | np.ndarray
-            Radian list
-        r : list[float] | np.ndarray
-            Radius list
-
-        Returns
-        -------
-        arc_rad : list[float]
-            Arc radian list
-        arc_r : list[float]
-            Arc radius list
-        """
-        all_arc_rad, all_arc_r = [], []
-        for i in range(len(rad) - 1):
-            rad1, rad2, r1, r2 = rad[i], rad[i + 1], r[i], r[i + 1]
-            if rad1 == rad2:
-                all_arc_rad.extend([rad1, rad2])
-                all_arc_r.extend([r1, r2])
-            else:
-                # To obtain finely chopped coordinates, step is reduced by a tenth
-                step = config.ARC_RADIAN_STEP / 10
-                if rad1 > rad2:
-                    step *= -1
-                arc_rad = list(np.arange(rad1, rad2, step)) + [rad2]
-                all_arc_rad.extend(arc_rad)
-                arc_r = np.linspace(r1, r2, len(arc_rad), endpoint=True)
-                all_arc_r.extend(arc_r)
-        return all_arc_rad, all_arc_r
 
     def _simpleline(
         self,
