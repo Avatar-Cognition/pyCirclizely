@@ -6,11 +6,13 @@ import textwrap
 from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import plotly.graph_objects as go
 from plotly.graph_objs.layout._annotation import Annotation
 from plotly.graph_objs.layout._shape import Shape
+from plotly.graph_objs.layout._coloraxis import Coloraxis
 from plotly.basedatatypes import BaseTraceType
 from pycirclizely import config, utils
 from pycirclizely.utils.plot import LinkDirection
@@ -107,6 +109,7 @@ class Circos:
         self._shapes: list[Shape] = []
         self._annotations: list[Annotation] = []
         self._traces: list[BaseTraceType] = []
+        self._coloraxes: list[Coloraxis] = []
 
     ############################################################
     # Property
@@ -571,65 +574,104 @@ class Circos:
         )
         self._traces.append(hover_trace)
 
-    # def colorbar(
-    #     self,
-    #     bounds: tuple[float, float, float, float] = (1.02, 0.3, 0.02, 0.4),
-    #     *,
-    #     vmin: float = 0,
-    #     vmax: float = 1,
-    #     cmap: str | Colormap = "bwr",
-    #     orientation: str = "vertical",
-    #     label: str | None = None,
-    #     colorbar_kws: dict[str, Any] | None = None,
-    #     label_kws: dict[str, Any] | None = None,
-    #     tick_kws: dict[str, Any] | None = None,
-    # ) -> None:
-    #     """Plot colorbar
+    def colorbar(
+        self,
+        bounds: tuple[float, float, float, float] = (1.02, 0.3, 0.02, 0.4),
+        *,
+        vmin: float = 0,
+        vmax: float = 1,
+        cmap: str = "RdBu",
+        orientation: str = "vertical",
+        label: str | None = None,
+        colorbar_kws: dict[str, Any] | None = None,
+        label_kws: dict[str, Any] | None = None,
+        tick_kws: dict[str, Any] | None = None,
+    ) -> None:
+        """Plot colorbar using Plotly's coloraxis system.
 
-    #     Parameters
-    #     ----------
-    #     bounds : tuple[float, float, float, float], optional
-    #         Colorbar bounds tuple (`x`, `y`, `width`, `height`)
-    #     vmin : float, optional
-    #         Colorbar min value
-    #     vmax : float, optional
-    #         Colorbar max value
-    #     cmap : str | Colormap, optional
-    #         Colormap (e.g. `viridis`, `Spectral`, `Reds`, `Greys`)
-    #         <https://matplotlib.org/stable/tutorials/colors/colormaps.html>
-    #     orientation : str, optional
-    #         Colorbar orientation (`vertical`|`horizontal`)
-    #     label : str | None, optional
-    #         Colorbar label. If None, no label shown.
-    #     colorbar_kws : dict[str, Any] | None, optional
-    #         Colorbar properties (e.g. `dict(format="%.1f", ...)`)
-    #         <https://matplotlib.org/stable/api/colorbar_api.html>
-    #     label_kws : dict[str, Any] | None, optional
-    #         Text properties (e.g. `dict(size=15, color="red", ...)`)
-    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.text.html>
-    #     tick_kws : dict[str, Any] | None, optional
-    #         Axes.tick_params properties (e.g. `dict(labelsize=12, colors="red", ...)`)
-    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.tick_params.html>
-    #     """
-    #     colorbar_kws = {} if colorbar_kws is None else deepcopy(colorbar_kws)
-    #     label_kws = {} if label_kws is None else deepcopy(label_kws)
-    #     tick_kws = {} if tick_kws is None else deepcopy(tick_kws)
+        Parameters
+        ----------
+        bounds : tuple[float, float, float, float], optional
+            Colorbar bounds tuple (x, y, width, height) in relative figure coordinates
+        vmin : float, optional
+            Colorbar min value
+        vmax : float, optional
+            Colorbar max value
+        cmap : str, optional
+            Colormap name (e.g. 'viridis', 'Spectral', 'Reds', 'Greys')
+            See: https://plotly.com/python/builtin-colorscales/
+        orientation : str, optional
+            Colorbar orientation ('vertical'|'horizontal')
+        label : str | None, optional
+            Colorbar label. If None, no label shown.
+        colorbar_kws : dict[str, Any] | None, optional
+            Colorbar properties (e.g. dict(tickformat=".1f", ...))
+            See: https://plotly.com/python/reference/layout/coloraxis/
+        label_kws : dict[str, Any] | None, optional
+            Annotation properties (e.g. `font=dict(size=12, color='red')`).
+            See: <https://plotly.com/python/reference/layout/annotations/>
+        tick_kws : dict[str, Any] | None, optional
+            Shape properties (e.g. `line=dict(color="blue", width=2)`)
+            See: <https://plotly.com/python/reference/layout/shapes/>
+        """
+        colorbar_kws = {} if colorbar_kws is None else deepcopy(colorbar_kws)
+        label_kws = {} if label_kws is None else deepcopy(label_kws)
+        tick_kws = {} if tick_kws is None else deepcopy(tick_kws)
 
-    #     def plot_colorbar(ax: PolarAxes) -> None:
-    #         axin: Axes = ax.inset_axes(bounds)
-    #         norm = utils.plot.Normalize(vmin=vmin, vmax=vmax)
-    #         cb = Colorbar(
-    #             axin,
-    #             cmap=cmap,  # type: ignore
-    #             norm=norm,
-    #             orientation=orientation,  # type: ignore
-    #             **colorbar_kws,
-    #         )
-    #         axin.tick_params(**tick_kws)
-    #         if label:
-    #             cb.set_label(label, **label_kws)
+        # Convert orientation to Plotly format (v/h)
+        orientation = orientation[0].lower()  # 'vertical' -> 'v', 'horizontal' -> 'h'
+        
+        # Create colorbar configuration
+        colorbar_config = {
+            "len": bounds[3],  # height
+            "thickness": bounds[2],  # width
+            "x": bounds[0],  # x position
+            "y": bounds[1],  # y position
+            "orientation": orientation,
+            **colorbar_kws,
+        }
+        
+        # Handle label properties
+        if label:
+            title_dict = {"text": label}
+            if label_kws:
+                font_dict = {}
+                if "size" in label_kws:
+                    font_dict["size"] = label_kws["size"]
+                if "color" in label_kws:
+                    font_dict["color"] = label_kws["color"]
+                if "family" in label_kws:
+                    font_dict["family"] = label_kws["family"]
+                if font_dict:
+                    title_dict["font"] = font_dict
+            colorbar_config["title"] = title_dict
+        
+        # Handle tick properties
+        if tick_kws:
+            tick_font_dict = {}
+            if "labelsize" in tick_kws:
+                tick_font_dict["size"] = tick_kws["labelsize"]
+            if "color" in tick_kws:
+                tick_font_dict["color"] = tick_kws["color"]
+            if "family" in tick_kws:
+                tick_font_dict["family"] = tick_kws["family"]
+            if tick_font_dict:
+                colorbar_config["tickfont"] = tick_font_dict
+            
+            if "length" in tick_kws:
+                colorbar_config["ticklen"] = tick_kws["length"]
+            if "width" in tick_kws:
+                colorbar_config["tickwidth"] = tick_kws["width"]
+        
+        # Create the full coloraxis configuration
+        coloraxis_config = {
+            "cmin": vmin,
+            "cmax": vmax,
+            "colorscale": cmap,
+            "colorbar": colorbar_config
+        }
 
-        # self._plot_funcs.append(plot_colorbar)
+        self._coloraxes.append(coloraxis_config)
 
     def plotfig(
         self,
@@ -658,6 +700,11 @@ class Circos:
 
         layout_dict["shapes"] = self._get_all_shapes()
         layout_dict["annotations"] = self._get_all_annotations()
+        
+        for i, coloraxis in enumerate(self._coloraxes):
+            axis_key = "coloraxis" if i == 0 else f"coloraxis{i+1}"
+            layout_dict[axis_key] = coloraxis
+        
         data_dict = self._get_all_traces()
 
         return go.Figure(data=data_dict, layout=go.Layout(layout_dict))

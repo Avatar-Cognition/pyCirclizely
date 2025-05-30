@@ -55,7 +55,7 @@ plotly_layout_defaults = {
         "text": None,
     },
     "hovermode": "closest",
-    "showlegend": False,
+    "showlegend": True,
     "xaxis": {
         "autorange": True,
         "showgrid": False,

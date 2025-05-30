@@ -753,6 +753,7 @@ class Track:
         vmin: float = 0,
         vmax: float | None = None,
         arc: bool = True,
+        hover_text: list[str] | None = None,
         **kwargs,
     ) -> None:
         """Plot lines with SVG paths at plotly.
@@ -770,6 +771,8 @@ class Track:
         arc : bool, optional
             If True, creates curved arc lines (polar projection)
             If False, creates straight chord lines
+        hover_text : list[str] | None, optional
+            Custom hover text for each point in line. If None, defaults to formatted x and y values.
         **kwargs : dict, optional
             Line properties (e.g. `line=dict(color="red", width=2, dash="dash")`)
             See: <https://plotly.com/python/reference/layout/shapes/>
@@ -786,7 +789,7 @@ class Track:
         kwargs = utils.deep_dict_update(kwargs, {"line": {"color": color}})
 
         # Generate hover text
-        hovertext = (kwargs.pop("text") if 'text' in kwargs 
+        hovertext = (hover_text if hover_text is not None 
                 else utils.plot.default_hovertext(x, y, sector_name=self._parent_sector._name))
 
         path = PolarSVGPatchBuilder.multi_segment_path(rad, r, arc)
@@ -820,6 +823,7 @@ class Track:
         *,
         vmin: float = 0,
         vmax: float | None = None,
+        hover_text: list[str] | None = None,
         **kwargs,
     ) -> None:
         """Scatter plot using Plotly Scatter trace.
@@ -834,6 +838,8 @@ class Track:
             Minimum value for radial scaling (default: 0)
         vmax : float | None, optional
             Maximum value for radial scaling. If None, uses max(y)
+        hover_text : list[str] | None, optional
+            Custom hover text for each point in line. If None, defaults to formatted x and y values.
         **kwargs : dict, optional
             Scatter trace properties that override defaults. Common options include:
             - marker: dict with properties like size, color, symbol
@@ -866,9 +872,12 @@ class Track:
             y_vals.append(cy)
 
         trace = utils.plot.build_scatter_trace(x_vals, y_vals, 'markers', **kwargs)
-        if trace.text is None:
+        if hover_text is not None:
+            default_text = hover_text
+        else:
             default_text = utils.plot.default_hovertext(x, y, sector_name=self._parent_sector._name)
-            trace.update(text=default_text)
+        
+        trace.update(text=default_text)
 
         self._traces.append(trace)
 
@@ -882,6 +891,7 @@ class Track:
         *,
         vmin: float = 0,
         vmax: float | None = None,
+        hover_text: list[str] | None = None,
         **kwargs,
     ) -> None:
         """Plot bar chart using Plotly shapes with hover information from scatter traces.
@@ -902,6 +912,8 @@ class Track:
             Minimum value for radial scaling (default: 0)
         vmax : float | None, optional
             Maximum value for radial scaling. If None, uses max(height + bottom)
+        hover_text : list[str] | None, optional
+            Custom hover text for each bar. If None, defaults to formatted range x and height.
         **kwargs : dict, optional
             Properties for both shapes and hover text
         """
@@ -950,7 +962,7 @@ class Track:
 
         # Generate bar shapes and hover text locations
         position_precision = max(1, min(10, int(6 - math.log10(self.size))))
-        hover_x, hover_y, hover_text, start_positions, end_positions = [], [], [], [], []
+        hover_x, hover_y, start_positions, end_positions = [], [], [], []
         for i in range(len(x)):
             color = colors[i]
             bar_width = width[i]
@@ -988,10 +1000,9 @@ class Track:
             self._shapes.append(shape)
 
         # Get hovertext
-        if "text" in kwargs:
-            hover_text = kwargs["text"]
+        if hover_text is not None:
             if len(hover_text) != len(x):
-                raise ValueError("Length of custom `text` must match the number of bars.")
+                raise ValueError("Length of `hover_text` must match the number of bars.")
         else:
             hover_text = utils.plot.default_hovertext(
                 x=start_positions,
@@ -1187,6 +1198,7 @@ class Track:
         vmin: float = 0,
         vmax: float | None = None,
         arc: bool = True,
+        hover_text: list[str] | None = None,
         **kwargs,
     ) -> None:
         """Fill the area between two curves with SVG paths at plotly.
@@ -1206,6 +1218,8 @@ class Track:
         arc : bool, optional
             If True, creates curved arc fills (polar projection)
             If False, creates straight chord fills
+        hover_text : list[str] | None, optional
+            Custom hover text for each bar. If None, defaults to formatted range x and height.
         **kwargs : dict, optional
             Fill properties (e.g. `fillcolor="red", line=dict(color="black", width=0.5)`)
             See: <https://plotly.com/python/reference/scatter/#scatter-fill>
@@ -1238,7 +1252,7 @@ class Track:
         self._shapes.append(shape)
         
         # Get hovertext
-        hovertext = (kwargs["text"] if 'text' in kwargs 
+        hovertext = (hover_text if hover_text is not None 
                 else utils.plot.default_hovertext(x, y1, sector_name=self._parent_sector._name))
 
         # Add invisible scatter points for hovertext
@@ -1264,6 +1278,7 @@ class Track:
         width: float | None = None,
         cmap: str = "RdBu",
         show_value: bool = False,
+        hover_text: list[str] | None = None,
         rect_kws: dict[str, Any] | None = None,
         text_kws: dict[str, Any] | None = None,
     ) -> None:
@@ -1294,6 +1309,8 @@ class Track:
             <https://plotly.com/python/builtin-colorscales/>
         show_value : bool, optional
             If True, show data value on heatmap rectangle
+        hover_text : list[str] | None, optional
+            Custom hover text for each bar. If None, defaults to formatted range x and height.
         rect_kws : dict[str, Any] | None, optional
             Shape properties for ticks/baseline (default: None)
             e.g. `dict(line=dict(color="black", width=1))`
@@ -1347,6 +1364,7 @@ class Track:
         # Plot heatmap
         color_scale = get_colorscale(cmap)
         norm = utils.plot.Normalize(vmin=vmin, vmax=vmax)
+        scatter_x, scatter_y, start_x, end_x, values, scatter_colors = [], [], [], [], [], []
         for row_idx, row in enumerate(data):
             for col_idx, v in enumerate(row):
                 # Plot heatmap rectangle
@@ -1356,12 +1374,50 @@ class Track:
                 rect_kws = utils.deep_dict_update(rect_kws, dict(fillcolor=color))
                 self.rect(rect_start, rect_end, r_lim=rect_r_lim, **rect_kws)
 
+                # Inside row/col loop:
+                text_x = (rect_start + rect_end) / 2
+                text_r = sum(rect_r_lim) / 2
+                cx, cy = PolarSVGPatchBuilder._polar_to_cart(self.x_to_rad(text_x), text_r)
+
+                scatter_x.append(cx)
+                scatter_y.append(cy)
+                start_x.append(rect_start)
+                end_x.append(rect_end)
+                values.append(v)
+                scatter_colors.append(color)
+
                 if show_value:
                     # Plot value text on heatmap rectangle
                     text_value = f"{v:.2f}" if isinstance(v, float) else str(v)
                     text_x = (rect_end + rect_start) / 2
                     text_r = sum(rect_r_lim) / 2
                     self.text(text_value, text_x, text_r, **text_kws)
+
+        # Get hovertext
+        if hover_text is not None:
+            if len(hover_text) != len(data.flatten()):
+                raise ValueError("Length of `hover_text` must match the number of bars.")
+        else:
+            hover_text = utils.plot.default_hovertext(
+                x=start_x,
+                y=values,
+                x2=end_x,
+                sector_name=self._parent_sector._name,
+            )
+
+        hover_trace = utils.plot.build_scatter_trace(
+            scatter_x,
+            scatter_y,
+            mode='markers',
+            text=hover_text,
+            marker=dict(
+                size=20,
+                opacity=0,
+                color=scatter_colors,
+            ),
+            hoverlabel={"bgcolor": scatter_colors}
+        )
+        self._traces.append(hover_trace)
 
     # def tree(
     #     self,
