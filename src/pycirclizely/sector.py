@@ -4,11 +4,8 @@ import math
 import textwrap
 import warnings
 from copy import deepcopy
-# from pathlib import Path
-# from typing import Any
 
 import numpy as np
-# from PIL import Image, ImageOps
 from plotly.graph_objs.layout._annotation import Annotation
 from plotly.graph_objs.layout._shape import Shape
 from plotly.basedatatypes import BaseTraceType

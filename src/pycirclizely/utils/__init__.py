@@ -10,7 +10,6 @@ from pycirclizely.utils.helper import (
                                              ColorCycler,
                                              calc_group_spaces,
                                              is_pseudo_feature,
-                                             load_image,
                                              deep_dict_update,
                                              precise_position
 )
@@ -25,6 +24,6 @@ __all__ = [
     "ColorCycler",
     "calc_group_spaces",
     "is_pseudo_feature",
-    "load_image",
-    "deep_dict_update"
+    "deep_dict_update",
+    "precise_position"
 ]

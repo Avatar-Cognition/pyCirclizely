@@ -6,11 +6,10 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
-# import pandas as pd
-# from PIL import Image
 from plotly.graph_objs.layout._annotation import Annotation
 from plotly.graph_objs.layout._shape import Shape
 from plotly.basedatatypes import BaseTraceType
+from plotly.colors import get_colorscale, sample_colorscale
 from pycirclizely import config, utils
 # from pycirclizely.parser import StackedBarTable
 from pycirclizely.patches import PolarSVGPatchBuilder
@@ -1254,113 +1253,115 @@ class Track:
         )
         self._traces.append(hover_trace)
 
-    # def heatmap(
-    #     self,
-    #     data: list | np.ndarray,
-    #     *,
-    #     vmin: float | None = None,
-    #     vmax: float | None = None,
-    #     start: float | None = None,
-    #     end: float | None = None,
-    #     width: float | None = None,
-    #     cmap: str | Colormap = "bwr",
-    #     show_value: bool = False,
-    #     rect_kws: dict[str, Any] | None = None,
-    #     text_kws: dict[str, Any] | None = None,
-    # ) -> None:
-    #     """Plot heatmap
+    def heatmap(
+        self,
+        data: list | np.ndarray,
+        *,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        start: float | None = None,
+        end: float | None = None,
+        width: float | None = None,
+        cmap: str = "RdBu",
+        show_value: bool = False,
+        rect_kws: dict[str, Any] | None = None,
+        text_kws: dict[str, Any] | None = None,
+    ) -> None:
+        """Plot heatmap
 
-    #     Parameters
-    #     ----------
-    #     data : list | np.ndarray
-    #         Numerical list, numpy 1d or 2d array
-    #     vmin : float | None, optional
-    #         Min value for heatmap plot. If None, `np.min(data)` is set.
-    #     vmax : float | None, optional
-    #         Max value for heatmap plot. If None, `np.max(data)` is set.
-    #     start : float | None, optional
-    #         Start position for heatmap plot (x coordinate).
-    #         If None, `track.start` is set.
-    #     end : float | None, optional
-    #         End position for heatmap plot (x coordinate).
-    #         If None, `track.end` is set.
-    #     width : float | None, optional
-    #         Heatmap rectangle x width size.
-    #         Normally heatmap plots squares of equal width. In some cases,
-    #         it is necessary to reduce the width of only the last column data square.
-    #         At that time, width can be set under the following conditions.
-    #         `(col_num - 1) * width < end - start < col_num * width`
-    #     cmap : str | Colormap, optional
-    #         Colormap (e.g. `viridis`, `Spectral`, `Reds`, `Greys`)
-    #         <https://matplotlib.org/stable/tutorials/colors/colormaps.html>
-    #     show_value : bool, optional
-    #         If True, show data value on heatmap rectangle
-    #     rect_kws : dict[str, Any] | None, optional
-    #         Patch properties (e.g. `dict(ec="black", lw=0.5, ...)`)
-    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
-    #     text_kws : dict[str, Any] | None, optional
-    #         Text properties (e.g. `dict(size=6, color="red", ...`)
-    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.text.html>
-    #     """
-    #     rect_kws = {} if rect_kws is None else deepcopy(rect_kws)
-    #     text_kws = {} if text_kws is None else deepcopy(text_kws)
+        Parameters
+        ----------
+        data : list | np.ndarray
+            Numerical list, numpy 1d or 2d array
+        vmin : float | None, optional
+            Min value for heatmap plot. If None, `np.min(data)` is set.
+        vmax : float | None, optional
+            Max value for heatmap plot. If None, `np.max(data)` is set.
+        start : float | None, optional
+            Start position for heatmap plot (x coordinate).
+            If None, `track.start` is set.
+        end : float | None, optional
+            End position for heatmap plot (x coordinate).
+            If None, `track.end` is set.
+        width : float | None, optional
+            Heatmap rectangle x width size.
+            Normally heatmap plots squares of equal width. In some cases,
+            it is necessary to reduce the width of only the last column data square.
+            At that time, width can be set under the following conditions.
+            `(col_num - 1) * width < end - start < col_num * width`
+        cmap : str, optional
+            Colormap (e.g. `Viridis`, `Plasma`, `Rainbow`, `RdBu`)
+            <https://plotly.com/python/builtin-colorscales/>
+        show_value : bool, optional
+            If True, show data value on heatmap rectangle
+        rect_kws : dict[str, Any] | None, optional
+            Shape properties for ticks/baseline (default: None)
+            e.g. `dict(line=dict(color="black", width=1))`
+            See: <https://plotly.com/python/reference/layout/shapes/>
+        text_kws : dict[str, Any] | None, optional
+            Annotation properties for labels (default: None)
+            e.g. `dict(font=dict(size=12, color="black"))`
+            See: <https://plotly.com/python/reference/layout/annotations/>
+        """
+        rect_kws = {} if rect_kws is None else deepcopy(rect_kws)
+        text_kws = {} if text_kws is None else deepcopy(text_kws)
 
-    #     # Check whether array is 1d or 2d (If 1d, reshape 2d)
-    #     data = np.array(data)
-    #     if data.ndim == 1:
-    #         data = data.reshape((1, -1))
-    #     elif data.ndim != 2:
-    #         raise ValueError(f"{data=} is not 1d or 2d array!!")
+        # Check whether array is 1d or 2d (If 1d, reshape 2d)
+        data = np.array(data)
+        if data.ndim == 1:
+            data = data.reshape((1, -1))
+        elif data.ndim != 2:
+            raise ValueError(f"{data=} is not 1d or 2d array!!")
 
-    #     # Set default value for None properties
-    #     vmin = np.min(data) if vmin is None else vmin
-    #     vmax = np.max(data) if vmax is None else vmax
-    #     start = self.start if start is None else start
-    #     end = self.end if end is None else end
-    #     self._check_value_min_max(data, vmin, vmax)
+        # Set default value for None properties
+        vmin = np.min(data) if vmin is None else vmin
+        vmax = np.max(data) if vmax is None else vmax
+        start = self.start if start is None else start
+        end = self.end if end is None else end
+        self._check_value_min_max(data, vmin, vmax)
 
-    #     # Calculate radius & x position range list of heatmap rectangle
-    #     row_num, col_num = data.shape
-    #     unit_r_size = self.r_plot_size / row_num
-    #     unit_x_size = (end - start) / col_num
-    #     if width is not None:
-    #         if (col_num - 1) * width < end - start < col_num * width:
-    #             unit_x_size = width
-    #         else:
-    #             raise ValueError(f"{width=} is invalid ({start=}, {end=})")
+        # Calculate radius & x position range list of heatmap rectangle
+        row_num, col_num = data.shape
+        unit_r_size = self.r_plot_size / row_num
+        unit_x_size = (end - start) / col_num
+        if width is not None:
+            if (col_num - 1) * width < end - start < col_num * width:
+                unit_x_size = width
+            else:
+                raise ValueError(f"{width=} is invalid ({start=}, {end=})")
 
-    #     r_range_list: list[tuple[float, float]] = []
-    #     for i in range(row_num):
-    #         max_range = max(self.r_plot_lim) - (unit_r_size * i)
-    #         min_range = max_range - unit_r_size
-    #         r_range_list.append((min_range, max_range))
-    #     x_range_list: list[tuple[float, float]] = []
-    #     for i in range(col_num):
-    #         min_range = start + (unit_x_size * i)
-    #         max_range = min_range + unit_x_size
-    #         # Avoid max_range exceeds `track.end` value
-    #         if max_range > self.end:
-    #             max_range = self.end
-    #         x_range_list.append((min_range, max_range))
+        r_range_list: list[tuple[float, float]] = []
+        for i in range(row_num):
+            max_range = max(self.r_plot_lim) - (unit_r_size * i)
+            min_range = max_range - unit_r_size
+            r_range_list.append((min_range, max_range))
+        x_range_list: list[tuple[float, float]] = []
+        for i in range(col_num):
+            min_range = start + (unit_x_size * i)
+            max_range = min_range + unit_x_size
+            # Avoid max_range exceeds `track.end` value
+            if max_range > self.end:
+                max_range = self.end
+            x_range_list.append((min_range, max_range))
 
-    #     # Plot heatmap
-    #     colormap = cmap if isinstance(cmap, Colormap) else mpl.colormaps[cmap]  # type: ignore
-    #     norm = plot.Normalize(vmin=vmin, vmax=vmax)
-    #     for row_idx, row in enumerate(data):
-    #         for col_idx, v in enumerate(row):
-    #             # Plot heatmap rectangle
-    #             rect_start, rect_end = x_range_list[col_idx]
-    #             rect_r_lim = r_range_list[row_idx]
-    #             color = colormap(norm(v))
-    #             rect_kws.utils.helper.deep_dict_update(dict(fc=color, facecolor=color))
-    #             self.rect(rect_start, rect_end, r_lim=rect_r_lim, **rect_kws)
+        # Plot heatmap
+        color_scale = get_colorscale(cmap)
+        norm = utils.plot.Normalize(vmin=vmin, vmax=vmax)
+        for row_idx, row in enumerate(data):
+            for col_idx, v in enumerate(row):
+                # Plot heatmap rectangle
+                rect_start, rect_end = x_range_list[col_idx]
+                rect_r_lim = r_range_list[row_idx]
+                color = sample_colorscale(colorscale=color_scale, samplepoints=norm(v))[0]
+                rect_kws = utils.deep_dict_update(rect_kws, dict(fillcolor=color))
+                self.rect(rect_start, rect_end, r_lim=rect_r_lim, **rect_kws)
 
-    #             if show_value:
-    #                 # Plot value text on heatmap rectangle
-    #                 text_value = f"{v:.2f}" if isinstance(v, float) else str(v)
-    #                 text_x = (rect_end + rect_start) / 2
-    #                 text_r = sum(rect_r_lim) / 2
-    #                 self.text(text_value, text_x, text_r, **text_kws)
+                if show_value:
+                    # Plot value text on heatmap rectangle
+                    text_value = f"{v:.2f}" if isinstance(v, float) else str(v)
+                    text_x = (rect_end + rect_start) / 2
+                    text_r = sum(rect_r_lim) / 2
+                    self.text(text_value, text_x, text_r, **text_kws)
 
     # def tree(
     #     self,
