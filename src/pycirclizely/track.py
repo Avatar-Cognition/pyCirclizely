@@ -1279,6 +1279,7 @@ class Track:
         cmap: str = "RdBu",
         show_value: bool = False,
         hover_text: list[str] | None = None,
+        coloraxis: str | None = None,
         rect_kws: dict[str, Any] | None = None,
         text_kws: dict[str, Any] | None = None,
     ) -> None:
@@ -1311,6 +1312,11 @@ class Track:
             If True, show data value on heatmap rectangle
         hover_text : list[str] | None, optional
             Custom hover text for each bar. If None, defaults to formatted range x and height.
+        coloraxis : str | None, optional
+            If specified, use this tag.
+            This allows consistent color mapping across multiple traces.
+            If None, a new color axis will be created.
+            See: <https://plotly.com/python/colorscales/#using-a-coloraxis>
         rect_kws : dict[str, Any] | None, optional
             Shape properties for ticks/baseline (default: None)
             e.g. `dict(line=dict(color="black", width=1))`
@@ -1414,6 +1420,11 @@ class Track:
                 size=20,
                 opacity=0,
                 color=scatter_colors,
+                colorscale=cmap,
+                cmin=vmin,
+                cmax=vmax,
+                coloraxis=coloraxis if coloraxis else None,
+                showscale=False,
             ),
             hoverlabel={"bgcolor": scatter_colors}
         )

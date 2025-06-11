@@ -576,7 +576,7 @@ class Circos:
 
     def colorbar(
         self,
-        bounds: tuple[float, float, float, float] = (1.02, 0.3, 0.02, 0.4),
+        bounds: tuple[float, float, float, float] | None = None,
         *,
         vmin: float = 0,
         vmax: float = 1,
@@ -586,92 +586,83 @@ class Circos:
         colorbar_kws: dict[str, Any] | None = None,
         label_kws: dict[str, Any] | None = None,
         tick_kws: dict[str, Any] | None = None,
-    ) -> None:
+    ) -> str:
         """Plot colorbar using Plotly's coloraxis system.
-
+        
         Parameters
         ----------
         bounds : tuple[float, float, float, float], optional
-            Colorbar bounds tuple (x, y, width, height) in relative figure coordinates
+            If None, Plotly will use default positioning
         vmin : float, optional
             Colorbar min value
         vmax : float, optional
             Colorbar max value
         cmap : str, optional
-            Colormap name (e.g. 'viridis', 'Spectral', 'Reds', 'Greys')
-            See: https://plotly.com/python/builtin-colorscales/
+            Colormap name
         orientation : str, optional
-            Colorbar orientation ('vertical'|'horizontal')
+            'vertical' or 'horizontal'
         label : str | None, optional
-            Colorbar label. If None, no label shown.
-        colorbar_kws : dict[str, Any] | None, optional
-            Colorbar properties (e.g. dict(tickformat=".1f", ...))
-            See: https://plotly.com/python/reference/layout/coloraxis/
-        label_kws : dict[str, Any] | None, optional
-            Annotation properties (e.g. `font=dict(size=12, color='red')`).
-            See: <https://plotly.com/python/reference/layout/annotations/>
-        tick_kws : dict[str, Any] | None, optional
-            Shape properties (e.g. `line=dict(color="blue", width=2)`)
-            See: <https://plotly.com/python/reference/layout/shapes/>
+            Colorbar label text
+        colorbar_kws : dict, optional
+            Additional colorbar properties
+        label_kws : dict, optional
+            Label text properties
+        tick_kws : dict, optional
+            Tick properties
         """
         colorbar_kws = {} if colorbar_kws is None else deepcopy(colorbar_kws)
         label_kws = {} if label_kws is None else deepcopy(label_kws)
         tick_kws = {} if tick_kws is None else deepcopy(tick_kws)
 
-        # Convert orientation to Plotly format (v/h)
-        orientation = orientation[0].lower()  # 'vertical' -> 'v', 'horizontal' -> 'h'
+        # Only set bounds if explicitly provided
+        if bounds is not None:
+            colorbar_kws.update({
+                "len": bounds[3],  # height
+                "thickness": bounds[2],  # width
+                "x": bounds[0],  # x position
+                "y": bounds[1],  # y position
+            })
+
+        # Convert orientation
+        orientation = orientation[0].lower()
+        colorbar_config = {"orientation": orientation, **colorbar_kws}
         
-        # Create colorbar configuration
-        colorbar_config = {
-            "len": bounds[3],  # height
-            "thickness": bounds[2],  # width
-            "x": bounds[0],  # x position
-            "y": bounds[1],  # y position
-            "orientation": orientation,
-            **colorbar_kws,
-        }
-        
-        # Handle label properties
+        # Handle label if provided
         if label:
             title_dict = {"text": label}
             if label_kws:
-                font_dict = {}
-                if "size" in label_kws:
-                    font_dict["size"] = label_kws["size"]
-                if "color" in label_kws:
-                    font_dict["color"] = label_kws["color"]
-                if "family" in label_kws:
-                    font_dict["family"] = label_kws["family"]
-                if font_dict:
-                    title_dict["font"] = font_dict
+                title_dict["font"] = {
+                    k: label_kws[k] 
+                    for k in ["size", "color", "family"] 
+                    if k in label_kws
+                }
             colorbar_config["title"] = title_dict
         
         # Handle tick properties
         if tick_kws:
-            tick_font_dict = {}
-            if "labelsize" in tick_kws:
-                tick_font_dict["size"] = tick_kws["labelsize"]
-            if "color" in tick_kws:
-                tick_font_dict["color"] = tick_kws["color"]
-            if "family" in tick_kws:
-                tick_font_dict["family"] = tick_kws["family"]
-            if tick_font_dict:
-                colorbar_config["tickfont"] = tick_font_dict
-            
-            if "length" in tick_kws:
-                colorbar_config["ticklen"] = tick_kws["length"]
-            if "width" in tick_kws:
-                colorbar_config["tickwidth"] = tick_kws["width"]
+            if any(k in tick_kws for k in ["labelsize", "color", "family"]):
+                colorbar_config["tickfont"] = {
+                    "size": tick_kws.get("labelsize"),
+                    "color": tick_kws.get("color"),
+                    "family": tick_kws.get("family")
+                }
+            colorbar_config.update({
+                "ticklen": tick_kws.get("length"),
+                "tickwidth": tick_kws.get("width")
+            })
         
-        # Create the full coloraxis configuration
+        # Create and store coloraxis config
         coloraxis_config = {
             "cmin": vmin,
             "cmax": vmax,
             "colorscale": cmap,
             "colorbar": colorbar_config
         }
-
+        
+        coloraxis_name = "coloraxis" if len(self._coloraxes) == 0 else f"coloraxis{len(self._coloraxes) + 1}"
         self._coloraxes.append(coloraxis_config)
+
+        return coloraxis_name
 
     def plotfig(
         self,
