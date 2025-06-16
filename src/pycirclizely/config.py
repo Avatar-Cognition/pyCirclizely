@@ -1,8 +1,6 @@
 # from __future__ import annotations
 
-import math
 from enum import IntEnum
-from typing import ClassVar
 
 ###########################################################
 # Constant Value Config
@@ -79,7 +77,7 @@ plotly_annotation_defaults = {
     },
     "showarrow": False,
     "xanchor": "center",
-    "yanchor": "middle"
+    "yanchor": "middle",
 }
 
 # Plotly shape defaults
@@ -95,7 +93,6 @@ plotly_grid_defaults = {
     "line": {"color": "grey", "width": 1},
     "opacity": 0.5,
     "layer": "below",
-    "text": None
 }
 
 # Plotly ribbon link defaults
@@ -113,22 +110,22 @@ plotly_linelink_defaults = {
 }
 
 plotly_scatter_defaults = {
-    'marker': {
-        'size': 4,
-        'opacity': 1.0,
+    "marker": {
+        "size": 4,
+        "opacity": 1.0,
     },
-    'line': {
-        'width': 2,
+    "line": {
+        "width": 2,
     },
-    'hoverinfo': 'text',
-    'showlegend': False
+    "hoverinfo": "text",
+    "showlegend": False,
 }
 
 ###########################################################
 # GitHub Eukaryote & Prokaryote Dataset Config
 ###########################################################
 
-# GITHUB_DATA_URL = "https://raw.githubusercontent.com/moshi4/pycirclizely-data/master/"
+GITHUB_DATA_URL = "https://raw.githubusercontent.com/moshi4/pycirclize-data/master/"
 
 EUKARYOTE_DATASET = {
     "hg38": [

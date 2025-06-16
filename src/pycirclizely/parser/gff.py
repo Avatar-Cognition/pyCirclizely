@@ -25,8 +25,7 @@ class Gff:
         min_range: None = None,
         max_range: None = None,
     ):
-        """
-        Parameters
+        """Parameters
         ----------
         gff_file : str | Path
             GFF file (`*.gz`, `*.bz2`, `*.zip` compressed file can be readable)
@@ -38,6 +37,7 @@ class Gff:
             No longer used. Left for backward compatibility.
         max_range : None, optional
             No longer used. Left for backward compatibility.
+
         """
         self._gff_file = Path(gff_file)
         self._name = name
@@ -119,6 +119,7 @@ class Gff:
         -------
         seqid2size : dict[str, int]
             seqid & genome size dict
+
         """
         return self._seqid2size
 
@@ -141,6 +142,7 @@ class Gff:
         -------
         seqid2features : dict[str, list[SeqFeature]]
             seqid & features dict
+
         """
         if isinstance(feature_type, str):
             feature_type = [feature_type]
@@ -184,6 +186,7 @@ class Gff:
         -------
         features : list[SeqFeature]
             Feature list
+
         """
         gff_records = GffRecord.filter_records(
             self.records,
@@ -207,6 +210,7 @@ class Gff:
         -------
         features : list[SeqFeature]
             Feature list
+
         """
         # Extract exon features by mRNA-exon relation
         parent_id = None
@@ -277,6 +281,7 @@ class Gff:
             Start position of target_seqid record
         end : int
             End position of target_seqid record
+
         """
         gff_file = Path(gff_file)
         if gff_file.suffix == ".gz":
@@ -318,6 +323,7 @@ class Gff:
             Start position of target_seqid record
         end : int
             End position of target_seqid record
+
         """
         # Parse GFF lines
         gff_all_lines = handle.read().splitlines()
@@ -338,15 +344,18 @@ class Gff:
         # If not found, (0, max_coordinate) is set as start-end
         seqid2start_end: dict[str, tuple[int, int]] = {}
         for seqid in seqid_list:
-            start, end = None, None
+            start: int = 0
+            end: int = 0
+            found_region = False
             for line in gff_all_lines:
                 if line.startswith("##sequence-region"):
                     # e.g. `##sequence-region NC_XXXXXX 1 10000` (seqid, start, end)
                     if len(line.split()) == 4 and line.split()[1] == seqid:
-                        start, end = line.split()[2:4]
-                        start, end = int(start) - 1, int(end)
+                        start = int(line.split()[2]) - 1
+                        end = int(line.split()[3])
+                        found_region = True
                         break
-            if start is None or end is None:
+            if not found_region:
                 seqid_gff_records = [rec for rec in gff_records if rec.seqid == seqid]
                 start, end = 0, max([r.end for r in seqid_gff_records])
             seqid2start_end[seqid] = (start, end)
@@ -389,6 +398,7 @@ class GffRecord:
         -------
         check_result : bool
             Check result
+
         """
         if min_range <= self.start <= self.end <= max_range:
             return True
@@ -411,6 +421,7 @@ class GffRecord:
         -------
         feature_location : SimpleLocation
             Simple location
+
         """
         return SimpleLocation(self.start - 1, self.end, self.strand)
 
@@ -421,6 +432,7 @@ class GffRecord:
         -------
         gff_line : str
             GFF record line
+
         """
         return "\t".join(
             (
@@ -449,6 +461,7 @@ class GffRecord:
         -------
         check_result : bool
             Check result
+
         """
         if line.startswith("#") or len(line.split("\t")) < 9:
             return False
@@ -468,6 +481,7 @@ class GffRecord:
         -------
         gff_record : GffRecord
             GFF record
+
         """
         gff_elms: list[Any] = gff_line.split("\t")[0:9]
         # start, end
@@ -518,6 +532,7 @@ class GffRecord:
         -------
         filter_gff_records : list[SeqFeature]
             Filtered GFF records
+
         """
         if isinstance(feature_type, str):
             feature_type = [feature_type]

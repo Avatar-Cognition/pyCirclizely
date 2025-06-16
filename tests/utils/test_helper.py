@@ -1,4 +1,5 @@
 import pytest
+from plotly.colors import qualitative  # type: ignore[attr-defined]
 
 from pycirclizely.utils import ColorCycler, calc_group_spaces
 
@@ -6,29 +7,31 @@ from pycirclizely.utils import ColorCycler, calc_group_spaces
 def test_color_cycler():
     """Test color cycler"""
     # Check get color list length
-    ColorCycler.set_cmap("tab10")
-    assert len(ColorCycler.get_color_list()) == 10
+    ColorCycler.set_palette("Plotly")
+    assert len(ColorCycler.get_color_list()) == len(qualitative.Plotly)
     assert len(ColorCycler.get_color_list(5)) == 5
     assert len(ColorCycler.get_color_list(20)) == 20
 
     # Check cycle index, color
-    assert ColorCycler(0) != ColorCycler(1)
-    assert ColorCycler(0) == ColorCycler(10)
-    assert ColorCycler(15) == ColorCycler(25)
+    assert ColorCycler.get_color(0) != ColorCycler.get_color(1)
+    assert ColorCycler.get_color(0) == ColorCycler.get_color(len(qualitative.Plotly))
+    assert ColorCycler.get_color(15) == ColorCycler.get_color(
+        15 + len(qualitative.Plotly)
+    )
 
     # Check cycle counter
-    assert ColorCycler() != ColorCycler()
-    assert ColorCycler.counter == 2
+    assert ColorCycler.get_color() != ColorCycler.get_color()
+    assert ColorCycler._palette_counters.get(ColorCycler._current_palette, 0) == 2
 
     # Check reset cycle
     ColorCycler.reset_cycle()
-    assert ColorCycler.counter == 0
+    assert ColorCycler._palette_counters.get(ColorCycler._current_palette, 0) == 0
 
-    # Check cmap change
-    ColorCycler.set_cmap("tab20")
-    with pytest.raises(KeyError):
-        ColorCycler.set_cmap("invalid name")
-    assert len(ColorCycler.get_color_list()) == 20
+    # Check palette change
+    ColorCycler.set_palette("Alphabet")
+    with pytest.raises(ValueError):
+        ColorCycler.set_palette("invalid name")
+    assert len(ColorCycler.get_color_list()) == len(qualitative.Alphabet)
 
 
 def test_calc_group_spaces():

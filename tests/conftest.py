@@ -3,6 +3,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from pycirclizely.circos import Circos
+
 
 @pytest.fixture
 def testdata_dir() -> Path:
@@ -98,3 +100,17 @@ def tsv_radar_table_file(radar_table_df: pd.DataFrame, tmp_path: Path) -> Path:
     tsv_radar_table_file = tmp_path / "radar_table.tsv"
     radar_table_df.to_csv(tsv_radar_table_file, sep="\t")
     return tsv_radar_table_file
+
+
+@pytest.fixture
+def circos():
+    """Fixture that creates a basic Circos plot with 3 sectors"""
+    sectors = {"A": 10, "B": 20, "C": 15}
+    return Circos(sectors, space=5)
+
+
+@pytest.fixture
+def fig(circos: Circos):
+    """Fixture that returns a Figure object"""
+    circos.axis()  # Add default axis
+    return circos.plotfig()

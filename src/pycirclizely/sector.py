@@ -6,9 +6,9 @@ import warnings
 from copy import deepcopy
 
 import numpy as np
-from plotly.graph_objs.layout._annotation import Annotation
-from plotly.graph_objs.layout._shape import Shape
+import plotly.graph_objects as go
 from plotly.basedatatypes import BaseTraceType
+
 from pycirclizely import config, utils
 from pycirclizely.patches import PolarSVGPatchBuilder
 from pycirclizely.track import Track
@@ -24,8 +24,7 @@ class Sector:
         rad_lim: tuple[float, float],
         clockwise: bool = True,
     ):
-        """
-        Parameters
+        """Parameters
         ----------
         name : str
             Sector name
@@ -35,6 +34,7 @@ class Sector:
             Sector radian limit region
         clockwise : bool, optional
             Sector coordinate direction (clockwise or anti-clockwise).
+
         """
         self._name = name
         if isinstance(size, (tuple, list)):
@@ -49,8 +49,8 @@ class Sector:
         self._tracks: list[Track] = []
 
         # Shapes and annotations for Layout
-        self._shapes: list[Shape] = []
-        self._annotations: list[Annotation] = []
+        self._shapes: list[go.layout.Shape] = []
+        self._annotations: list[go.layout.Annotation] = []
         self._traces: list[BaseTraceType] = []
 
     ############################################################
@@ -113,15 +113,15 @@ class Sector:
         return self._tracks
 
     @property
-    def shapes(self) -> list[Shape]:
+    def shapes(self) -> list[go.layout.Shape]:
         """Layout shapes"""
         return self._shapes
 
     @property
-    def annotations(self) -> list[Annotation]:
+    def annotations(self) -> list[go.layout.Annotation]:
         """Layout annotations"""
         return self._annotations
-    
+
     @property
     def traces(self) -> list[BaseTraceType]:
         """Data traces"""
@@ -153,6 +153,7 @@ class Sector:
         -------
         track : Track
             Track
+
         """
         name = f"Track{len(self.tracks) + 1:02d}" if name is None else name
         if name in [t.name for t in self.tracks]:
@@ -176,6 +177,7 @@ class Sector:
         -------
         track : Track
             Target name track
+
         """
         name2track = {t.name: t for t in self.tracks}
         if name not in name2track:
@@ -189,6 +191,7 @@ class Sector:
         -------
         lowest_r : float
             Lowest radius position. If no tracks found, `lowest_r=100`.
+
         """
         if len(self.tracks) == 0:
             return config.MAX_R
@@ -208,6 +211,7 @@ class Sector:
         -------
         rad : float
             Radian coordinate
+
         """
         # Check target x is in valid sector range
         if not ignore_range_error:
@@ -233,19 +237,25 @@ class Sector:
         Parameters
         ----------
         **kwargs : dict, optional
-            Shape properties (e.g. `fillcolor="red", line=dict(color="darkgreen", width=2, dash="dash", ... ) ...`)
+            Shape properties
+            (e.g. `fillcolor="red", line=dict(color="green", width=2, dash="dash")`)
             <https://plotly.com/python/reference/layout/shapes/>
+
         """
         kwargs = {} if kwargs is None else kwargs
 
         # Background shape placed behind other shapes (layer="below")
         fc_behind_kwargs = deepcopy(kwargs)
-        fc_behind_kwargs = utils.deep_dict_update(fc_behind_kwargs, config.AXIS_FACE_PARAM)
+        fc_behind_kwargs = utils.deep_dict_update(
+            fc_behind_kwargs, config.AXIS_FACE_PARAM
+        )
         self.rect(self.start, self.end, config.R_LIM, **fc_behind_kwargs)
 
         # Edge shape placed in front of other shapes (layer="above")
         ec_front_kwargs = deepcopy(kwargs)
-        ec_front_kwargs = utils.deep_dict_update(ec_front_kwargs, config.AXIS_EDGE_PARAM)
+        ec_front_kwargs = utils.deep_dict_update(
+            ec_front_kwargs, config.AXIS_EDGE_PARAM
+        )
         self.rect(self.start, self.end, config.R_LIM, **ec_front_kwargs)
 
     def text(
@@ -284,6 +294,7 @@ class Sector:
         **kwargs : dict, optional
             Annotation properties (e.g. `font=dict(size=12, color='red')`).
             See: <https://plotly.com/python/reference/layout/annotations/>
+
         """
         x = self.center if x is None else x
         rad = self.x_to_rad(x, ignore_range_error)
@@ -292,7 +303,7 @@ class Sector:
         y_pos = r * np.sin(plotly_rad)
 
         annotation = utils.plot.get_plotly_label_params(
-            rad, adjust_rotation, orientation, outer, **kwargs
+            rad, adjust_rotation, orientation, **kwargs
         )
 
         annotation.update(
@@ -303,7 +314,8 @@ class Sector:
             }
         )
 
-        self._annotations.append(annotation)
+        annotation_layout = go.layout.Annotation(**annotation)
+        self._annotations.append(annotation_layout)
 
     def line(
         self,
@@ -329,33 +341,33 @@ class Sector:
             If False, creates straight chord line.
         **kwargs : dict, optional
             Line properties (e.g. `line=dict(color="red", width=2, dash="dash")`)
+
         """
         # Set default genomic coordinates
         start = self.start if start is None else start
         end = self.end if end is None else end
-        
+
         # Convert to polar coordinates
         rad_lim = (self.x_to_rad(start), self.x_to_rad(end))
         r_lim = (r, r) if isinstance(r, (float, int)) else r
-        
+
         # Generate path based on arc preference
         path = (
-            PolarSVGPatchBuilder.arc_line(rad_lim, r_lim) if arc 
+            PolarSVGPatchBuilder.arc_line(rad_lim, r_lim)
+            if arc
             else PolarSVGPatchBuilder.straight_line(rad_lim, r_lim)
         )
-        
+
         # Create shape with defaults and kwargs
         shape = utils.plot.build_plotly_shape(
-            path, 
-            config.plotly_shape_defaults, 
-            **kwargs
+            path, config.plotly_shape_defaults, **kwargs
         )
         self._shapes.append(shape)
 
     def rect(
         self,
-        start: float | None = None,
-        end: float | None = None,
+        start: int | float | None = None,
+        end: int | float | None = None,
         r_lim: tuple[float, float] | None = None,
         **kwargs,
     ) -> None:
@@ -373,8 +385,10 @@ class Sector:
         r_lim : tuple[float, float] | None, optional
             Radius limit region. If None, (0, 100) is set.
         **kwargs : dict, optional
-            Shape properties (e.g. `fillcolor="red", line: {color: "blue", width: 2, ... } ...`)
+            Shape properties
+            (e.g. `fillcolor="red", line: {color: "blue", width: 2, ... } ...`)
             <https://plotly.com/python/reference/layout/shapes/>
+
         """
         start = self.start if start is None else start
         end = self.end if end is None else end
@@ -390,7 +404,9 @@ class Sector:
         height = max(r_lim) - min(r_lim)
 
         path = PolarSVGPatchBuilder.arc_rectangle(radr, width, height)
-        shape = utils.plot.build_plotly_shape(path, config.plotly_shape_defaults, **kwargs)
+        shape = utils.plot.build_plotly_shape(
+            path, config.plotly_shape_defaults, **kwargs
+        )
         self._shapes.append(shape)
 
     ############################################################

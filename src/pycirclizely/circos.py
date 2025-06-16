@@ -6,20 +6,17 @@ import textwrap
 from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 import plotly.graph_objects as go
-from plotly.graph_objs.layout._annotation import Annotation
-from plotly.graph_objs.layout._shape import Shape
-from plotly.graph_objs.layout._coloraxis import Coloraxis
 from plotly.basedatatypes import BaseTraceType
+
 from pycirclizely import config, utils
-from pycirclizely.utils.plot import LinkDirection
 from pycirclizely.parser import Bed
 from pycirclizely.patches import PolarSVGPatchBuilder
 from pycirclizely.sector import Sector
 from pycirclizely.track import Track
+from pycirclizely.utils.plot import LinkDirection
 
 
 class Circos:
@@ -36,8 +33,7 @@ class Circos:
         sector2clockwise: dict[str, bool] | None = None,
         show_axis_for_debug: bool = False,
     ):
-        """
-        Parameters
+        """Parameters
         ----------
         sectors : Mapping[str, int | float | tuple[float, float]]
             Sector name & size (or range) dict
@@ -53,6 +49,7 @@ class Circos:
             Sector name & clockwise bool dict. By default, `clockwise=True`.
         show_axis_for_debug : bool, optional
             Show axis for position check debugging (Developer option)
+
         """
         sector2clockwise = {} if sector2clockwise is None else sector2clockwise
 
@@ -106,10 +103,10 @@ class Circos:
         self._show_axis_for_debug = show_axis_for_debug
 
         # Plotly classes
-        self._shapes: list[Shape] = []
-        self._annotations: list[Annotation] = []
+        self._shapes: list[go.layout.Shape] = []
+        self._annotations: list[go.layout.Annotation] = []
         self._traces: list[BaseTraceType] = []
-        self._coloraxes: list[Coloraxis] = []
+        self._coloraxes: list[go.layout.Coloraxis] = []
 
     ############################################################
     # Property
@@ -186,6 +183,7 @@ class Circos:
         -------
         circos : Circos
             Circos instance initialized from BED file
+
         """
         records = Bed(bed_file).records
         sectors = {rec.chr: (rec.start, rec.end) for rec in records}
@@ -219,6 +217,7 @@ class Circos:
         cytoband_cmap : dict[str, str] | None, optional
             User-defined cytoband colormap. If None, use Circos style colormap.
             (e.g. `{"gpos100": "#000000", "gneg": "#FFFFFF", ...}`)
+
         """
         if cytoband_cmap is None:
             cytoband_cmap = config.CYTOBAND_COLORMAP
@@ -243,11 +242,34 @@ class Circos:
         -------
         sector : Sector
             Sector
+
         """
         name2sector = {s.name: s for s in self.sectors}
         if name not in name2sector:
             raise ValueError(f"{name=} sector not found.")
         return name2sector[name]
+
+    def get_group_sectors_deg_lim(
+        self,
+        group_sector_names: list[str],
+    ) -> tuple[float, float]:
+        """Get degree min-max limit in target group sectors
+
+        Parameters
+        ----------
+        group_sector_names : list[str]
+            Group sector names
+
+        Returns
+        -------
+        group_sectors_deg_lim : tuple[float, float]
+            Degree limit in group sectors
+
+        """
+        group_sectors = [self.get_sector(name) for name in group_sector_names]
+        min_deg = min([min(s.deg_lim) for s in group_sectors])
+        max_deg = max([max(s.deg_lim) for s in group_sectors])
+        return min_deg, max_deg
 
     def axis(self, **kwargs) -> None:
         """Plot axis
@@ -255,19 +277,25 @@ class Circos:
         Parameters
         ----------
         **kwargs : dict, optional
-            Shape properties (e.g. `fillcolor="red", line=dict(color="darkgreen", width=2, dash="dash", ... ) ...`)
+            Shape properties
+            (e.g. `fillcolor="red", line=dict(color="green", width=2, dash="dash")`)
             <https://plotly.com/python/reference/layout/shapes/>
+
         """
         kwargs = {} if kwargs is None else kwargs
 
         # Background shape placed behind other shapes (layer="below")
         fc_behind_kwargs = deepcopy(kwargs)
-        fc_behind_kwargs = utils.deep_dict_update(fc_behind_kwargs, config.AXIS_FACE_PARAM)
+        fc_behind_kwargs = utils.deep_dict_update(
+            fc_behind_kwargs, config.AXIS_FACE_PARAM
+        )
         self.rect(**fc_behind_kwargs)
 
         # Edge shape placed in front of other shapes (layer="above")
         ec_front_kwargs = deepcopy(kwargs)
-        ec_front_kwargs = utils.deep_dict_update(ec_front_kwargs, config.AXIS_EDGE_PARAM)
+        ec_front_kwargs = utils.deep_dict_update(
+            ec_front_kwargs, config.AXIS_EDGE_PARAM
+        )
         self.rect(**ec_front_kwargs)
 
     def text(
@@ -303,6 +331,7 @@ class Circos:
         **kwargs : dict, optional
             Annotation properties (e.g. `font=dict(size=12, color='red')`).
             See: <https://plotly.com/python/reference/layout/annotations/>
+
         """
         rad = np.radians(deg)
         plotly_rad = -(rad - np.pi / 2)  # Convert to Plotly's polar coordinates
@@ -310,7 +339,7 @@ class Circos:
         y_pos = r * np.sin(plotly_rad)
 
         annotation = utils.plot.get_plotly_label_params(
-            rad, adjust_rotation, orientation, outer, **kwargs
+            rad, adjust_rotation, orientation, **kwargs
         )
 
         annotation.update(
@@ -321,7 +350,8 @@ class Circos:
             }
         )
 
-        self._annotations.append(annotation)
+        annotation_layout = go.layout.Annotation(**annotation)
+        self._annotations.append(annotation_layout)
 
     def line(
         self,
@@ -345,20 +375,24 @@ class Circos:
         **kwargs : dict, optional
             Line properties (e.g. `line=dict(color="red", width=2, dash="dash")`)
             See: <https://plotly.com/python/reference/layout/shapes/>
+
         """
         deg_lim = self.deg_lim if deg_lim is None else deg_lim
         start_deg, end_deg = min(deg_lim), max(deg_lim)
         rad_lim = (math.radians(start_deg), math.radians(end_deg))
-        
+
         # Convert radius to tuple if needed
         r_lim = (r, r) if isinstance(r, (float, int)) else r
-        
+
         path = (
-            PolarSVGPatchBuilder.arc_line(rad_lim, r_lim) if arc 
+            PolarSVGPatchBuilder.arc_line(rad_lim, r_lim)
+            if arc
             else PolarSVGPatchBuilder.straight_line(rad_lim, r_lim)
         )
-            
-        shape = utils.plot.build_plotly_shape(path, config.plotly_shape_defaults, **kwargs)
+
+        shape = utils.plot.build_plotly_shape(
+            path, config.plotly_shape_defaults, **kwargs
+        )
         self._shapes.append(shape)
 
     def rect(
@@ -381,6 +415,7 @@ class Circos:
         **kwargs : dict, optional
             Shape properties (e.g. `fillcolor="red", line=dict(color="blue", width=2)`)
             See: <https://plotly.com/python/reference/layout/shapes/>
+
         """
         deg_lim = self.deg_lim if deg_lim is None else deg_lim
         rad_start = math.radians(deg_lim[0])
@@ -394,9 +429,10 @@ class Circos:
         height = max(r_lim) - min(r_lim)
 
         path = PolarSVGPatchBuilder.arc_rectangle(radr, width, height)
-        shape = utils.plot.build_plotly_shape(path, config.plotly_shape_defaults, **kwargs)
+        shape = utils.plot.build_plotly_shape(
+            path, config.plotly_shape_defaults, **kwargs
+        )
         self._shapes.append(shape)
-
 
     def link(
         self,
@@ -406,7 +442,7 @@ class Circos:
         r2: float | None = None,
         *,
         height_ratio: float = 0.5,
-        direction: LinkDirection = LinkDirection.NONE,
+        direction: int = 0,
         arrow_length_ratio: float = 0.05,
         allow_twist: bool = True,
         **kwargs,
@@ -435,6 +471,7 @@ class Circos:
             Shape properties (e.g. `fillcolor="red", line=dict(color="blue", width=2)`)
             Hover text for link (e.g. `hovertext="Link: ..."`).
             See: <https://plotly.com/python/reference/layout/shapes/>
+
         """
         # Extract regions
         name1, start1, end1 = sector_region1
@@ -443,8 +480,8 @@ class Circos:
         # Get default hovertext or pop from kwargs
         arrow_symbol = LinkDirection(direction).arrow()
         hovertext = kwargs.pop(
-            'hovertext', 
-            f"Link: {name1}:{start1}-{end1} {arrow_symbol} {name2}:{start2}-{end2}"
+            "hovertext",
+            f"Link: {name1}:{start1}-{end1} {arrow_symbol} {name2}:{start2}-{end2}",
         )
 
         # Get sectors and calculate positions
@@ -461,28 +498,36 @@ class Circos:
 
         # Create Bezier curve path
         path = PolarSVGPatchBuilder.bezier_ribbon_path(
-            rad_start1, rad_end1, r1,
-            rad_start2, rad_end2, r2,
+            rad_start1,
+            rad_end1,
+            r1,
+            rad_start2,
+            rad_end2,
+            r2,
             height_ratio,
             direction,
-            arrow_length_ratio
+            arrow_length_ratio,
         )
 
-        shape = utils.plot.build_plotly_shape(path, defaults=config.plotly_arrow_defaults, **kwargs)
+        shape = utils.plot.build_plotly_shape(
+            path, defaults=config.plotly_arrow_defaults, **kwargs
+        )
         self._shapes.append(shape)
 
         # Add invisible scatter points for hovertext at link positions
-        hover_x, hover_y = zip(*[
-            PolarSVGPatchBuilder._polar_to_cart((rad_start1 + rad_end1) / 2, r1),
-            PolarSVGPatchBuilder._polar_to_cart((rad_start2 + rad_end2) / 2, r2)
-        ])
+        hover_x, hover_y = zip(
+            *[
+                PolarSVGPatchBuilder._polar_to_cart((rad_start1 + rad_end1) / 2, r1),
+                PolarSVGPatchBuilder._polar_to_cart((rad_start2 + rad_end2) / 2, r2),
+            ]
+        )
         hover_trace = utils.plot.build_scatter_trace(
-            hover_x,
-            hover_y,
-            mode='markers',
+            list(hover_x),
+            list(hover_y),
+            mode="markers",
             text=hovertext,
             marker=dict(size=20, opacity=0),
-            hoverlabel={"bgcolor": shape['fillcolor']},
+            hoverlabel={"bgcolor": shape["fillcolor"]},
         )
         self._traces.append(hover_trace)
 
@@ -528,6 +573,7 @@ class Circos:
             Shape properties (e.g. `fillcolor="red", line=dict(color="blue", width=2)`)
             Hover text for link (e.g. `hovertext="Link: ..."`).
             See: <https://plotly.com/python/reference/layout/shapes/>
+
         """
         # Set data for plot link
         name1, pos1 = sector_pos1
@@ -536,8 +582,7 @@ class Circos:
         # Get default hovertext or pop from kwargs
         arrow_symbol = LinkDirection(direction).arrow()
         hovertext = kwargs.pop(
-            'hovertext', 
-            f"Link: {name1}:{pos1} {arrow_symbol} {name2}:{pos2}"
+            "hovertext", f"Link: {name1}:{pos1} {arrow_symbol} {name2}:{pos2}"
         )
 
         # Get coordinates
@@ -548,118 +593,73 @@ class Circos:
 
         # Create Bezier curve path
         path = PolarSVGPatchBuilder.bezier_line_path(
-            rad_pos1, r1,
-            rad_pos2, r2,
+            rad_pos1,
+            r1,
+            rad_pos2,
+            r2,
             height_ratio,
             direction,
             arrow_height,
             arrow_width,
         )
 
-        shape = utils.plot.build_plotly_shape(path, defaults=config.plotly_linelink_defaults, **kwargs)
+        shape = utils.plot.build_plotly_shape(
+            path, defaults=config.plotly_linelink_defaults, **kwargs
+        )
         self._shapes.append(shape)
 
         # Add invisible scatter points for hovertext at link positions
-        hover_x, hover_y = zip(*[
-            PolarSVGPatchBuilder._polar_to_cart(rad_pos1, r1),
-            PolarSVGPatchBuilder._polar_to_cart(rad_pos2, r2)
-        ])
+        hover_x, hover_y = zip(
+            *[
+                PolarSVGPatchBuilder._polar_to_cart(rad_pos1, r1),
+                PolarSVGPatchBuilder._polar_to_cart(rad_pos2, r2),
+            ]
+        )
         hover_trace = utils.plot.build_scatter_trace(
-            hover_x,
-            hover_y,
-            mode='markers',
+            list(hover_x),
+            list(hover_y),
+            mode="markers",
             text=hovertext,
             marker=dict(size=20, opacity=0),
-            hoverlabel={"bgcolor": shape['line']['color']},
+            hoverlabel={"bgcolor": shape["line"]["color"]},
         )
         self._traces.append(hover_trace)
 
     def colorbar(
         self,
-        bounds: tuple[float, float, float, float] | None = None,
         *,
-        vmin: float = 0,
-        vmax: float = 1,
+        vmin: int | float = 0,
+        vmax: int | float = 1,
         cmap: str = "RdBu",
-        orientation: str = "vertical",
-        label: str | None = None,
-        colorbar_kws: dict[str, Any] | None = None,
-        label_kws: dict[str, Any] | None = None,
-        tick_kws: dict[str, Any] | None = None,
+        **kwargs,
     ) -> str:
         """Plot colorbar using Plotly's coloraxis system.
-        
+
         Parameters
         ----------
-        bounds : tuple[float, float, float, float], optional
-            If None, Plotly will use default positioning
-        vmin : float, optional
+        vmin : int | float, optional
             Colorbar min value
-        vmax : float, optional
+        vmax : int | float, optional
             Colorbar max value
         cmap : str, optional
             Colormap name
-        orientation : str, optional
-            'vertical' or 'horizontal'
-        label : str | None, optional
-            Colorbar label text
-        colorbar_kws : dict, optional
-            Additional colorbar properties
-        label_kws : dict, optional
-            Label text properties
-        tick_kws : dict, optional
-            Tick properties
+        **kwargs : dict, optional
+            Colorbar properties (e.g. `orientation="v", tickfont=dict(size=12)`)
+            See: <https://plotly.com/python/reference/layout/coloraxis/>
         """
-        colorbar_kws = {} if colorbar_kws is None else deepcopy(colorbar_kws)
-        label_kws = {} if label_kws is None else deepcopy(label_kws)
-        tick_kws = {} if tick_kws is None else deepcopy(tick_kws)
-
-        # Only set bounds if explicitly provided
-        if bounds is not None:
-            colorbar_kws.update({
-                "len": bounds[3],  # height
-                "thickness": bounds[2],  # width
-                "x": bounds[0],  # x position
-                "y": bounds[1],  # y position
-            })
-
-        # Convert orientation
-        orientation = orientation[0].lower()
-        colorbar_config = {"orientation": orientation, **colorbar_kws}
-        
-        # Handle label if provided
-        if label:
-            title_dict = {"text": label}
-            if label_kws:
-                title_dict["font"] = {
-                    k: label_kws[k] 
-                    for k in ["size", "color", "family"] 
-                    if k in label_kws
-                }
-            colorbar_config["title"] = title_dict
-        
-        # Handle tick properties
-        if tick_kws:
-            if any(k in tick_kws for k in ["labelsize", "color", "family"]):
-                colorbar_config["tickfont"] = {
-                    "size": tick_kws.get("labelsize"),
-                    "color": tick_kws.get("color"),
-                    "family": tick_kws.get("family")
-                }
-            colorbar_config.update({
-                "ticklen": tick_kws.get("length"),
-                "tickwidth": tick_kws.get("width")
-            })
-        
         # Create and store coloraxis config
         coloraxis_config = {
             "cmin": vmin,
             "cmax": vmax,
             "colorscale": cmap,
-            "colorbar": colorbar_config
+            "colorbar": kwargs,
         }
-        
-        coloraxis_name = "coloraxis" if len(self._coloraxes) == 0 else f"coloraxis{len(self._coloraxes) + 1}"
+
+        coloraxis_name = (
+            "coloraxis"
+            if len(self._coloraxes) == 0
+            else f"coloraxis{len(self._coloraxes) + 1}"
+        )
         self._coloraxes.append(coloraxis_config)
 
         return coloraxis_name
@@ -685,58 +685,21 @@ class Circos:
         -------
         fig : go.Figure
             Plotly figure object
+
         """
         layout_dict = self._initialize_plotly_layout(figsize=figsize, dpi=dpi)
         layout_dict = utils.deep_dict_update(layout_dict, kwargs)
 
         layout_dict["shapes"] = self._get_all_shapes()
         layout_dict["annotations"] = self._get_all_annotations()
-        
+
         for i, coloraxis in enumerate(self._coloraxes):
             axis_key = "coloraxis" if i == 0 else f"coloraxis{i+1}"
             layout_dict[axis_key] = coloraxis
-        
+
         data_dict = self._get_all_traces()
 
         return go.Figure(data=data_dict, layout=go.Layout(layout_dict))
-
-    # def savefig(
-    #     self,
-    #     savefile: str | Path,
-    #     *,
-    #     dpi: int = 100,
-    #     figsize: tuple[float, float] = (8, 8),
-    #     pad_inches: float = 0.5,
-    # ) -> None:
-    #     """Save figure to file
-
-    #     Parameters
-    #     ----------
-    #     savefile : str | Path
-    #         Save file (`*.png`|`*.jpg`|`*.svg`|`*.pdf`)
-    #     dpi : int, optional
-    #         DPI
-    #     figsize : tuple[float, float], optional
-    #         Figure size
-    #     pad_inches : float, optional
-    #         Padding inches
-
-    #     Warnings
-    #     --------
-    #     To plot a figure that settings a user-defined legend, subtracks, or annotations,
-    #     call `fig.savefig()` instead of `gv.savefig()`.
-    #     """
-    #     fig = self.plotfig(dpi=dpi, figsize=figsize)
-    #     fig.savefig(
-    #         fname=savefile,  # type: ignore
-    #         dpi=dpi,
-    #         pad_inches=pad_inches,
-    #         bbox_inches="tight",
-    #     )
-    #     # Clear & close figure to suppress memory leak
-    #     if config.clear_savefig:
-    #         fig.clear()
-    #         plt.close(fig)
 
     ############################################################
     # Private Method
@@ -751,6 +714,7 @@ class Circos:
             Start degree range
         end : float
             End degree range
+
         """
         min_deg, max_deg = -360, 360
         if not min_deg <= start < end <= max_deg:
@@ -787,7 +751,7 @@ class Circos:
         width = int(figsize[0] * dpi)
         height = int(figsize[1] * dpi)
 
-        layout = deepcopy(config.plotly_layout_defaults)
+        layout: dict = deepcopy(config.plotly_layout_defaults)
 
         layout["width"] = width
         layout["height"] = height
@@ -796,20 +760,20 @@ class Circos:
 
         return layout
 
-    def _get_all_shapes(self) -> list[dict]:
+    def _get_all_shapes(self) -> list[go.layout.Shape]:
         """Gather all shape dictionaries from self, sectors, and tracks."""
         circos_shapes = self._shapes
         sector_shapes = list(itertools.chain(*[s._shapes for s in self.sectors]))
         track_shapes = list(itertools.chain(*[t._shapes for t in self.tracks]))
         return circos_shapes + sector_shapes + track_shapes
 
-    def _get_all_annotations(self) -> list[dict]:
+    def _get_all_annotations(self) -> list[go.layout.Annotation]:
         """Gather all annotation dictionaries from self, sectors, and tracks."""
         circos_ann = self._annotations
         sector_ann = list(itertools.chain(*[s._annotations for s in self.sectors]))
         track_ann = list(itertools.chain(*[t._annotations for t in self.tracks]))
         return circos_ann + sector_ann + track_ann
-    
+
     def _get_all_traces(self) -> list[BaseTraceType]:
         """Gather all traces from self, sectors, and tracks.
 
@@ -817,21 +781,19 @@ class Circos:
         -------
         List[BaseTraceType]
             Combined list of all trace objects (scatter, bar, etc.)
+
         """
         # Get traces from main Circos object
         circos_traces = self._traces
-        
-        # Get traces from all sectors (flatten nested lists)
-        sector_traces = list(itertools.chain(*[
-            s._traces for s in self.sectors 
-            if hasattr(s, '_traces')
-        ]))
-        
-        # Get traces from all tracks (flatten nested lists)
-        track_traces = list(itertools.chain(*[
-            t._traces for t in self.tracks 
-            if hasattr(t, '_traces')
-        ]))
-        
-        return circos_traces + sector_traces + track_traces
 
+        # Get traces from all sectors (flatten nested lists)
+        sector_traces = list(
+            itertools.chain(*[s._traces for s in self.sectors if hasattr(s, "_traces")])
+        )
+
+        # Get traces from all tracks (flatten nested lists)
+        track_traces = list(
+            itertools.chain(*[t._traces for t in self.tracks if hasattr(t, "_traces")])
+        )
+
+        return circos_traces + sector_traces + track_traces
