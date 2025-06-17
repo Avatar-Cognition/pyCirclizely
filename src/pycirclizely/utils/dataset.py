@@ -3,11 +3,13 @@ from __future__ import annotations
 import csv
 import os
 from dataclasses import dataclass
-from io import StringIO, TextIOWrapper
+from io import StringIO
 from pathlib import Path
+from typing import TextIO, Union
 from urllib.request import urlretrieve
 
 from Bio import Entrez
+
 from pycirclizely import config
 
 
@@ -16,10 +18,10 @@ def load_prokaryote_example_file(
     cache_dir: str | Path | None = None,
     overwrite_cache: bool = False,
 ) -> Path:
-    """Load pycirclizely example Genbank or GFF file
+    """Load pycirclize example Genbank or GFF file
 
-    Load example file from <https://github.com/moshi4/pycirclizely-data/>
-    and cache file in local directory (Default: `~/.cache/pycirclizely/`).
+    Load example file from <https://github.com/moshi4/pycirclize-data/>
+    and cache file in local directory (Default: `~/.cache/pycirclize/`).
 
     List of example Genbank or GFF filename
 
@@ -32,7 +34,7 @@ def load_prokaryote_example_file(
     filename : str
         Genbank or GFF filename (e.g. `enterobacteria_phage.gff`)
     cache_dir : str | Path | None, optional
-        Output cache directory (Default: `~/.cache/pycirclizely/`)
+        Output cache directory (Default: `~/.cache/pycirclize/`)
     overwrite_cache : bool, optional
         If True, overwrite cache file.
         Assumed to be used when cache file is corrupt.
@@ -41,6 +43,7 @@ def load_prokaryote_example_file(
     -------
     file_path : Path
         Genbank or GFF file
+
     """
     # Check specified filename exists or not
     if filename not in config.PROKARYOTE_FILES:
@@ -72,10 +75,10 @@ def load_eukaryote_example_dataset(
     cache_dir: str | Path | None = None,
     overwrite_cache: bool = False,
 ) -> tuple[Path, Path, list[ChrLink]]:
-    """Load pycirclizely eukaryote example dataset
+    """Load pycirclize eukaryote example dataset
 
-    Load example file from <https://github.com/moshi4/pycirclizely-data/>
-    and cache file in local directory (Default: `~/.cache/pycirclizely/`).
+    Load example file from <https://github.com/moshi4/pycirclize-data/>
+    and cache file in local directory (Default: `~/.cache/pycirclize/`).
 
     List of dataset contents (download from UCSC)
 
@@ -88,7 +91,7 @@ def load_eukaryote_example_dataset(
     name : str, optional
         Dataset name (`hg38`|`hs1`|`mm10`|`mm39`)
     cache_dir : str | Path | None, optional
-        Output cache directory (Default: `~/.cache/pycirclizely/`)
+        Output cache directory (Default: `~/.cache/pycirclize/`)
     overwrite_cache : bool
         If True, overwrite cache dataset.
         Assumed to be used when cache dataset is corrupt.
@@ -101,6 +104,7 @@ def load_eukaryote_example_dataset(
         Cytoband file
     chr_links : list[ChrLink]
         Chromosome links
+
     """
     # Check specified name dataset exists or not
     if name not in config.EUKARYOTE_DATASET:
@@ -134,32 +138,6 @@ def load_eukaryote_example_dataset(
     return eukaryote_files[0], eukaryote_files[1], chr_links
 
 
-def load_example_image_file(filename: str) -> Path:
-    """Load example image file from local package data
-
-    e.g. `python_logo.png`
-
-    Parameters
-    ----------
-    filename : str
-        Image file name
-
-    Returns
-    -------
-    image_file_path : Path
-        Image file path
-    """
-    image_dir = Path(__file__).parent / "example_data" / "images"
-    image_filenames = [f.name for f in image_dir.glob("*.png")]
-
-    if filename.lower() in image_filenames:
-        return image_dir / filename.lower()
-    else:
-        err_msg = f"{filename=} is not found.\n"
-        err_msg += f"Available filenames = {image_filenames}"
-        raise FileNotFoundError(err_msg)
-
-
 def load_example_tree_file(filename: str) -> Path:
     """Load example phylogenetic tree file
 
@@ -179,6 +157,7 @@ def load_example_tree_file(filename: str) -> Path:
     -------
     tree_file : Path
         Tree file (Newick format)
+
     """
     example_data_dir = Path(__file__).parent / "example_data" / "trees"
     example_files = example_data_dir.glob("*.nwk")
@@ -191,9 +170,9 @@ def load_example_tree_file(filename: str) -> Path:
 
 def fetch_genbank_by_accid(
     accid: str,
-    gbk_outfile: str | Path | None = None,
-    email: str | None = None,
-) -> TextIOWrapper:
+    gbk_outfile: Union[str, Path, None] = None,
+    email: Union[str, None] = None,
+) -> TextIO:
     """Fetch genbank text by `Accession ID`
 
     Parameters
@@ -207,26 +186,34 @@ def fetch_genbank_by_accid(
 
     Returns
     -------
-    TextIOWrapper
-        Genbank data
+    TextIO
+        Genbank data (either TextIOWrapper or StringIO)
 
     Examples
     --------
     >>> gbk_fetch_data = fetch_genbank_by_accid("NC_002483")
     >>> gbk = Genbank(gbk_fetch_data)
+
     """
-    Entrez.email = "" if email is None else email
-    gbk_fetch_data: TextIOWrapper = Entrez.efetch(
+    # Handle email assignment
+    setattr(Entrez, "email", email if email is not None else "")
+
+    # Fetch data from NCBI - use TextIO as the variable type
+    gbk_fetch_data: TextIO = Entrez.efetch(
         db="nucleotide",
         id=accid,
         rettype="gbwithparts",
         retmode="text",
     )
+
+    # Handle file output if requested
     if gbk_outfile is not None:
         gbk_text = gbk_fetch_data.read()
         with open(gbk_outfile, "w", encoding="utf-8") as f:
             f.write(gbk_text)
+        # Create new StringIO object to return
         gbk_fetch_data = StringIO(gbk_text)
+        gbk_fetch_data.seek(0)  # Rewind to start of stream
 
     return gbk_fetch_data
 
@@ -255,6 +242,7 @@ class ChrLink:
         -------
         chr_link_list : list[ChrLink]
             Chromosome link list
+
         """
         chr_link_list = []
         with open(chr_link_file, encoding="utf-8") as f:

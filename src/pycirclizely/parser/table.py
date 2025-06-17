@@ -16,13 +16,13 @@ class Table:
         *,
         delimiter: str = "\t",
     ):
-        """
-        Parameters
+        """Parameters
         ----------
         table_data : str | Path | pd.DataFrame
             Table file or Table DataFrame
         delimiter : str, optional
             Table file delimiter. By default, `tab` delimiter.
+
         """
         if isinstance(table_data, (str, Path)):
             table_data = pd.read_csv(table_data, sep=delimiter, index_col=0)
@@ -65,8 +65,9 @@ class Table:
         -------
         col_name2color : dict[str, str]
             Column name & color dict
+
         """
-        ColorCycler.set_cmap(cmap)
+        ColorCycler.set_palette(cmap)
         return {n: ColorCycler.get_color() for n in self.col_names}
 
     def get_row_name2color(self, cmap: str = "tab10") -> dict[str, str]:
@@ -81,8 +82,9 @@ class Table:
         -------
         col_name2color : dict[str, str]
             Column name & color dict
+
         """
-        ColorCycler.set_cmap(cmap)
+        ColorCycler.set_palette(cmap)
         return {n: ColorCycler.get_color() for n in self.row_names}
 
     def __str__(self):
@@ -139,6 +141,7 @@ class StackedBarTable(Table):
         -------
         x_list : list[float]
             List of x position for bar label plot
+
         """
         interval = track_size / len(self.row_names)
         return [cnt * interval + (interval / 2) for cnt in range(len(self.row_names))]
@@ -158,6 +161,7 @@ class StackedBarTable(Table):
         -------
         bar_label_r_list : list[float]
             List of radius position for horizontal bar label plot
+
         """
         rmin, rmax = track_r_lim
         interval = (rmax - rmin) / len(self.row_names)
@@ -185,6 +189,7 @@ class StackedBarTable(Table):
         -------
         list[tuple[float, float]]
             List of radius limit for horizontal bar plot
+
         """
         rmin, rmax = track_r_lim
         interval = (rmax - rmin) / len(self.row_names)

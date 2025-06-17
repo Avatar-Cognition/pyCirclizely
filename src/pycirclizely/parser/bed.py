@@ -9,11 +9,11 @@ class Bed:
     """BED Parser Class"""
 
     def __init__(self, bed_file: str | Path):
-        """
-        Parameters
+        """Parameters
         ----------
         bed_file : str | Path
             BED format file
+
         """
         self._bed_file = bed_file
         self._records = BedRecord.parse(bed_file)
@@ -50,6 +50,7 @@ class BedRecord:
         -------
         bed_records : list[BedRecord]
             BED records
+
         """
         bed_records = []
         with open(bed_file, encoding="utf-8") as f:

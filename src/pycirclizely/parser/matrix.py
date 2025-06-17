@@ -15,13 +15,13 @@ class Matrix:
         *,
         delimiter: str = "\t",
     ):
-        """
-        Parameters
+        """Parameters
         ----------
         matrix : str | Path | pd.DataFrame
             Matrix file or Matrix DataFrame
         delimiter : str, optional
             Matrix file delimiter. By default, `tab` delimiter.
+
         """
         # If input matrix is file path, convert to pandas dataframe
         if isinstance(matrix, (str, Path)):
@@ -29,7 +29,8 @@ class Matrix:
 
         # Calculate data size & link positions
         rev_matrix = matrix.iloc[::-1, ::-1]
-        name2size, links = defaultdict(float), []
+        name2size: defaultdict[str, float] = defaultdict(float)
+        links: list = []
         for row_name, row in zip(rev_matrix.index, rev_matrix.values):
             for col_name, value in zip(rev_matrix.columns, row):
                 if value <= 0:
@@ -88,6 +89,7 @@ class Matrix:
         -------
         matrix : Matrix
             Matrix converted from from-to table
+
         """
         # If input from-to table is file path, convert to pandas dataframe
         if isinstance(fromto_table, (str, Path)):
@@ -98,7 +100,7 @@ class Matrix:
             )
 
         # Parse from-to table dataframe
-        label2value_sum = defaultdict(int)
+        label2value_sum: defaultdict[str, int] = defaultdict(int)
         fromto2value = defaultdict(int)
         for row in fromto_table.itertuples():
             from_label, to_label, value = str(row[1]), str(row[2]), row[3]
@@ -171,6 +173,7 @@ class Matrix:
         -------
         matrix : Matrix
             Sorted matrix
+
         """
         fromto_table = self.to_fromto_table()
         return self.parse_fromto_table(fromto_table, order=order)
@@ -186,6 +189,7 @@ class Matrix:
         -------
         sectors : dict[str, float]
             Sector dict (e.g. `{"A": 12, "B": 15, "C":20, ...}`)
+
         """
         sectors = {}
         for row_name in self.row_names:
@@ -212,6 +216,7 @@ class Matrix:
         >>> circos = Circos(matrix.to_sectors())
         >>> for link in matrix.to_links():
         >>>    circos.link(*link)
+
         """
         return self._links
 
@@ -222,6 +227,7 @@ class Matrix:
         -------
         fromto_table : pd.DataFrame
             From-to table dataframe
+
         """
         fromto_table_data = []
         for row_name in self.row_names:

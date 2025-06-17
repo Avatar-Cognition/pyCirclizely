@@ -27,8 +27,9 @@ def test_property():
     assert sector_case1.deg_size == 180
     assert sector_case1.deg_lim == (0, 180)
     assert sector_case1.tracks == []
-    assert sector_case1.patches == []
-    assert sector_case1.plot_funcs == []
+    assert sector_case1.shapes == []
+    assert sector_case1.annotations == []
+    assert sector_case1.traces == []
 
     # Case2: Set tuple[float, float] range
     name, range, rad_lim = "test", (100, 1100), (0, math.pi)

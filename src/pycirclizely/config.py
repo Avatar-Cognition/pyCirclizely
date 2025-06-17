@@ -1,8 +1,6 @@
 # from __future__ import annotations
 
-import math
 from enum import IntEnum
-from typing import ClassVar
 
 ###########################################################
 # Constant Value Config
@@ -11,7 +9,7 @@ from typing import ClassVar
 # Fundamental Plot Parameters
 MIN_R = 0
 MAX_R = 100
-R_PLOT_MARGIN = 10
+R_PLOT_MARGIN = 15
 ARC_POINTS = 100
 R_LIM = (MIN_R, MAX_R)
 AXIS_FACE_PARAM = dict(layer="below", line=dict(color="rgba(0,0,0,0)"))
@@ -46,40 +44,6 @@ class Direction(IntEnum):
 
 
 ###########################################################
-# Mutable Value Config (Mainly for Developer)
-###########################################################
-
-
-class _AnnotationAdjustConfig:
-    """Annotation Position Adjustment Config"""
-
-    enable: ClassVar[bool] = True
-    """Enable Annotation position adjustment (default: `True`)"""
-    limit: ClassVar[int] = 200
-    """Limit of Annotation number for position adjustment (default: `200`)"""
-    max_iter: ClassVar[int] = 1000
-    """Max iteration number for Annotation position adjustment (default: `1000`)"""
-    drad: ClassVar[float] = math.radians(0.1)
-    """Delta radian for iterative position adjustment (default: `math.radians(0.1)`)"""
-    dr: ClassVar[float] = 0.1
-    """Delta radius for iterative position adjustment (default: `0.1`)"""
-    expand: ClassVar[tuple[float, float]] = (1.2, 1.2)
-    """Expand width & height factor of text bbox (default: `(1.2, 1.2)`)"""
-    max_rad_shift: ClassVar[float] = math.radians(3.0)
-    """Max radian of Annotation position shift (default: `math.radians(3.0)`)"""
-
-
-clear_savefig: bool = True
-"""
-By default, after saving a figure using the `savefig()` method, figure object is
-automatically deleted to avoid memory leaks (no display on jupyter notebook)
-If you want to display the figure on jupyter notebook using `savefig()` method,
-set clear_savefig=False.
-"""
-ann_adjust = _AnnotationAdjustConfig
-
-
-###########################################################
 # Plotly Default Configuration
 ###########################################################
 
@@ -89,7 +53,7 @@ plotly_layout_defaults = {
         "text": None,
     },
     "hovermode": "closest",
-    "showlegend": False,
+    "showlegend": True,
     "xaxis": {
         "autorange": True,
         "showgrid": False,
@@ -112,6 +76,8 @@ plotly_annotation_defaults = {
         "color": "black",
     },
     "showarrow": False,
+    "xanchor": "center",
+    "yanchor": "middle",
 }
 
 # Plotly shape defaults
@@ -121,21 +87,45 @@ plotly_shape_defaults = {
     "layer": "above",
 }
 
-# Text orientation-specific overrides
-plotly_text_orientation_defaults = {
-    "horizontal": {
-        "yanchor": "top",  # Default for outer horizontal text
+# Plotly grid defaults
+plotly_grid_defaults = {
+    "fillcolor": None,
+    "line": {"color": "grey", "width": 1},
+    "opacity": 0.5,
+    "layer": "below",
+}
+
+# Plotly ribbon link defaults
+plotly_arrow_defaults = {
+    "fillcolor": "grey",
+    "opacity": 0.5,
+    "line": {"width": 0.2, "color": "white"},
+    "layer": "between",
+}
+
+# Plotly line link defaults
+plotly_linelink_defaults = {
+    "line": {"width": 1.2, "color": "grey"},
+    "layer": "above",
+}
+
+plotly_scatter_defaults = {
+    "marker": {
+        "size": 4,
+        "opacity": 1.0,
     },
-    "vertical": {
-        "xanchor": "left",  # Default for outer vertical text
+    "line": {
+        "width": 2,
     },
+    "hoverinfo": "text",
+    "showlegend": False,
 }
 
 ###########################################################
 # GitHub Eukaryote & Prokaryote Dataset Config
 ###########################################################
 
-# GITHUB_DATA_URL = "https://raw.githubusercontent.com/moshi4/pycirclizely-data/master/"
+GITHUB_DATA_URL = "https://raw.githubusercontent.com/moshi4/pycirclize-data/master/"
 
 EUKARYOTE_DATASET = {
     "hg38": [

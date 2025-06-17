@@ -2,10 +2,42 @@ from __future__ import annotations
 
 import math
 from copy import deepcopy
+from enum import IntEnum
 from typing import Literal
 
 import numpy as np
+from plotly.graph_objs import graph_objs as go  # type: ignore[attr-defined]
+
 from pycirclizely import config
+
+from .helper import ColorCycler, deep_dict_update
+
+
+def get_default_color(kwargs: dict, target: str = "line") -> str:
+    """Returns a consistent color based on kwargs or assigns a new one from ColorCycler.
+
+    Parameters
+    ----------
+    kwargs : dict
+        Dictionary of Plotly styling keyword arguments.
+    target : str
+        The key to check for color (e.g., 'line', 'marker').
+
+    Returns
+    -------
+    str
+        A color string (e.g., "#1f77b4").
+
+    """
+    color = kwargs.get(target, {})
+
+    if isinstance(color, dict):
+        color = color.get("color")
+
+    if color is None:
+        color = ColorCycler.get_color()
+
+    return color
 
 
 def degrees(rad: float) -> float:
@@ -20,6 +52,7 @@ def degrees(rad: float) -> float:
     -------
     deg : float
         Positive degree (`0 - 360`)
+
     """
     # Radian to degree
     deg = math.degrees(rad)
@@ -43,6 +76,7 @@ def is_lower_loc(rad: float) -> bool:
     -------
     result : bool
         Lower location or not
+
     """
     deg = math.degrees(rad)
     return -270 <= deg < -90 or 90 <= deg < 270
@@ -60,6 +94,7 @@ def is_right_loc(rad: float) -> bool:
     -------
     result : bool
         Right location or not
+
     """
     deg = math.degrees(rad)
     return -360 <= deg < -180 or 0 <= deg < 180
@@ -77,6 +112,7 @@ def is_ann_rad_shift_target_loc(rad: float) -> bool:
     -------
     result : bool
         Target or not
+
     """
     deg = degrees(rad)
     return 30 <= deg <= 150 or 210 <= deg <= 330
@@ -91,6 +127,7 @@ def get_loc(
     -------
     loc : str
         Location (`upper-right`|`lower-right`|`lower-left`|`upper-left`)
+
     """
     deg = degrees(rad)
     if 0 <= deg < 90:
@@ -115,6 +152,7 @@ def get_ann_relpos(rad: float) -> tuple[float, float]:
     -------
     relpos : tuple[float, float]
         Relative position
+
     """
     deg = degrees(rad)
     if 0 <= deg <= 180:
@@ -123,60 +161,18 @@ def get_ann_relpos(rad: float) -> tuple[float, float]:
         return 1.0, 1.0 - Normalize(180, 360)(deg)
 
 
-def plot_bbox(bbox: Bbox, ax: PolarAxes, **kwargs) -> None:
-    """Plot bbox to check bbox area for development
-
-    Parameters
-    ----------
-    bbox : Bbox
-        Bounding box
-    ax : PolarAxes
-        Polar axes
-    **kwargs : dict, optional
-        Axes.plot properties (e.g. `color="red", lw=0.5, ls="--", ...`)
-        <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.plot.html>
-    """
-    trans_bbox = bbox.transformed(ax.transAxes.inverted())
-    kwargs.setdefault("clip_on", False)
-    x0, y0, x1, y1 = trans_bbox.x0, trans_bbox.y0, trans_bbox.x1, trans_bbox.y1
-    x, y = [x0, x1, x1, x0, x0], [y0, y0, y1, y1, y0]
-    ax.plot(x, y, transform=ax.transAxes, **kwargs)
-
-
 def get_plotly_label_params(
     rad: float,
     adjust_rotation: bool,
     orientation: str,
-    outer: bool = True,
-    only_rotation: bool = False,
     **kwargs,
 ) -> dict:
+    """Build Plotly label parameters based on radian and orientation."""
     # Start with global defaults
     annotation = deepcopy(config.plotly_annotation_defaults)
 
-    if not only_rotation:
-        # Apply orientation-specific defaults
-        orientation_defaults = config.plotly_text_orientation_defaults.get(
-            orientation, {}
-        )
-        annotation.update(orientation_defaults)
-
-        # Handle outer/inner alignment
-        if not outer:
-            if orientation == "horizontal":
-                annotation["yanchor"] = (
-                    "bottom" if annotation["yanchor"] == "top" else "top"
-                )
-            elif orientation == "vertical":
-                annotation["xanchor"] = (
-                    "right" if annotation["xanchor"] == "left" else "left"
-                )
-        else:
-            annotation["xanchor"] = "center"
-            annotation["yanchor"] = "middle"
-
     # Override with user-provided kwargs
-    annotation.update(kwargs)
+    annotation = deep_dict_update(annotation, kwargs)
 
     if adjust_rotation:
         rotation = np.degrees(rad)
@@ -189,17 +185,61 @@ def get_plotly_label_params(
         elif orientation == "vertical":
             # Point text radially (90° offset from horizontal)
             rotation = (rotation + 90) % 360
-            # No flipping needed for vertical text
+            # Flip for vertical text
+            if 90 < rotation <= 270:
+                rotation += 180
 
         annotation.update({"textangle": rotation})
 
     return annotation
 
 
-def build_plotly_shape(path: str, **kwargs) -> dict:
-    shape_defaults = deepcopy(config.plotly_shape_defaults)
-    shape_defaults.update(**kwargs)
+def build_plotly_shape(path: str, defaults: dict = {}, **kwargs) -> dict:
+    """Build a Plotly shape dictionary with defaults and custom parameters."""
+    shape_defaults = deepcopy(defaults)
+    shape_defaults = deep_dict_update(shape_defaults, kwargs)
     return {"type": "path", "path": path, **shape_defaults}
+
+
+def build_scatter_trace(x: list, y: list, mode: str, **kwargs) -> go.Scatter:
+    """Build a Plotly Scatter trace with defaults and custom parameters."""
+    scatter_config = deepcopy(config.plotly_scatter_defaults)
+    scatter_config["mode"] = mode
+    scatter_config = deep_dict_update(scatter_config, kwargs)
+
+    return go.Scatter(x=x, y=y, **scatter_config)
+
+
+def default_hovertext(
+    x: list[int] | list[float] | np.ndarray,
+    y: list[int] | list[float] | np.ndarray,
+    x2: list[int] | list[float] | np.ndarray | None = None,
+    sector_name: str | None = None,
+    value_format: str = ".2f",
+) -> list[str]:
+    """Generate default hovertext for a Plotly scatter trace."""
+    # Convert numpy arrays to lists if needed
+    if isinstance(x, np.ndarray):
+        x = x.tolist()
+    if isinstance(y, np.ndarray):
+        y = y.tolist()
+    if x2 is not None and isinstance(x2, np.ndarray):
+        x2 = x2.tolist()
+
+    hovertext = []
+    for i, (xi, yi) in enumerate(zip(x, y)):
+        parts = []
+        if sector_name:
+            parts.append(f"Sector: {sector_name}")
+        if x2 is not None:
+            xi2 = x2[i]
+            parts.append(f"Position: {xi}–{xi2}")
+        else:
+            parts.append(f"Position: {xi}")
+        parts.append(f"Value: {format(yi, value_format)}")
+        hovertext.append("<br>".join(parts))
+    return hovertext
+
 
 class Normalize:
     def __init__(self, vmin, vmax, clip=False):
@@ -210,7 +250,24 @@ class Normalize:
         self.clip = clip
 
     def __call__(self, value):
+        """Normalize a value to the range [0, 1]."""
         normed = (value - self.vmin) / (self.vmax - self.vmin)
         if self.clip:
             return max(0.0, min(1.0, normed))
         return normed
+
+
+class LinkDirection(IntEnum):
+    NONE = 0
+    FORWARD = 1
+    REVERSE = -1
+    BIDIRECTIONAL = 2
+
+    def arrow(self) -> str:
+        """Return the arrow representation of the link direction."""
+        return {
+            LinkDirection.NONE: "-",
+            LinkDirection.FORWARD: "->",
+            LinkDirection.REVERSE: "<-",
+            LinkDirection.BIDIRECTIONAL: "<->",
+        }[self]
