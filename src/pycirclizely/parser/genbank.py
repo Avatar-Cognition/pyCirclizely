@@ -162,25 +162,25 @@ class Genbank:
             step_size = int(len(seq) / 1000)
         if window_size == 0 or step_size == 0:
             window_size, step_size = len(seq), int(len(seq) / 2)
+        pos_list = np.arange(0, len(seq), step_size, dtype=np.int64)
+        if len(pos_list) == 0 or pos_list[-1] != len(seq):
+            pos_list = np.append(pos_list, len(seq))
 
-        pos_list = np.arange(0, len(seq) + step_size, step_size, dtype=np.int64)
-        pos_list = np.append(pos_list, len(seq))
-
-        gc_skew_list = np.zeros_like(pos_list, dtype=np.float64)
-
+        # Initialize GC skew array and compute
+        gc_skew_list = np.empty(len(pos_list), dtype=np.float64)
         for i, pos in enumerate(pos_list):
-            window_start_pos = pos - int(window_size / 2)
-            window_end_pos = pos + int(window_size / 2)
-            window_start_pos = max(0, window_start_pos)
-            window_end_pos = min(len(seq), window_end_pos)
+            start = max(0, pos - window_size // 2)
+            end = min(len(seq), pos + window_size // 2)
+            subseq = seq[start:end]
 
-            subseq = seq[window_start_pos:window_end_pos]
             g = subseq.count("G") + subseq.count("g")
             c = subseq.count("C") + subseq.count("c")
+
             try:
                 skew = (g - c) / float(g + c)
             except ZeroDivisionError:
                 skew = 0.0
+
             gc_skew_list[i] = skew
 
         return pos_list, gc_skew_list
@@ -209,9 +209,11 @@ class Genbank:
             Position list
         gc_content_list : NDArray[np.float64]
             GC content list
-
         """
         seq = self.genome_seq if seq is None else seq
+        assert seq is not None
+
+        # Handle default values
         if window_size is None:
             window_size = int(len(seq) / 500)
         if step_size is None:
@@ -219,11 +221,13 @@ class Genbank:
         if window_size == 0 or step_size == 0:
             window_size, step_size = len(seq), int(len(seq) / 2)
 
-        pos_list = np.arange(0, len(seq) + step_size, step_size, dtype=np.int64)
-        pos_list = np.append(pos_list, len(seq))
+        positions: list[int] = list(range(0, len(seq), step_size))
+        if not positions or positions[-1] != len(seq):
+            positions.append(len(seq))
+        pos_list: NDArray[np.int64] = np.array(positions, dtype=np.int64)
 
-        gc_content_list = np.zeros_like(pos_list, dtype=np.float64)
-
+        # Initialize and fill GC content array
+        gc_content_list: NDArray[np.float64] = np.empty_like(pos_list, dtype=np.float64)
         for i, pos in enumerate(pos_list):
             window_start_pos = pos - int(window_size / 2)
             window_end_pos = pos + int(window_size / 2)
