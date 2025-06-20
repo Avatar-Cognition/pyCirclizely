@@ -1,20 +1,21 @@
 import random
 from io import StringIO
+from pathlib import Path
 
 import numpy as np
 import plotly.graph_objs as go
 from Bio import Phylo
 
 from pycirclizely import Circos
-
-# from pycirclizely.parser import Genbank, Gff, StackedBarTable
+from pycirclizely.parser import Genbank, Gff  # StackedBarTable
 from pycirclizely.utils import (
     ColorCycler,
     load_example_tree_file,
+    load_prokaryote_example_file,
 )
 
 # load_eukaryote_example_dataset,;;
-# ;; load_prokaryote_example_file,
+# ;;
 
 
 np.random.seed(0)
@@ -365,15 +366,15 @@ class TestTrackPlots:
     #     seqid2features = gff.get_seqid2features(feature_type="CDS")
     #     for sector in circos.sectors:
     #         track = sector.add_track((90, 100))
-    #         track.axis(fc="#EEEEEE", ec="none")
+    #         track.axis(fillcolor="#EEEEEE", line=dict(color=None))
 
     #         features = seqid2features[sector.name]
     #         for feature in features:
     #             # Plot CDS feature
     #             if feature.location.strand == 1:
-    #                 track.genomic_features(feature, r_lim=(95, 100), fc="salmon")
+    #               track.genomic_features(feature, r_lim=(95, 100), fillcolor="salmon")
     #             else:
-    #                 track.genomic_features(feature, r_lim=(90, 95), fc="skyblue")
+    #               track.genomic_features(feature, r_lim=(90, 95), fillcolor="skyblue")
     #             # Plot feature annotation label
     #             start = int(feature.location.start)  # type: ignore
     #             end = int(feature.location.end)  # type: ignore
@@ -674,68 +675,80 @@ class TestTrackPlots:
         fig = circos.plotfig()
         assert isinstance(fig, go.Figure)
 
+    def test_track_genomic_features_genbank_plot(
+        self,
+        circos: Circos,
+        prokaryote_testdata_dir: Path,
+    ):
+        """Test `track.genomic_features()` with genbank file"""
+        # Load Genbank file
+        gbk_file = load_prokaryote_example_file(
+            "enterobacteria_phage.gbk",
+            cache_dir=prokaryote_testdata_dir,
+        )
+        gbk = Genbank(gbk_file)
+        # Initialize circos sector by genome size
+        circos = Circos(sectors={gbk.name: gbk.range_size})
+        circos.text("Enterobacteria phage\n(NC_000902)", font=dict(size=15))
+        sector = circos.sectors[0]
+        # Outer track
+        outer_track = sector.add_track((98, 100))
+        outer_track.axis(fillcolor="lightgrey")
+        outer_track.xticks_by_interval(
+            5000, label_formatter=lambda v: f"{v / 1000:.0f} Kb"
+        )
+        outer_track.xticks_by_interval(1000, tick_length=1, show_label=False)
+        # Plot forward & reverse CDS genomic features
+        cds_track = sector.add_track((90, 95))
+        cds_track.genomic_features(
+            gbk.extract_features("CDS", target_strand=1),
+            plotstyle="arrow",
+            fillcolor="salmon",
+        )
+        cds_track.genomic_features(
+            gbk.extract_features("CDS", target_strand=-1),
+            plotstyle="arrow",
+            fillcolor="skyblue",
+        )
 
-# def test_track_genomic_features_genbank_plot(
-#     fig_outfile: Path,
-#     prokaryote_testdata_dir: Path,
-# ):
-#     """Test `track.genomic_features()` with genbank file"""
-#     # Load Genbank file
-#     gbk_file = load_prokaryote_example_file(
-#         "enterobacteria_phage.gbk",
-#         cache_dir=prokaryote_testdata_dir,
-#     )
-#     gbk = Genbank(gbk_file)
-#     # Initialize circos sector by genome size
-#     circos = Circos(sectors={gbk.name: gbk.range_size})
-#     circos.text("Enterobacteria phage\n(NC_000902)", size=15)
-#     sector = circos.sectors[0]
-#     # Outer track
-#     outer_track = sector.add_track((98, 100))
-#     outer_track.axis(fc="lightgrey")
-#   outer_track.xticks_by_interval(5000, label_formatter=lambda v: f"{v / 1000:.0f} Kb")
-#     outer_track.xticks_by_interval(1000, tick_length=1, show_label=False)
-#     # Plot forward & reverse CDS genomic features
-#     cds_track = sector.add_track((90, 95))
-#     cds_track.genomic_features(
-#         gbk.extract_features("CDS", target_strand=1), plotstyle="arrow", fc="salmon"
-#     )
-#     cds_track.genomic_features(
-#         gbk.extract_features("CDS", target_strand=-1), plotstyle="arrow", fc="skyblue"
-#     )
+        fig = circos.plotfig()
+        assert isinstance(fig, go.Figure)
 
-#     circos.savefig(fig_outfile)
-#     assert fig_outfile.exists()
+    def test_track_genomic_features_gff_plot(
+        self,
+        circos: Circos,
+        prokaryote_testdata_dir: Path,
+    ):
+        """Test `track.genomic_features()` with gff file"""
+        # Load Genbank file
+        gff_file = load_prokaryote_example_file(
+            "enterobacteria_phage.gff",
+            cache_dir=prokaryote_testdata_dir,
+        )
+        gff = Gff(gff_file)
+        # Initialize circos sector by genome size
+        circos = Circos(sectors={gff.name: gff.range_size})
+        circos.text("Enterobacteria phage\n(NC_000902)", font=dict(size=15))
+        sector = circos.sectors[0]
+        # Outer track
+        outer_track = sector.add_track((98, 100))
+        outer_track.axis(fillcolor="lightgrey")
+        outer_track.xticks_by_interval(
+            5000, label_formatter=lambda v: f"{v / 1000:.0f} Kb"
+        )
+        outer_track.xticks_by_interval(1000, tick_length=1, show_label=False)
+        # Plot forward & reverse CDS genomic features
+        cds_track = sector.add_track((90, 95))
+        cds_track.genomic_features(
+            gff.extract_features("CDS", target_strand=1),
+            plotstyle="arrow",
+            fillcolor="salmon",
+        )
+        cds_track.genomic_features(
+            gff.extract_features("CDS", target_strand=-1),
+            plotstyle="arrow",
+            fillcolor="skyblue",
+        )
 
-
-# def test_track_genomic_features_gff_plot(
-#     fig_outfile: Path,
-#     prokaryote_testdata_dir: Path,
-# ):
-#     """Test `track.genomic_features()` with gff file"""
-#     # Load Genbank file
-#     gff_file = load_prokaryote_example_file(
-#         "enterobacteria_phage.gff",
-#         cache_dir=prokaryote_testdata_dir,
-#     )
-#     gff = Gff(gff_file)
-#     # Initialize circos sector by genome size
-#     circos = Circos(sectors={gff.name: gff.range_size})
-#     circos.text("Enterobacteria phage\n(NC_000902)", size=15)
-#     sector = circos.sectors[0]
-#     # Outer track
-#     outer_track = sector.add_track((98, 100))
-#     outer_track.axis(fc="lightgrey")
-#   outer_track.xticks_by_interval(5000, label_formatter=lambda v: f"{v / 1000:.0f} Kb")
-#     outer_track.xticks_by_interval(1000, tick_length=1, show_label=False)
-#     # Plot forward & reverse CDS genomic features
-#     cds_track = sector.add_track((90, 95))
-#     cds_track.genomic_features(
-#         gff.extract_features("CDS", target_strand=1), plotstyle="arrow", fc="salmon"
-#     )
-#     cds_track.genomic_features(
-#         gff.extract_features("CDS", target_strand=-1), plotstyle="arrow", fc="skyblue"
-#     )
-
-#     circos.savefig(fig_outfile)
-#     assert fig_outfile.exists()
+        fig = circos.plotfig()
+        assert isinstance(fig, go.Figure)

@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable
 import numpy as np
 import plotly.graph_objects as go
 from Bio.Phylo.BaseTree import Tree
+from Bio.SeqFeature import SeqFeature
 from plotly.basedatatypes import BaseTraceType
 from plotly.colors import (  # type: ignore[attr-defined]
     get_colorscale,
@@ -1621,64 +1622,54 @@ class Track:
 
         return tv
 
-    # def genomic_features(
-    #     self,
-    #     features: SeqFeature | list[SeqFeature],
-    #     *,
-    #     plotstyle: str = "box",
-    #     r_lim: tuple[float, float] | None = None,
-    #     facecolor_handler: Callable[[SeqFeature], str] | None = None,
-    #     **kwargs,
-    # ) -> None:
-    #     """Plot genomic features
+    def genomic_features(
+        self,
+        features: SeqFeature | list[SeqFeature],
+        *,
+        plotstyle: str = "box",
+        r_lim: tuple[float, float] | None = None,
+        **kwargs,
+    ) -> None:
+        """Plot genomic features
 
-    #     Parameters
-    #     ----------
-    #     features : SeqFeature | list[SeqFeature]
-    #         Biopython's SeqFeature or SeqFeature list
-    #     plotstyle : str, optional
-    #         Plot style (`box` or `arrow`)
-    #     r_lim : tuple[float, float] | None, optional
-    #         Radius limit range. If None, `track.r_plot_lim` is set.
-    #     facecolor_handler : Callable[[SeqFeature], str] | None, optional
-    #         User-defined function to handle facecolor
-    #     **kwargs : dict, optional
-    #         Patch properties (e.g. `fc="red", ec="blue", lw=1.0, ...`)
-    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
-    #     """
-    #     if isinstance(features, SeqFeature):
-    #         features = [features]
+        Parameters
+        ----------
+        features : SeqFeature | list[SeqFeature]
+            Biopython's SeqFeature or SeqFeature list
+        plotstyle : str, optional
+            Plot style (`box` or `arrow`)
+        r_lim : tuple[float, float] | None, optional
+            Radius limit range. If None, `track.r_plot_lim` is set.
+        **kwargs : dict, optional
+            Shape properties (default: None)
+            e.g. `dict(line=dict(color="red", width=1, dash="dash"))`
+            See: <https://plotly.com/python/reference/layout/shapes/>
+        """
+        if isinstance(features, SeqFeature):
+            features = [features]
 
-    #     if r_lim is None:
-    #         r_lim = self.r_plot_lim
-    #     else:
-    #         if not min(self.r_lim) <= min(r_lim) < max(r_lim) <= max(self.r_lim):
-    #             raise ValueError(f"{r_lim=} is invalid track range.\n{self}")
+        if r_lim is None:
+            r_lim = self.r_plot_lim
+        else:
+            if not min(self.r_lim) <= min(r_lim) < max(r_lim) <= max(self.r_lim):
+                raise ValueError(f"{r_lim=} is invalid track range.\n{self}")
 
-    #     for feature in features:
-    #         # Set qualifier tag facecolor if exists
-    #         tag_color = feature.qualifiers.get("facecolor", [None])[0]
-    #         if tag_color is not None:
-    #             kwargs.update(dict(fc=tag_color, facecolor=tag_color))
-    #         # Set facecolor by user-defined function
-    #         if facecolor_handler is not None:
-    #             color = facecolor_handler(feature)
-    #             kwargs.update(dict(fc=color, facecolor=color))
-    #         # Plot feature
-    #         try:
-    #             start = int(str(feature.location.parts[0].start))
-    #             end = int(str(feature.location.parts[-1].end))
-    #         except ValueError:
-    #             print(f"Failed to parse feature's start-end position.\n{feature}")
-    #             continue
-    #         if feature.location.strand == -1:
-    #             start, end = end, start
-    #         if plotstyle == "box":
-    #             self.rect(start, end, r_lim=r_lim, **kwargs)
-    #         elif plotstyle == "arrow":
-    #             self.arrow(start, end, r_lim=r_lim, **kwargs)
-    #         else:
-    #             raise ValueError(f"{plotstyle=} is invalid ('box' or 'arrow').")
+        for feature in features:
+            # Plot feature
+            try:
+                start = int(str(feature.location.parts[0].start))
+                end = int(str(feature.location.parts[-1].end))
+            except ValueError:
+                print(f"Failed to parse feature's start-end position.\n{feature}")
+                continue
+            if feature.location.strand == -1:
+                start, end = end, start
+            if plotstyle == "box":
+                self.rect(start, end, r_lim=r_lim, **kwargs)
+            elif plotstyle == "arrow":
+                self.arrow(start, end, r_lim=r_lim, **kwargs)
+            else:
+                raise ValueError(f"{plotstyle=} is invalid ('box' or 'arrow').")
 
     ############################################################
     # Private Method
