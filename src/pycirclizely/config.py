@@ -9,7 +9,7 @@ from enum import IntEnum
 # Fundamental Plot Parameters
 MIN_R = 0
 MAX_R = 100
-R_PLOT_MARGIN = 15
+R_PLOT_MARGIN = 20
 ARC_POINTS = 100
 R_LIM = (MIN_R, MAX_R)
 AXIS_FACE_PARAM = dict(layer="below", line=dict(color="rgba(0,0,0,0)"))
@@ -72,7 +72,7 @@ plotly_layout_defaults = {
 # Plotly annotation defaults
 plotly_annotation_defaults = {
     "font": {
-        "size": 10,
+        "size": 13,
         "color": "black",
     },
     "showarrow": False,
@@ -119,6 +119,40 @@ plotly_scatter_defaults = {
     },
     "hoverinfo": "text",
     "showlegend": False,
+}
+
+tree_line_defaults = {
+    "line": {
+        "color": "black",
+    },
+    "layer": "below",
+}
+
+tree_alignline_defaults = {
+    "line": {
+        "dash": "dot",
+    },
+    "opacity": 0.5,
+    "layer": "below",
+}
+
+tree_highlight_defaults = {
+    "line": {
+        "width": 0,
+    },
+    "opacity": 0.6,
+    "fillcolor": "lightyellow",
+    "layer": "below",
+}
+
+tree_node_info_defaults = {
+    "opacity": 0,
+}
+
+tree_hovertext_defaults = {
+    "hoverlavel": {
+        "bgcolor": "lightgrey",
+    },
 }
 
 ###########################################################

@@ -4,7 +4,8 @@ import collections.abc
 from typing import Any, Dict, Mapping, Optional, cast
 
 from Bio.SeqFeature import SeqFeature
-from plotly.colors import qualitative  # type: ignore[attr-defined]
+from plotly.colors import label_rgb, qualitative  # type: ignore[attr-defined]
+from webcolors import hex_to_rgb, name_to_rgb
 
 
 class ColorCycler:
@@ -75,7 +76,7 @@ def deep_dict_update(
     Parameters
     ----------
     - orig_dict (Dict[str, Any]): The original dictionary to be updated.
-    - new_dict (Dict[str, Any]): The dictionary containing updates.
+    - new_dict (Mapping[str, Any]): The dictionary containing updates.
 
     Returns
     -------
@@ -198,3 +199,14 @@ def precise_position(val: float, position_precision: int) -> float:
     rounded = round(val, position_precision + 2)
     # Then round to target precision
     return round(rounded, position_precision)
+
+
+def parse_color(color):
+    """Convert css, hex or other color codes into a rgb coded string."""
+    if isinstance(color, str) and color.strip().lower().startswith("rgb("):
+        return color
+    elif isinstance(color, str) and color.startswith("#"):
+        rgb = hex_to_rgb(color)
+    else:
+        rgb = name_to_rgb(color)
+    return label_rgb(rgb)

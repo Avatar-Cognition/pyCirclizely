@@ -58,6 +58,8 @@ repos:
           - pytz==2025.2
           - six==1.17.*
           - tzdata==2025.2
+          - webcolors
+          - webcolors-stubs
 
   - repo: https://github.com/nbQA-dev/nbQA
     rev: 1.9.1
@@ -79,6 +81,8 @@ repos:
           - pytz==2025.2
           - six==1.17.*
           - tzdata==2025.2
+          - webcolors
+          - webcolors-stubs
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.11.6

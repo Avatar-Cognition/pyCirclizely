@@ -3,10 +3,12 @@ from __future__ import annotations
 import math
 import textwrap
 from copy import deepcopy
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 import plotly.graph_objects as go
+from Bio.Phylo.BaseTree import Tree
 from plotly.basedatatypes import BaseTraceType
 from plotly.colors import (  # type: ignore[attr-defined]
     get_colorscale,
@@ -17,6 +19,7 @@ from pycirclizely import config, utils
 
 # from pycirclizely.parser import StackedBarTable
 from pycirclizely.patches import PolarSVGPatchBuilder
+from pycirclizely.tree import TreeViz
 
 if TYPE_CHECKING:
     # Avoid Sector <-> Track circular import error at runtime
@@ -59,6 +62,8 @@ class Track:
         self._shapes: list[go.layout.Shape] = []
         self._annotations: list[go.layout.Annotation] = []
         self._traces: list[BaseTraceType] = []
+
+        self._trees: list[TreeViz] = []
 
     ############################################################
     # Property
@@ -678,9 +683,11 @@ class Track:
         line_kws : dict[str, Any] | None, optional
             Shape properties for ticks/baseline (default: None)
             e.g. `dict(line=dict(color="black", width=1))`
+            See: <https://plotly.com/python/reference/layout/shapes/>
         text_kws : dict[str, Any] | None, optional
             Annotation properties for labels (default: None)
             e.g. `dict(font=dict(size=12, color="black"))`
+            See: <https://plotly.com/python/reference/layout/annotations/>
 
         """
         line_kws = {} if line_kws is None else deepcopy(line_kws)
@@ -1361,7 +1368,7 @@ class Track:
         start: int | float | None = None,
         end: int | float | None = None,
         width: int | float | None = None,
-        cmap: str = "RdBu",
+        cmap: str | list[tuple[float, str]] = "RdBu_r",
         show_value: bool = False,
         hover_text: list[str] | None = None,
         coloraxis: str | None = None,
@@ -1390,9 +1397,12 @@ class Track:
             it is necessary to reduce the width of only the last column data square.
             At that time, width can be set under the following conditions.
             `(col_num - 1) * width < end - start < col_num * width`
-        cmap : str, optional
-            Colormap (e.g. `Viridis`, `Plasma`, `Rainbow`, `RdBu`)
-            <https://plotly.com/python/builtin-colorscales/>
+        cmap : str | list[list[float, str]], optional
+            Colormap can be either:
+            - A string name of a predefined plotly colorscale
+              (e.g. `Viridis`, `Plasma`, `Rainbow`, `RdBu`)
+            - A custom colorscale of value-color pairs where value is between 0 and 1
+              (e.g. [[0, "blue"], [0.5, "white"], [1, "red"]])
         show_value : bool, optional
             If True, show data value on heatmap rectangle
         hover_text : list[str] | None, optional
@@ -1411,7 +1421,6 @@ class Track:
             Annotation properties for labels (default: None)
             e.g. `dict(font=dict(size=12, color="black"))`
             See: <https://plotly.com/python/reference/layout/annotations/>
-
         """
         rect_kws = {} if rect_kws is None else deepcopy(rect_kws)
         text_kws = {} if text_kws is None else deepcopy(text_kws)
@@ -1455,7 +1464,11 @@ class Track:
             x_range_list.append((min_range, max_range))
 
         # Plot heatmap
-        color_scale = get_colorscale(cmap)
+        if isinstance(cmap, str):
+            color_scale = get_colorscale(cmap)
+        else:
+            color_scale = [[pos, utils.parse_color(color)] for pos, color in cmap]
+
         norm = utils.plot.Normalize(vmin=vmin, vmax=vmax)
         scatter_x, scatter_y, start_x, end_x, values, scatter_colors = (
             [],
@@ -1520,7 +1533,7 @@ class Track:
                 size=20,
                 opacity=0,
                 color=scatter_colors,
-                colorscale=cmap,
+                colorscale=color_scale,
                 cmin=vmin,
                 cmax=vmax,
                 coloraxis=coloraxis if coloraxis else None,
@@ -1530,81 +1543,83 @@ class Track:
         )
         self._traces.append(hover_trace)
 
-    # def tree(
-    #     self,
-    #     tree_data: str | Path | Tree,
-    #     *,
-    #     format: str = "newick",
-    #     outer: bool = True,
-    #     align_leaf_label: bool = True,
-    #     ignore_branch_length: bool = False,
-    #     leaf_label_size: float = 12,
-    #     leaf_label_rmargin: float = 2.0,
-    #     reverse: bool = False,
-    #     ladderize: bool = False,
-    #     line_kws: dict[str, Any] | None = None,
-    #     align_line_kws: dict[str, Any] | None = None,
-    #     label_formatter: Callable[[str], str] | None = None,
-    # ) -> TreeViz:
-    #     """Plot tree
+    def tree(
+        self,
+        tree_data: str | Path | Tree,
+        *,
+        format: str = "newick",
+        outer: bool = True,
+        align_leaf_label: bool = True,
+        ignore_branch_length: bool = False,
+        leaf_label_size: float = 12,
+        leaf_label_rmargin: float = 2.0,
+        reverse: bool = False,
+        ladderize: bool = False,
+        line_kws: dict[str, Any] | None = None,
+        align_line_kws: dict[str, Any] | None = None,
+        label_formatter: Callable[[str], str] | None = None,
+    ) -> TreeViz:
+        """Plot tree
 
-    #     It is recommended that the track(sector) size be the same as the number of
-    #     leaf nodes in the tree, to make it easier to combine with `bar` and `heatmap`.
+        It is recommended that the track(sector) size be the same as the number of
+        leaf nodes in the tree, to make it easier to combine with `bar` and `heatmap`.
 
-    #     Parameters
-    #     ----------
-    #     tree_data : str | Path | Tree
-    #         Tree data (`File`|`File URL`|`Tree Object`|`Tree String`)
-    #     format : str, optional
-    #         Tree format (`newick`|`phyloxml`|`nexus`|`nexml`|`cdao`)
-    #     outer : bool, optional
-    #         If True, plot tree on outer side. If False, plot tree on inner side.
-    #     align_leaf_label: bool, optional
-    #         If True, align leaf label.
-    #     ignore_branch_length : bool, optional
-    #         If True, ignore branch length for plotting tree.
-    #     leaf_label_size : float, optional
-    #         Leaf label size
-    #     leaf_label_rmargin : float, optional
-    #         Leaf label radius margin
-    #     reverse : bool, optional
-    #         If True, reverse tree
-    #     ladderize : bool, optional
-    #         If True, ladderize tree
-    #     line_kws : dict[str, Any] | None, optional
-    #         Patch properties (e.g. `dict(color="red", lw=1, ls="dashed", ...)`)
-    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
-    #     align_line_kws : dict[str, Any] | None, optional
-    #         Patch properties (e.g. `dict(lw=1, ls="dotted", alpha=1.0, ...)`)
-    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
-    #     label_formatter : Callable[[str], str] | None, optional
-    #         User-defined label text format function to change plot label text content.
-    #         For example, if you want to change underscore of the label to space,
-    #         set `lambda t: t.replace("_", " ")`.
+        Parameters
+        ----------
+        tree_data : str | Path | Tree
+            Tree data (`File`|`File URL`|`Tree Object`|`Tree String`)
+        format : str, optional
+            Tree format (`newick`|`phyloxml`|`nexus`|`nexml`|`cdao`)
+        outer : bool, optional
+            If True, plot tree on outer side. If False, plot tree on inner side.
+        align_leaf_label: bool, optional
+            If True, align leaf label.
+        ignore_branch_length : bool, optional
+            If True, ignore branch length for plotting tree.
+        leaf_label_size : float, optional
+            Leaf label size
+        leaf_label_rmargin : float, optional
+            Leaf label radius margin
+        reverse : bool, optional
+            If True, reverse tree
+        ladderize : bool, optional
+            If True, ladderize tree
+        line_kws : dict[str, Any] | None, optional
+            Shape properties (default: None)
+            e.g. `dict(line=dict(color="red", width=1, dash="dash"))`
+            See: <https://plotly.com/python/reference/layout/shapes/>
+        align_line_kws : dict[str, Any] | None, optional
+            Shape properties (default: None)
+            e.g. `dict(line=dict(color="black", dash="dot"), opacity=0.5)`
+            See: <https://plotly.com/python/reference/layout/shapes/>
+        label_formatter : Callable[[str], str] | None, optional
+            User-defined label text format function to change plot label text content.
+            For example, if you want to change underscore of the label to space,
+            set `lambda t: t.replace("_", " ")`.
 
-    #     Returns
-    #     -------
-    #     tv : TreeViz
-    #         TreeViz instance
-    #     """
-    #     tv = TreeViz(
-    #         tree_data,
-    #         format=format,
-    #         outer=outer,
-    #         align_leaf_label=align_leaf_label,
-    #         ignore_branch_length=ignore_branch_length,
-    #         leaf_label_size=leaf_label_size,
-    #         leaf_label_rmargin=leaf_label_rmargin,
-    #         reverse=reverse,
-    #         ladderize=ladderize,
-    #         line_kws=line_kws,
-    #         align_line_kws=align_line_kws,
-    #         label_formatter=label_formatter,
-    #         track=self,
-    #     )
-    #     self._trees.append(tv)
+        Returns
+        -------
+        tv : TreeViz
+            TreeViz instance
+        """
+        tv = TreeViz(
+            tree_data,
+            format=format,
+            outer=outer,
+            align_leaf_label=align_leaf_label,
+            ignore_branch_length=ignore_branch_length,
+            leaf_label_size=leaf_label_size,
+            leaf_label_rmargin=leaf_label_rmargin,
+            reverse=reverse,
+            ladderize=ladderize,
+            line_kws=line_kws,
+            align_line_kws=align_line_kws,
+            label_formatter=label_formatter,
+            track=self,
+        )
+        self._trees.append(tv)
 
-    #     return tv
+        return tv
 
     # def genomic_features(
     #     self,

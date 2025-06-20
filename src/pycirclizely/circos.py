@@ -6,9 +6,11 @@ import textwrap
 from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
+from typing import Any, Callable
 
 import numpy as np
 import plotly.graph_objects as go
+from Bio.Phylo.BaseTree import Tree
 from plotly.basedatatypes import BaseTraceType
 
 from pycirclizely import config, utils
@@ -16,6 +18,7 @@ from pycirclizely.parser import Bed
 from pycirclizely.patches import PolarSVGPatchBuilder
 from pycirclizely.sector import Sector
 from pycirclizely.track import Track
+from pycirclizely.tree import TreeViz
 from pycirclizely.utils.plot import LinkDirection
 
 
@@ -149,6 +152,99 @@ class Circos:
     ############################################################
     # Public Method
     ############################################################
+
+    @staticmethod
+    def initialize_from_tree(
+        tree_data: str | Path | Tree,
+        *,
+        start: float = 0,
+        end: float = 360,
+        r_lim: tuple[float, float] = (50, 100),
+        format: str = "newick",
+        outer: bool = True,
+        align_leaf_label: bool = True,
+        ignore_branch_length: bool = False,
+        leaf_label_size: float = 14,
+        leaf_label_rmargin: float = 2.0,
+        reverse: bool = False,
+        ladderize: bool = False,
+        line_kws: dict[str, Any] | None = None,
+        label_formatter: Callable[[str], str] | None = None,
+        align_line_kws: dict[str, Any] | None = None,
+    ) -> tuple[Circos, TreeViz]:
+        """Initialize Circos instance from phylogenetic tree
+
+        Circos sector and track are auto-defined by phylogenetic tree
+
+        Parameters
+        ----------
+        tree_data : str | Path | Tree
+            Tree data (`File`|`File URL`|`Tree Object`|`Tree String`)
+        start : float, optional
+            Plot start degree (-360 <= start < end <= 360)
+        end : float, optional
+            Plot end degree (-360 <= start < end <= 360)
+        r_lim : tuple[float, float], optional
+            Tree track radius limit region (0 - 100)
+        format : str, optional
+            Tree format (`newick`|`phyloxml`|`nexus`|`nexml`|`cdao`)
+        outer : bool, optional
+            If True, plot tree on outer side. If False, plot tree on inner side.
+        align_leaf_label: bool, optional
+            If True, align leaf label.
+        ignore_branch_length : bool, optional
+            If True, ignore branch length for plotting tree.
+        leaf_label_size : float, optional
+            Leaf label size
+        leaf_label_rmargin : float, optional
+            Leaf label radius margin
+        reverse : bool, optional
+            If True, reverse tree
+        ladderize : bool, optional
+            If True, ladderize tree
+        line_kws : dict[str, Any] | None, optional
+            Shape properties (default: None)
+            e.g. `dict(line=dict(color="red", width=1, dash="dash"))`
+            See: <https://plotly.com/python/reference/layout/shapes/>
+        align_line_kws : dict[str, Any] | None, optional
+            Shape properties (default: None)
+            e.g. `dict(line=dict(color="black", dash="dot"), opacity=0.5)`
+            See: <https://plotly.com/python/reference/layout/shapes/>
+        label_formatter : Callable[[str], str] | None, optional
+            User-defined label text format function to change plot label text content.
+            For example, if you want to change underscore of the label to space,
+            set `lambda t: t.replace("_", " ")`.
+
+        Returns
+        -------
+        circos : Circos
+            Circos instance
+        tv : TreeViz
+            TreeViz instance
+        """
+        # Initialize circos sector with tree size
+        tree = TreeViz.load_tree(tree_data, format=format)
+        leaf_num = tree.count_terminals()
+        circos = Circos(dict(tree=leaf_num), start=start, end=end)
+        sector = circos.sectors[0]
+
+        # Plot tree on track
+        track = sector.add_track(r_lim)
+        tv = track.tree(
+            tree,
+            format=format,
+            outer=outer,
+            align_leaf_label=align_leaf_label,
+            ignore_branch_length=ignore_branch_length,
+            leaf_label_size=leaf_label_size,
+            leaf_label_rmargin=leaf_label_rmargin,
+            reverse=reverse,
+            ladderize=ladderize,
+            line_kws=line_kws,
+            label_formatter=label_formatter,
+            align_line_kws=align_line_kws,
+        )
+        return circos, tv
 
     @staticmethod
     def initialize_from_bed(
@@ -306,7 +402,6 @@ class Circos:
         deg: float = 0,
         adjust_rotation: bool = False,
         orientation: str = "horizontal",
-        outer: bool = True,
         **kwargs,
     ) -> None:
         """Plot text on the entire circos plot. Uses angular positioning (0-360°).
@@ -326,8 +421,6 @@ class Circos:
             If True, text rotation is auto set based on `deg` and `orientation`.
         orientation : str, optional
             Text orientation (`horizontal` or `vertical`).
-        outer : bool, optional
-            If True, text aligns outward from center (for horizontal orientation).
         **kwargs : dict, optional
             Annotation properties (e.g. `font=dict(size=12, color='red')`).
             See: <https://plotly.com/python/reference/layout/annotations/>
@@ -630,7 +723,7 @@ class Circos:
         *,
         vmin: int | float = 0,
         vmax: int | float = 1,
-        cmap: str = "RdBu",
+        cmap: str = "RdBu_r",
         **kwargs,
     ) -> str:
         """Plot colorbar using Plotly's coloraxis system.
@@ -689,6 +782,11 @@ class Circos:
         """
         layout_dict = self._initialize_plotly_layout(figsize=figsize, dpi=dpi)
         layout_dict = utils.deep_dict_update(layout_dict, kwargs)
+
+        # Plot trees (call to generate shapes, annotations and traces)
+        for tv in self._get_all_treeviz_list():
+            tv._plot_tree_line()
+            tv._plot_tree_label()
 
         layout_dict["shapes"] = self._get_all_shapes()
         layout_dict["annotations"] = self._get_all_annotations()
@@ -797,3 +895,13 @@ class Circos:
         )
 
         return circos_traces + sector_traces + track_traces
+
+    def _get_all_treeviz_list(self) -> list[TreeViz]:
+        """Get all tree visualization instance list from tracks
+
+        Returns
+        -------
+        all_treeviz_list : list[TreeViz]
+            All tree visualization instance list
+        """
+        return list(itertools.chain(*[t._trees for t in self.tracks]))

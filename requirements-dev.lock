@@ -316,6 +316,8 @@ watchdog==6.0.0
     # via mkdocs
 wcwidth==0.2.13
     # via prompt-toolkit
+webcolors==24.11.1
+    # via pycirclizely
 webencodings==0.5.1
     # via bleach
     # via tinycss2

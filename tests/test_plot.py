@@ -1,24 +1,20 @@
 import random
+from io import StringIO
 
 import numpy as np
 import plotly.graph_objs as go
+from Bio import Phylo
 
 from pycirclizely import Circos
 
 # from pycirclizely.parser import Genbank, Gff, StackedBarTable
 from pycirclizely.utils import (
     ColorCycler,
+    load_example_tree_file,
 )
 
 # load_eukaryote_example_dataset,;;
-# load_example_tree_file,;; load_prokaryote_example_file,
-
-# from io import StringIO
-# from pathlib import Path
-
-
-# import pandas as pd
-# from Bio import Phylo
+# ;; load_prokaryote_example_file,
 
 
 np.random.seed(0)
@@ -144,61 +140,59 @@ class TestCircosPlots:
         fig = circos.plotfig()
         assert isinstance(fig, go.Figure)
 
+    # def test_radar_chart_plot(fig_outfile: Path, tsv_radar_table_file: Path):
+    #     """Test radar chart plot"""
+    #     circos = Circos.radar_chart(tsv_radar_table_file, vmax=100, marker_size=6)
+    #     circos.savefig(fig_outfile)
+    #     assert fig_outfile.exists()
 
-# def test_radar_chart_plot(fig_outfile: Path, tsv_radar_table_file: Path):
-#     """Test radar chart plot"""
-#     circos = Circos.radar_chart(tsv_radar_table_file, vmax=100, marker_size=6)
-#     circos.savefig(fig_outfile)
-#     assert fig_outfile.exists()
+    # def test_chord_diagram_plot(fig_outfile: Path, tsv_matrix_file: pd.DataFrame):
+    #     """Test chord diagram plot"""
+    #     circos = Circos.chord_diagram(tsv_matrix_file)
+    #     circos.savefig(fig_outfile)
+    #     assert fig_outfile.exists()
 
+    #     # For backward compatibility method
+    #     circos = Circos.initialize_from_matrix(tsv_matrix_file)
+    #     circos.savefig(fig_outfile)
+    #     assert fig_outfile.exists()
 
-# def test_chord_diagram_plot(fig_outfile: Path, tsv_matrix_file: pd.DataFrame):
-#     """Test chord diagram plot"""
-#     circos = Circos.chord_diagram(tsv_matrix_file)
-#     circos.savefig(fig_outfile)
-#     assert fig_outfile.exists()
+    # def test_cytoband_plot(fig_outfile: Path, hg38_testdata_dir: Path):
+    #     """Test hg38 cytoband plot"""
+    #     # Add tracks for cytoband plot
+    #     chr_bed_file, cytoband_file, _ = load_eukaryote_example_dataset(
+    #         "hg38", cache_dir=hg38_testdata_dir
+    #     )
+    #     circos = Circos.initialize_from_bed(chr_bed_file, space=2)
+    #     circos.add_cytoband_tracks((95, 100), cytoband_file)
 
-#     # For backward compatibility method
-#     circos = Circos.initialize_from_matrix(tsv_matrix_file)
-#     circos.savefig(fig_outfile)
-#     assert fig_outfile.exists()
+    #     # Plot and check fig file exists
+    #     circos.savefig(fig_outfile)
+    #     assert fig_outfile.exists()
 
+    def test_phylogenetic_tree_plot(self):
+        """Test phylogenetic tree plot"""
+        tree_file = load_example_tree_file("alphabet.nwk")
+        circos, tv = Circos.initialize_from_tree(tree_file)
 
-# def test_cytoband_plot(fig_outfile: Path, hg38_testdata_dir: Path):
-#     """Test hg38 cytoband plot"""
-#     # Add tracks for cytoband plot
-#     chr_bed_file, cytoband_file, _ = load_eukaryote_example_dataset(
-#         "hg38", cache_dir=hg38_testdata_dir
-#     )
-#     circos = Circos.initialize_from_bed(chr_bed_file, space=2)
-#     circos.add_cytoband_tracks((95, 100), cytoband_file)
+        tv.highlight("A", fillcolor="red")
+        tv.highlight(["D", "E", "F"], fillcolor="blue")
 
-#     # Plot and check fig file exists
-#     circos.savefig(fig_outfile)
-#     assert fig_outfile.exists()
+        tv.marker(["G", "H"], marker=dict(color="green"))
+        tv.marker(["J", "K"], marker=dict(color="magenta"), descendent=False)
 
+        tv.set_node_label_props("A", font=dict(color="red"))
 
-# def test_phylogenetic_tree_plot(fig_outfile: Path):
-#     """Test phylogenetic tree plot"""
-#     tree_file = load_example_tree_file("alphabet.nwk")
-#     circos, tv = Circos.initialize_from_tree(tree_file)
+        tv.set_node_line_props(["P", "O", "N"], line=dict(color="orange"))
+        tv.set_node_line_props(["S", "R"], line=dict(color="lime"), descendent=False)
+        tv.set_node_line_props(
+            ["X", "Y", "Z"], line=dict(color="purple"), apply_label_color=True
+        )
 
-#     tv.highlight("A", color="red")
-#     tv.highlight(["D", "E", "F"], color="blue")
+        tv.show_node_info()
 
-#     tv.marker(["G", "H"], color="green")
-#     tv.marker(["J", "K"], color="magenta", descendent=False)
-
-#     tv.set_node_label_props("A", color="red")
-
-#     tv.set_node_line_props(["P", "O", "N"], color="orange")
-#     tv.set_node_line_props(["S", "R"], color="lime", descendent=False)
-#     tv.set_node_line_props(["X", "Y", "Z"], color="purple", apply_label_color=True)
-
-#     tv.show_confidence()
-
-#     circos.savefig(fig_outfile)
-#     assert fig_outfile.exists()
+        fig = circos.plotfig()
+        assert isinstance(fig, go.Figure)
 
 
 ###########################################################
@@ -664,22 +658,21 @@ class TestTrackPlots:
         fig = circos.plotfig()
         assert isinstance(fig, go.Figure)
 
+    def test_track_tree_plot(self, circos: Circos):
+        """Test `track.heatmap()`"""
+        # Load newick tree
+        tree_text = "((((A:1,B:1)100:1,(C:1,D:1)100:1)100:1,(E:2,F:2)90:1):1,G:6)100;"
+        tree = Phylo.read(StringIO(tree_text), "newick")
+        # Initialize circos sector by tree size
+        circos = Circos(sectors={"Tree": tree.count_terminals()})
+        sector = circos.sectors[0]
+        # Plot tree
+        track = sector.add_track((50, 100))
+        track.axis(line=dict(color="lightgrey"))
+        track.tree(tree, leaf_label_size=12)
 
-# def test_track_tree_plot(fig_outfile: Path):
-#     """Test `track.heatmap()`"""
-#     # Load newick tree
-#     tree_text = "((((A:1,B:1)100:1,(C:1,D:1)100:1)100:1,(E:2,F:2)90:1):1,G:6)100;"
-#     tree = Phylo.read(StringIO(tree_text), "newick")
-#     # Initialize circos sector by tree size
-#     circos = Circos(sectors={"Tree": tree.count_terminals()})
-#     sector = circos.sectors[0]
-#     # Plot tree
-#     track = sector.add_track((50, 100))
-#     track.axis(ec="lightgrey")
-#     track.tree(tree, leaf_label_size=12)
-
-#     circos.savefig(fig_outfile)
-#     assert fig_outfile.exists()
+        fig = circos.plotfig()
+        assert isinstance(fig, go.Figure)
 
 
 # def test_track_genomic_features_genbank_plot(

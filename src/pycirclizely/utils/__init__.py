@@ -10,6 +10,7 @@ from pycirclizely.utils.helper import (
     calc_group_spaces,
     deep_dict_update,
     is_pseudo_feature,
+    parse_color,
     precise_position,
 )
 
@@ -24,4 +25,5 @@ __all__ = [
     "is_pseudo_feature",
     "deep_dict_update",
     "precise_position",
+    "parse_color",
 ]
