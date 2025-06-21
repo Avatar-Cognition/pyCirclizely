@@ -354,39 +354,6 @@ class TestTrackPlots:
         fig = circos.plotfig()
         assert isinstance(fig, go.Figure)
 
-    # def test_track_annotate_plot(fig: go.Figure):
-    #     """Test `track.annotate()`"""
-    #     gff_file = load_prokaryote_example_file("enterobacteria_phage.gff")
-    #     gff = Gff(gff_file)
-
-    #     seqid2size = gff.get_seqid2size()
-    #     space = 0 if len(seqid2size) == 1 else 2
-    #     circos = Circos(sectors=seqid2size, space=space, start=0, end=360)
-
-    #     seqid2features = gff.get_seqid2features(feature_type="CDS")
-    #     for sector in circos.sectors:
-    #         track = sector.add_track((90, 100))
-    #         track.axis(fillcolor="#EEEEEE", line=dict(color=None))
-
-    #         features = seqid2features[sector.name]
-    #         for feature in features:
-    #             # Plot CDS feature
-    #             if feature.location.strand == 1:
-    #               track.genomic_features(feature, r_lim=(95, 100), fillcolor="salmon")
-    #             else:
-    #               track.genomic_features(feature, r_lim=(90, 95), fillcolor="skyblue")
-    #             # Plot feature annotation label
-    #             start = int(feature.location.start)  # type: ignore
-    #             end = int(feature.location.end)  # type: ignore
-    #             label_pos = (start + end) / 2
-    #             label = feature.qualifiers.get("product", [""])[0]
-    #             if label == "" or label.startswith("hypothetical"):
-    #                 continue
-    #             track.annotate(label_pos, label, label_size=7)
-
-    #     circos.savefig(fig_outfile)
-    #     assert fig_outfile.exists()
-
     def test_track_xticks_plot(self, circos: Circos):
         """Test `track.xticks()`"""
         for sector in circos.sectors:

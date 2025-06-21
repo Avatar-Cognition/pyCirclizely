@@ -411,78 +411,6 @@ class Track:
         )
         self._shapes.append(shape)
 
-    # def annotate(
-    #     self,
-    #     x: float,
-    #     label: str,
-    #     *,
-    #     min_r: float | None = None,
-    #     max_r: float | None = None,
-    #     # label_size: float = 8,
-    #     shorten: int | None = 20,
-    #     line_kws: dict[str, Any] | None = None,
-    #     text_kws: dict[str, Any] | None = None,
-    # ) -> None:
-    #     """Plot annotation label
-
-    #     The position of annotation labels is automatically adjusted so that there is
-    #     no overlap between them. The current algorithm for automatic adjustment of
-    #     overlap label positions is experimental and may be changed in the future.
-
-    #     Parameters
-    #     ----------
-    #     x : float
-    #         X coordinate
-    #     label : str
-    #         Label
-    #     min_r : float | None, optional
-    #         Min radius position of annotation line. If None, `max(self.r_lim)` is set.
-    #     max_r : float | None, optional
-    #         Max radius position of annotation line. If None, `min_r + 5` is set.
-    #     # label_size : float, optional
-    #     #     Label size
-    #     shorten : int | None, optional
-    #         Shorten label if int value is set.
-    #     line_kws : dict[str, Any] | None, optional
-    #         Patch properties (e.g. `dict(color="red", lw=1, ...)`)
-    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Patch.html>
-    #     text_kws : dict[str, Any] | None, optional
-    #         Text properties (e.g. `dict(color="red", alpha=0.5, ...)`)
-    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.text.html>
-    #     """
-    #     line_kws = {} if line_kws is None else deepcopy(line_kws)
-    #     text_kws = {} if text_kws is None else deepcopy(text_kws)
-
-    #     if shorten:
-    #         label = label[:shorten] + "..." if len(label) > shorten else label
-
-    #     # Setup radian, radius coordinates
-    #     min_r = max(self.r_lim) if min_r is None else min_r
-    #     max_r = min_r + 5 if max_r is None else max_r
-    #     if min_r > max_r:
-    #         ValueError(f"{max_r=} must be larger than {min_r=}.")
-    #     rad = self.x_to_rad(x)
-    #     xy, xytext = (rad, min_r), (rad, max_r)
-
-    #     # Setup annotation line & text property
-    #     line_kws.setdefault("color", "grey")
-    #     line_kws.setdefault("lw", 0.5)
-    #     line_kws.utils.helper.deep_dict_update(
-    #         dict(shrinkA=0, shrinkB=0, patchA=None, patchB=None)
-    #     )
-    #     line_kws.utils.helper.deep_dict_update(
-    #         dict(arrowstyle="-", relpos=utils.plot.get_ann_relpos(rad))
-    #     )
-    #     text_kws.utils.helper.deep_dict_update(
-    #         utils.plot.get_label_params_by_rad(rad, "vertical")
-    #     )
-    #     text_kws.utils.helper.deep_dict_update(dict(rotation=0, size=label_size))
-
-    #     def plot_annotate(ax: PolarAxes) -> None:
-    #         ax.annotate(label, xy, xytext, arrowprops=line_kws, **text_kws)
-
-    #     self._plot_funcs.append(plot_annotate)
-
     def xticks(
         self,
         x: list[int] | list[float] | np.ndarray,
@@ -1628,6 +1556,7 @@ class Track:
         *,
         plotstyle: str = "box",
         r_lim: tuple[float, float] | None = None,
+        hover_text_formatter: Callable[[SeqFeature], str] | None = None,
         **kwargs,
     ) -> None:
         """Plot genomic features
@@ -1640,6 +1569,9 @@ class Track:
             Plot style (`box` or `arrow`)
         r_lim : tuple[float, float] | None, optional
             Radius limit range. If None, `track.r_plot_lim` is set.
+        hover_text_formatter : Callable[[SeqFeature], str] | None, optional
+            User-defined function for hover text format.
+            If None, default format will be used.
         **kwargs : dict, optional
             Shape properties (default: None)
             e.g. `dict(line=dict(color="red", width=1, dash="dash"))`
@@ -1654,14 +1586,36 @@ class Track:
             if not min(self.r_lim) <= min(r_lim) < max(r_lim) <= max(self.r_lim):
                 raise ValueError(f"{r_lim=} is invalid track range.\n{self}")
 
+        # Manager hovertext
+        if hover_text_formatter:
+            hover_texts = []
+
+            bg_color = (
+                kwargs.get("fillcolor", None)
+                or (kwargs.get("line", {}).get("color") if "line" in kwargs else None)
+                or "lightgrey"
+            )
+
+        hover_x = []
+        hover_y = []
         for feature in features:
-            # Plot feature
             try:
                 start = int(str(feature.location.parts[0].start))
                 end = int(str(feature.location.parts[-1].end))
             except ValueError:
                 print(f"Failed to parse feature's start-end position.\n{feature}")
                 continue
+
+            if hover_text_formatter:
+                # Calculate midpoint for hover point
+                midpoint = (start + end) / 2
+                rad = self.x_to_rad(midpoint)
+                r = sum(r_lim) / 2
+                cx, cy = PolarSVGPatchBuilder._polar_to_cart(rad, r)
+                hover_x.append(cx)
+                hover_y.append(cy)
+                hover_texts.append(hover_text_formatter(feature))
+
             if feature.location.strand == -1:
                 start, end = end, start
             if plotstyle == "box":
@@ -1670,6 +1624,20 @@ class Track:
                 self.arrow(start, end, r_lim=r_lim, **kwargs)
             else:
                 raise ValueError(f"{plotstyle=} is invalid ('box' or 'arrow').")
+
+        if hover_text_formatter:
+            hover_trace = utils.plot.build_scatter_trace(
+                hover_x,
+                hover_y,
+                mode="markers",
+                text=hover_texts,
+                marker=dict(
+                    size=20,
+                    opacity=0,
+                ),
+                hoverlabel={"bgcolor": bg_color},
+            )
+            self._traces.append(hover_trace)
 
     ############################################################
     # Private Method
