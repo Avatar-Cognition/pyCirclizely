@@ -112,8 +112,24 @@ class ColorCycler:
             cls._palette_counters[palette_name] = 0
 
     @classmethod
-    def set_palette(cls, name: str, palette_type: str = "qualitative") -> None:
-        """Set the current color palette by name and type."""
+    def set_palette(cls, name: str, palette_type: Optional[str] = None) -> None:
+        """Set the current color palette by name.
+
+        Args:
+            name: Name of the palette to set as current.
+            palette_type: Type of palette ('qualitative' or 'sequential').
+                If None, will try to detect automatically.
+        """
+        # Try to detect palette type if not specified
+        if palette_type is None:
+            if hasattr(qualitative, name):
+                palette_type = "qualitative"
+            elif hasattr(sequential, name):
+                palette_type = "sequential"
+            else:
+                raise ValueError(f"Invalid built-in palette: '{name}'")
+
+        # Set the palette based on detected/confirmed type
         if palette_type == "qualitative":
             if not hasattr(qualitative, name):
                 raise ValueError(
@@ -130,8 +146,8 @@ class ColorCycler:
                 cls._palette_colors[name] = getattr(sequential, name)
         else:
             raise ValueError(
-                f"""Invalid palette_type: {palette_type}
-                Must be 'qualitative' or 'sequential'"""
+                f"Invalid palette_type: {palette_type}. "
+                "Must be 'qualitative' or 'sequential'"
             )
 
         cls._current_palette = name

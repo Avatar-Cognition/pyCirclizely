@@ -3,6 +3,7 @@ from io import StringIO
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import plotly.graph_objs as go
 from Bio import Phylo
 
@@ -10,13 +11,10 @@ from pycirclizely import Circos
 from pycirclizely.parser import Genbank, Gff  # StackedBarTable
 from pycirclizely.utils import (
     ColorCycler,
+    load_eukaryote_example_dataset,
     load_example_tree_file,
     load_prokaryote_example_file,
 )
-
-# load_eukaryote_example_dataset,;;
-# ;;
-
 
 np.random.seed(0)
 random.seed(0)
@@ -147,29 +145,24 @@ class TestCircosPlots:
     #     circos.savefig(fig_outfile)
     #     assert fig_outfile.exists()
 
-    # def test_chord_diagram_plot(fig_outfile: Path, tsv_matrix_file: pd.DataFrame):
-    #     """Test chord diagram plot"""
-    #     circos = Circos.chord_diagram(tsv_matrix_file)
-    #     circos.savefig(fig_outfile)
-    #     assert fig_outfile.exists()
+    def test_chord_diagram_plot(self, tsv_matrix_file: pd.DataFrame):
+        """Test chord diagram plot"""
+        circos = Circos.chord_diagram(tsv_matrix_file)
 
-    #     # For backward compatibility method
-    #     circos = Circos.initialize_from_matrix(tsv_matrix_file)
-    #     circos.savefig(fig_outfile)
-    #     assert fig_outfile.exists()
+        fig = circos.plotfig()
+        assert isinstance(fig, go.Figure)
 
-    # def test_cytoband_plot(fig_outfile: Path, hg38_testdata_dir: Path):
-    #     """Test hg38 cytoband plot"""
-    #     # Add tracks for cytoband plot
-    #     chr_bed_file, cytoband_file, _ = load_eukaryote_example_dataset(
-    #         "hg38", cache_dir=hg38_testdata_dir
-    #     )
-    #     circos = Circos.initialize_from_bed(chr_bed_file, space=2)
-    #     circos.add_cytoband_tracks((95, 100), cytoband_file)
+    def test_cytoband_plot(self, hg38_testdata_dir: Path):
+        """Test hg38 cytoband plot"""
+        # Add tracks for cytoband plot
+        chr_bed_file, cytoband_file, _ = load_eukaryote_example_dataset(
+            "hg38", cache_dir=hg38_testdata_dir
+        )
+        circos = Circos.initialize_from_bed(chr_bed_file, space=2)
+        circos.add_cytoband_tracks((95, 100), cytoband_file)
 
-    #     # Plot and check fig file exists
-    #     circos.savefig(fig_outfile)
-    #     assert fig_outfile.exists()
+        fig = circos.plotfig()
+        assert isinstance(fig, go.Figure)
 
     def test_phylogenetic_tree_plot(self):
         """Test phylogenetic tree plot"""
@@ -626,7 +619,7 @@ class TestTrackPlots:
         fig = circos.plotfig()
         assert isinstance(fig, go.Figure)
 
-    def test_track_tree_plot(self, circos: Circos):
+    def test_track_tree_plot(self):
         """Test `track.heatmap()`"""
         # Load newick tree
         tree_text = "((((A:1,B:1)100:1,(C:1,D:1)100:1)100:1,(E:2,F:2)90:1):1,G:6)100;"
@@ -644,7 +637,6 @@ class TestTrackPlots:
 
     def test_track_genomic_features_genbank_plot(
         self,
-        circos: Circos,
         prokaryote_testdata_dir: Path,
     ):
         """Test `track.genomic_features()` with genbank file"""
@@ -683,7 +675,6 @@ class TestTrackPlots:
 
     def test_track_genomic_features_gff_plot(
         self,
-        circos: Circos,
         prokaryote_testdata_dir: Path,
     ):
         """Test `track.genomic_features()` with gff file"""

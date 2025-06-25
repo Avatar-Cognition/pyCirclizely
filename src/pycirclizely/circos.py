@@ -3,18 +3,21 @@ from __future__ import annotations
 import itertools
 import math
 import textwrap
+from collections import defaultdict
 from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Callable
 
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
 from Bio.Phylo.BaseTree import Tree
 from plotly.basedatatypes import BaseTraceType
 
 from pycirclizely import config, utils
 from pycirclizely.parser import Bed
+from pycirclizely.parser.matrix import Matrix
 from pycirclizely.patches import PolarSVGPatchBuilder
 from pycirclizely.sector import Sector
 from pycirclizely.track import Track
@@ -152,6 +155,137 @@ class Circos:
     ############################################################
     # Public Method
     ############################################################
+
+    @staticmethod
+    def chord_diagram(
+        matrix: str | Path | pd.DataFrame | Matrix,
+        *,
+        start: float = 0,
+        end: float = 360,
+        space: float | list[float] = 0,
+        endspace: bool = True,
+        r_lim: tuple[float, float] = (97, 100),
+        cmap: str | dict[str, str] = "Viridis",
+        link_cmap: list[tuple[str, str, str]] | None = None,
+        ticks_interval: int | None = None,
+        order: str | list[str] | None = None,
+        label_kws: dict[str, Any] | None = None,
+        ticks_kws: dict[str, Any] | None = None,
+        link_kws: dict[str, Any] | None = None,
+        link_kws_handler: Callable[[str, str], dict[str, Any] | None] | None = None,
+    ) -> Circos:
+        """Plot chord diagram
+
+        Circos tracks and links are auto-defined from Matrix
+
+        Parameters
+        ----------
+        matrix : str | Path | pd.DataFrame | Matrix
+            Matrix file or Matrix dataframe or Matrix instance
+        start : float, optional
+            Plot start degree (-360 <= start < end <= 360)
+        end : float, optional
+            Plot end degree (-360 <= start < end <= 360)
+        space : float | list[float], optional
+            Space degree(s) between sector
+        endspace : bool, optional
+            If True, insert space after the end sector
+        r_lim : tuple[float, float], optional
+            Outer track radius limit region (0 - 100)
+        cmap : str | dict[str, str], optional
+            Colormap assigned to each outer track and link.
+            User can set plotly's colormap (e.g. `Viridis`, `T10`) or
+            label_name -> color dict (e.g. `dict(A="red", B="blue", C="green", ...)`)
+        link_cmap : list[tuple[str, str, str]] | None, optional
+            Link colormap to overwrite link colors automatically set by cmap.
+            User can set list of `from_label`, `to_label`, `color` tuple
+            (e.g. `[("A", "B", "red"), ("A", "C", "#ffff00"), ...]`)
+        ticks_interval : int | None, optional
+            Ticks interval. If None, ticks are not plotted.
+        order : str | list[str] | None, optional
+            Sort order of matrix for plotting Chord Diagram. If `None`, no sorting.
+            If `asc`|`desc`, sort in ascending(or descending) order by node size.
+            If node name list is set, sort in user specified node order.
+        label_kws : dict[str, Any] | None, optional
+            Keyword arguments passed to `sector.text()` method
+            (e.g. `dict(r=110, orientation="vertical", font=dict(size=15), ...)`)
+        ticks_kws : dict[str, Any] | None, optional
+            Keyword arguments passed to `track.xticks_by_interval()` method
+            (e.g. `dict(text_kws=dict(font=dict(size=10)),
+                label_orientation="vertical", ...)`)
+        link_kws : dict[str, Any] | None, optional
+            Keyword arguments passed to `circos.link()` method
+            (e.g. `dict(direction=1, line=dict(color="black", width=0.5),
+                opacity=0.8, ...)`)
+        link_kws_handler : Callable[[str, str], dict[str, Any] | None] | None, optional
+            User-defined function to handle keyword arguments for each link.
+            This option allows user to set or override properties such as
+            `fillcolor`, `opacity`, `layer`, etc... on each link.
+            Handler function arguments `[str, str]` means `[from_label, to_label]`.
+
+        Returns
+        -------
+        circos : Circos
+            Circos instance initialized from Matrix
+        """
+        link_cmap = [] if link_cmap is None else deepcopy(link_cmap)
+        label_kws = {} if label_kws is None else deepcopy(label_kws)
+        ticks_kws = {} if ticks_kws is None else deepcopy(ticks_kws)
+        link_kws = {} if link_kws is None else deepcopy(link_kws)
+
+        # If input matrix is file path, convert to Matrix instance
+        if isinstance(matrix, (str, Path, pd.DataFrame)):
+            matrix = Matrix(matrix)
+
+        # Sort matrix if order is set
+        if order is not None:
+            matrix = matrix.sort(order)
+
+        # Get name2color dict from user-specified colormap
+        names = matrix.all_names
+        name2color: dict[str, str]
+        if isinstance(cmap, str):
+            utils.ColorCycler.set_palette(cmap)
+            colors = utils.ColorCycler.get_color_list(len(names))
+            name2color = dict(zip(names, colors))
+        else:
+            if isinstance(cmap, defaultdict):
+                name2color = cmap
+            else:
+                name2color = defaultdict(lambda: "grey")
+                name2color.update(cmap)
+
+        # Initialize circos sectors
+        circos = Circos(matrix.to_sectors(), start, end, space=space, endspace=endspace)
+        for sector in circos.sectors:
+            # Plot label, outer track axis & xticks
+            sector.text(sector.name, **label_kws)
+            outer_track = sector.add_track(r_lim)
+            color = name2color[sector.name]
+            outer_track.axis(fillcolor=color)
+            if ticks_interval is not None:
+                outer_track.xticks_by_interval(ticks_interval, **ticks_kws)
+
+        # Plot links
+        fromto_label2color = {f"{t[0]}-->{t[1]}": t[2] for t in link_cmap}
+        for link in matrix.to_links():
+            from_label, to_label = link[0][0], link[1][0]
+            fromto_label = f"{from_label}-->{to_label}"
+            # Set link color
+            if fromto_label in fromto_label2color:
+                color = fromto_label2color[fromto_label]
+            else:
+                color = name2color[from_label]
+            # Update link properties by user-defined handler function
+            _link_kws = deepcopy(link_kws)
+            _link_kws.update(fillcolor=color)
+            if link_kws_handler is not None:
+                handle_link_kws = link_kws_handler(from_label, to_label)
+                if handle_link_kws is not None:
+                    _link_kws.update(handle_link_kws)
+            circos.link(*link, **_link_kws)
+
+        return circos
 
     @staticmethod
     def initialize_from_tree(
