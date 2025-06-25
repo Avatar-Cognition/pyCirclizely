@@ -262,7 +262,7 @@ class Sector:
         self,
         text: str,
         x: float | None = None,
-        r: float = 112,
+        r: float = 107,
         *,
         adjust_rotation: bool = True,
         orientation: str = "horizontal",

@@ -299,6 +299,7 @@ class Circos:
         *,
         track_name: str = "cytoband",
         cytoband_cmap: dict[str, str] | None = None,
+        show_hovertext: bool = False,
     ) -> None:
         """Add track & plot chromosome cytoband on each sector
 
@@ -313,18 +314,58 @@ class Circos:
         cytoband_cmap : dict[str, str] | None, optional
             User-defined cytoband colormap. If None, use Circos style colormap.
             (e.g. `{"gpos100": "#000000", "gneg": "#FFFFFF", ...}`)
-
+        show_hovertext : bool, optional
+            If True, shows hovertext with band information. Default is False.
         """
         if cytoband_cmap is None:
             cytoband_cmap = config.CYTOBAND_COLORMAP
         cytoband_records = Bed(cytoband_file).records
+
         for sector in self.sectors:
             track = sector.add_track(r_lim, name=track_name)
             track.axis()
+
+            # Prepare hover data if needed
+            hover_x, hover_y, hover_texts, colors = [], [], [], []
+
             for rec in cytoband_records:
                 if sector.name == rec.chr:
                     color = cytoband_cmap.get(str(rec.score), "white")
-                    track.rect(rec.start, rec.end, fc=color)
+                    kwargs = utils.deep_dict_update(
+                        config.cytoband_defaults, {"fillcolor": color}
+                    )
+                    track.rect(rec.start, rec.end, **kwargs)
+
+                    if show_hovertext:
+                        # Calculate midpoint for hover point
+                        midpoint = (rec.start + rec.end) / 2
+                        rad = track.x_to_rad(midpoint)
+                        r = sum(r_lim) / 2
+                        cx, cy = PolarSVGPatchBuilder._polar_to_cart(rad, r)
+                        hover_x.append(cx)
+                        hover_y.append(cy)
+                        colors.append(color)
+                        hover_texts.append(
+                            f"Chromosome: {rec.chr}<br>"
+                            f"Start: {rec.start:,}<br>"
+                            f"End: {rec.end:,}<br>"
+                            f"Band: {rec.name}<br>"
+                            f"Type: {rec.score}"
+                        )
+
+            if show_hovertext and hover_x:
+                hover_trace = utils.plot.build_scatter_trace(
+                    hover_x,
+                    hover_y,
+                    mode="markers",
+                    text=hover_texts,
+                    marker=dict(
+                        size=20,
+                        opacity=0,
+                    ),
+                    hoverlabel={"bgcolor": colors},
+                )
+                track._traces.append(hover_trace)
 
     def get_sector(self, name: str) -> Sector:
         """Get sector by name

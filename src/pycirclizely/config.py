@@ -155,6 +155,13 @@ tree_hovertext_defaults = {
     },
 }
 
+cytoband_defaults = {
+    "line": {
+        "width": 0,
+    },
+    "layer": "below",
+}
+
 ###########################################################
 # GitHub Eukaryote & Prokaryote Dataset Config
 ###########################################################
