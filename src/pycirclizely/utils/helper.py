@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Mapping, Optional, cast
 
 from Bio.SeqFeature import SeqFeature
 from plotly.colors import (  # type: ignore[attr-defined]
-    label_rgb,
     qualitative,
     sequential,
 )
@@ -300,11 +299,47 @@ def precise_position(val: float, position_precision: int) -> float:
 
 
 def parse_color(color):
-    """Convert css, hex or other color codes into a rgb coded string."""
-    if isinstance(color, str) and color.strip().lower().startswith("rgb("):
-        return color
-    elif isinstance(color, str) and color.startswith("#"):
-        rgb = hex_to_rgb(color)
-    else:
+    """
+    Convert css, hex (including 8-digit with alpha),
+    or named colors into an rgb/rgba string.
+    """
+    if isinstance(color, str):
+        color = color.strip().lower()
+
+        # Handle rgb() or rgba() strings directly
+        if color.startswith(("rgb(", "rgba(")):
+            return color
+
+        # Handle hex colors (including 8-digit with alpha)
+        elif color.startswith("#"):
+            hex_code = color.lstrip("#")
+
+            # 8-digit hex (#RRGGBBAA)
+            if len(hex_code) == 8:
+                r = int(hex_code[0:2], 16)
+                g = int(hex_code[2:4], 16)
+                b = int(hex_code[4:6], 16)
+                a = round(int(hex_code[6:8], 16) / 255, 2)  # Convert to 0-1 float
+                return f"rgba({r}, {g}, {b}, {a})"
+
+            # Standard 6-digit hex (#RRGGBB)
+            elif len(hex_code) == 6:
+                rgb = hex_to_rgb(color)
+                return f"rgb({rgb.red}, {rgb.green}, {rgb.blue})"
+
+            # 3-digit hex (#RGB)
+            elif len(hex_code) == 3:
+                # Expand to 6-digit and process
+                expanded = f"#{hex_code[0] * 2}{hex_code[1] * 2}{hex_code[2] * 2}"
+                rgb = hex_to_rgb(expanded)
+                return f"rgb({rgb.red}, {rgb.green}, {rgb.blue})"
+
+            else:
+                raise ValueError(f"Invalid hex color code: {color}")
+
+    # Handle named colors
+    try:
         rgb = name_to_rgb(color)
-    return label_rgb(rgb)
+        return f"rgb({rgb.red}, {rgb.green}, {rgb.blue})"
+    except ValueError:
+        raise ValueError(f"Could not parse color: {color}")
