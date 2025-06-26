@@ -101,7 +101,7 @@ class TreeViz:
         self._track = track
 
         line_kws = {} if line_kws is None else deepcopy(line_kws)
-        line_kws = utils.deep_dict_update(config.tree_line_defaults, line_kws)
+        line_kws = utils.deep_dict_update(config.plotly_shape_defaults, line_kws)
         self._line_kws = line_kws
 
         align_line_kws = {} if align_line_kws is None else deepcopy(align_line_kws)
@@ -272,7 +272,7 @@ class TreeViz:
             Scatter trace properties that override defaults.
             Note: The scatter points will be invisible by default (opacity=0).
         """
-        kwargs = utils.deep_dict_update(config.tree_node_info_defaults, kwargs)
+        kwargs = utils.deep_dict_update(dict(opacity=0), kwargs)
         default_bgcolor = config.tree_hovertext_defaults.get("hoverlabel", {}).get(
             "bgcolor", "lightgrey"
         )

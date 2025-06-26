@@ -69,7 +69,6 @@ plotly_layout_defaults = {
     "plot_bgcolor": "rgba(0,0,0,0)",  # Transparent background inside the axes
 }
 
-# Plotly annotation defaults
 plotly_annotation_defaults = {
     "font": {
         "size": 13,
@@ -80,22 +79,19 @@ plotly_annotation_defaults = {
     "yanchor": "middle",
 }
 
-# Plotly shape defaults
 plotly_shape_defaults = {
     "fillcolor": None,
     "line": {"color": "black", "width": 1},
-    "layer": "above",
+    "layer": "between",
 }
 
-# Plotly grid defaults
 plotly_grid_defaults = {
     "fillcolor": None,
-    "line": {"color": "grey", "width": 1},
+    "line": {"color": "grey", "width": 0.5},
     "opacity": 0.5,
     "layer": "below",
 }
 
-# Plotly ribbon link defaults
 plotly_arrow_defaults = {
     "fillcolor": "grey",
     "opacity": 0.5,
@@ -103,7 +99,6 @@ plotly_arrow_defaults = {
     "layer": "between",
 }
 
-# Plotly line link defaults
 plotly_linelink_defaults = {
     "line": {"width": 1.2, "color": "grey"},
     "layer": "above",
@@ -113,6 +108,7 @@ plotly_scatter_defaults = {
     "marker": {
         "size": 4,
         "opacity": 1.0,
+        "symbol": "circle",
     },
     "line": {
         "width": 2,
@@ -121,19 +117,12 @@ plotly_scatter_defaults = {
     "showlegend": False,
 }
 
-tree_line_defaults = {
-    "line": {
-        "color": "black",
-    },
-    "layer": "below",
-}
-
 tree_alignline_defaults = {
     "line": {
         "dash": "dot",
     },
     "opacity": 0.5,
-    "layer": "below",
+    "layer": "between",
 }
 
 tree_highlight_defaults = {
@@ -143,10 +132,6 @@ tree_highlight_defaults = {
     "opacity": 0.6,
     "fillcolor": "lightyellow",
     "layer": "below",
-}
-
-tree_node_info_defaults = {
-    "opacity": 0,
 }
 
 tree_hovertext_defaults = {
@@ -160,6 +145,31 @@ cytoband_defaults = {
         "width": 0,
     },
     "layer": "below",
+}
+
+radar_line_defaults = {
+    "line": {
+        "width": 2,
+    },
+    "layer": "between",
+}
+
+radar_grid_defaults = {
+    "line": {
+        "color": "grey",
+        "width": 0.5,
+        "dash": "dash",
+    },
+    "layer": "below",
+}
+
+radar_annotation_defaults = {
+    "font": {
+        "color": "dimgrey",
+        "size": 10,
+    },
+    "xanchor": "left",
+    "yanchor": "top",
 }
 
 ###########################################################

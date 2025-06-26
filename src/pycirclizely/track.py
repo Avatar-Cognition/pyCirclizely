@@ -4,7 +4,7 @@ import math
 import textwrap
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, List, Literal, TypedDict
 
 import numpy as np
 import plotly.graph_objects as go
@@ -705,7 +705,7 @@ class Track:
             for y_grid_idx in range(y_grid_num):
                 x = [self.start, self.end]
                 y: list[float] = [float(y_grid_idx), float(y_grid_idx)]
-                self.line(x, y, vmin=y_vmin, vmax=y_vmax, **kwargs)
+                self.line(x, y, vmin=y_vmin, vmax=y_vmax, hover_text=None, **kwargs)
 
         # Plot x-axis grid line
         if x_grid_interval is not None:
@@ -716,7 +716,7 @@ class Track:
                 if x_pos > self.end:
                     break
                 x, y = [x_pos, x_pos], [x_vmin, x_vmax]
-                self.line(x, y, vmin=x_vmin, vmax=x_vmax, **kwargs)
+                self.line(x, y, vmin=x_vmin, vmax=x_vmax, hover_text=None, **kwargs)
                 x_grid_idx += 1
 
     def line(
@@ -727,7 +727,7 @@ class Track:
         vmin: int | float = 0,
         vmax: int | float | None = None,
         arc: bool = True,
-        hover_text: list[str] | None = None,
+        hover_text: list[str] | Literal["default"] | None = "default",
         **kwargs,
     ) -> None:
         """Plot lines with SVG paths at plotly.
@@ -746,8 +746,9 @@ class Track:
             If True, creates curved arc lines (polar projection)
             If False, creates straight chord lines
         hover_text : list[str] | None, optional
-            Custom hover text for each point in line.
-            If None, defaults to formatted x and y values.
+            - "default": Auto-generates hover text (default)
+            - list[str]: Uses custom hover labels
+            - None: Disables hover text
         **kwargs : dict, optional
             Line properties (e.g. `line=dict(color="red", width=2, dash="dash")`)
             See: <https://plotly.com/python/reference/layout/shapes/>
@@ -764,40 +765,44 @@ class Track:
         color = utils.plot.get_default_color(kwargs, target="line")
         kwargs = utils.deep_dict_update(kwargs, {"line": {"color": color}})
 
-        # Generate hover text
-        hovertext = (
-            hover_text
-            if hover_text is not None
-            else utils.plot.default_hovertext(
-                x, y, sector_name=self._parent_sector._name
-            )
-        )
+        # Handle hover_text logic
+        if hover_text is not None:
+            if hover_text == "default":
+                hover_text = utils.plot.default_hovertext(
+                    x, y, sector_name=self._parent_sector._name
+                )
+            elif isinstance(hover_text, list):
+                if len(hover_text) != len(x):
+                    raise ValueError(
+                        f"hover_text length ({len(hover_text)}) must match x/y length "
+                        f"({len(x)})"
+                    )
+            else:
+                raise TypeError("hover_text must be 'default', list[str], or None")
 
         path = PolarSVGPatchBuilder.multi_segment_path(rad, r, arc)
-
-        # Add shape to layout
         shape = utils.plot.build_plotly_shape(
             path, defaults=config.plotly_shape_defaults, **kwargs
         )
         self._shapes.append(shape)
 
         # Build invisible trace with proper hover handling
-        x_vals, y_vals = [], []
-        for theta, rho in zip(rad, r):
-            cx, cy = PolarSVGPatchBuilder._polar_to_cart(theta, rho)
-            x_vals.append(cx)
-            y_vals.append(cy)
+        if hover_text is not None:
+            x_vals, y_vals = [], []
+            for theta, rho in zip(rad, r):
+                cx, cy = PolarSVGPatchBuilder._polar_to_cart(theta, rho)
+                x_vals.append(cx)
+                y_vals.append(cy)
 
-        trace = utils.plot.build_scatter_trace(
-            x=x_vals,
-            y=y_vals,
-            mode="markers",
-            marker=dict(size=20, opacity=0),
-            text=hovertext,
-            hoverlabel={"bgcolor": color},
-        )
-
-        self._traces.append(trace)
+            trace = utils.plot.build_scatter_trace(
+                x=x_vals,
+                y=y_vals,
+                mode="markers",
+                marker=dict(size=20, opacity=0),
+                text=hover_text,
+                hoverlabel={"bgcolor": color},
+            )
+            self._traces.append(trace)
 
     def scatter(
         self,
@@ -806,7 +811,7 @@ class Track:
         *,
         vmin: int | float = 0,
         vmax: int | float | None = None,
-        hover_text: list[str] | None = None,
+        hover_text: list[str] | Literal["default"] | None = "default",
         **kwargs,
     ) -> None:
         """Scatter plot using Plotly Scatter trace.
@@ -822,8 +827,9 @@ class Track:
         vmax : int | float | None, optional
             Maximum value for radial scaling. If None, uses max(y)
         hover_text : list[str] | None, optional
-            Custom hover text for each point in line.
-            If None, defaults to formatted x and y values.
+            - "default": Auto-generates hover text (default)
+            - list[str]: Uses custom hover labels
+            - None: Disables hover text
         **kwargs : dict, optional
             Scatter trace properties that override defaults. Common options include:
             - marker: dict with properties like size, color, symbol
@@ -835,9 +841,7 @@ class Track:
             raise ValueError(f"x and y lengths must match ({len(x)} vs {len(y)})")
 
         # Get and merge defaults with kwargs
-        trace_defaults = deepcopy(config.plotly_scatter_defaults)
-        trace_defaults = utils.deep_dict_update(trace_defaults, kwargs)
-        kwargs = trace_defaults
+        kwargs = utils.deep_dict_update(config.plotly_scatter_defaults, kwargs)
 
         color = utils.plot.get_default_color(kwargs, target="marker")
         kwargs = utils.deep_dict_update(kwargs, {"line": {"color": color}})
@@ -857,14 +861,23 @@ class Track:
             y_vals.append(cy)
 
         trace = utils.plot.build_scatter_trace(x_vals, y_vals, "markers", **kwargs)
-        if hover_text is not None:
-            default_text = hover_text
-        else:
-            default_text = utils.plot.default_hovertext(
-                x, y, sector_name=self._parent_sector._name
-            )
 
-        trace.update(text=default_text)
+        # Handle hover_text logic
+        if hover_text is not None:
+            if hover_text == "default":
+                hover_text = utils.plot.default_hovertext(
+                    x, y, sector_name=self._parent_sector._name
+                )
+            elif isinstance(hover_text, list):
+                if len(hover_text) != len(x):
+                    raise ValueError(
+                        f"hover_text length ({len(hover_text)}) must match x/y length "
+                        f"({len(x)})"
+                    )
+            else:
+                raise TypeError("hover_text must be 'default', list[str], or None")
+
+        trace.update(text=hover_text)
 
         self._traces.append(trace)
 
@@ -878,7 +891,7 @@ class Track:
         *,
         vmin: int | float = 0,
         vmax: int | float | None = None,
-        hover_text: list[str] | None = None,
+        hover_text: list[str] | Literal["default"] | None = "default",
         **kwargs,
     ) -> None:
         """Plot bar chart with hover information from scatter traces.
@@ -900,8 +913,9 @@ class Track:
         vmax : int | float | None, optional
             Maximum value for radial scaling. If None, uses max(height + bottom)
         hover_text : list[str] | None, optional
-            Custom hover text for each bar.
-            If None, defaults to formatted range x and height.
+            - "default": Auto-generates hover text (default)
+            - list[str]: Custom hover labels (length must match bars)
+            - None: Disables hover text
         **kwargs : dict, optional
             Properties for both shapes and hover text
 
@@ -1002,13 +1016,16 @@ class Track:
             )
             self._shapes.append(shape)
 
-        # Get hovertext
-        if hover_text is not None:
+        # Handle hover_text logic
+        if hover_text is not None and hover_text != "default":
+            if not isinstance(hover_text, list):
+                raise TypeError("hover_text must be 'default', a list[str], or None")
             if len(hover_text) != len(x):
                 raise ValueError(
-                    "Length of `hover_text` must match the number of bars."
+                    f"hover_text length ({len(hover_text)}) must match number of "
+                    f"bars ({len(x)})"
                 )
-        else:
+        elif hover_text == "default":
             hover_text = utils.plot.default_hovertext(
                 x=start_positions,
                 y=height,
@@ -1016,16 +1033,16 @@ class Track:
                 sector_name=self._parent_sector._name,
             )
 
-        # Invisible scatter for hovertext at top point of bar
-        hover_trace = utils.plot.build_scatter_trace(
-            hover_x,
-            hover_y,
-            mode="markers",
-            text=hover_text,
-            marker=dict(size=20, opacity=0),
-            hoverlabel={"bgcolor": colors},
-        )
-        self._traces.append(hover_trace)
+        if hover_text is not None:
+            hover_trace = utils.plot.build_scatter_trace(
+                hover_x,
+                hover_y,
+                mode="markers",
+                text=hover_text,
+                marker=dict(size=20, opacity=0),
+                hoverlabel={"bgcolor": colors},
+            )
+            self._traces.append(hover_trace)
 
     # def stacked_bar(
     #     self,
@@ -1202,7 +1219,7 @@ class Track:
         vmin: int | float = 0,
         vmax: int | float | None = None,
         arc: bool = True,
-        hover_text: list[str] | None = None,
+        hover_text: list[str] | Literal["default"] | None = "default",
         **kwargs,
     ) -> None:
         """Fill the area between two curves with SVG paths at plotly.
@@ -1223,13 +1240,12 @@ class Track:
             If True, creates curved arc fills (polar projection)
             If False, creates straight chord fills
         hover_text : list[str] | None, optional
-            Custom hover text for each bar.
-            If None, defaults to formatted range x and height.
+            - "default": Auto-generates hover text (default)
+            - list[str]: Custom hover labels (length must match x/y1)
+            - None: Disables hover text
         **kwargs : dict, optional
             Fill properties
             (e.g. `fillcolor="red", line=dict(color="black", width=0.5)`)
-            See: <https://plotly.com/python/reference/scatter/#scatter-fill>
-
         """
         # Input validation
         x = np.asarray(x)
@@ -1262,31 +1278,37 @@ class Track:
         )
         self._shapes.append(shape)
 
-        # Get hovertext
-        hovertext = (
-            hover_text
-            if hover_text is not None
-            else utils.plot.default_hovertext(
+        # Handle hover_text logic
+        if hover_text is not None and hover_text != "default":
+            if not isinstance(hover_text, list):
+                raise TypeError("hover_text must be 'default', a list[str], or None")
+            if len(hover_text) != len(x):
+                raise ValueError(
+                    f"hover_text length ({len(hover_text)}) must match x/y1 length "
+                    f"({len(x)})"
+                )
+        elif hover_text == "default":
+            hover_text = utils.plot.default_hovertext(
                 x, y1, sector_name=self._parent_sector._name
             )
-        )
 
-        # Add invisible scatter points for hovertext
-        hover_x, hover_y = zip(
-            *[
-                PolarSVGPatchBuilder._polar_to_cart(theta, rho)
-                for theta, rho in zip(rad, r1)
-            ]
-        )
-        hover_trace = utils.plot.build_scatter_trace(
-            list(hover_x),
-            list(hover_y),
-            mode="markers",
-            text=hovertext,
-            marker=dict(size=20, opacity=0),
-            hoverlabel={"bgcolor": color},
-        )
-        self._traces.append(hover_trace)
+        # Only create hover trace if hover_text exists
+        if hover_text is not None:
+            hover_x, hover_y = zip(
+                *[
+                    PolarSVGPatchBuilder._polar_to_cart(theta, rho)
+                    for theta, rho in zip(rad, r1)
+                ]
+            )
+            hover_trace = utils.plot.build_scatter_trace(
+                list(hover_x),
+                list(hover_y),
+                mode="markers",
+                text=hover_text,
+                marker=dict(size=20, opacity=0),
+                hoverlabel={"bgcolor": color},
+            )
+            self._traces.append(hover_trace)
 
     def heatmap(
         self,
@@ -1299,7 +1321,7 @@ class Track:
         width: int | float | None = None,
         cmap: str | list[tuple[float, str]] = "RdBu_r",
         show_value: bool = False,
-        hover_text: list[str] | bool | None = None,
+        hover_text: list[str] | Literal["default"] | None = "default",
         coloraxis: str | None = None,
         rect_kws: dict[str, Any] | None = None,
         text_kws: dict[str, Any] | None = None,
@@ -1322,159 +1344,151 @@ class Track:
             If None, `track.end` is set.
         width : int | float | None, optional
             Heatmap rectangle x width size.
-            Normally heatmap plots squares of equal width. In some cases,
-            it is necessary to reduce the width of only the last column data square.
-            At that time, width can be set under the following conditions.
-            `(col_num - 1) * width < end - start < col_num * width`
         cmap : str | list[list[float, str]], optional
-            Colormap can be either:
-            - A string name of a predefined plotly colorscale
-              (e.g. `Viridis`, `Plasma`, `Rainbow`, `RdBu`)
-            - A custom colorscale of value-color pairs where value is between 0 and 1
-              (e.g. [[0, "blue"], [0.5, "white"], [1, "red"]])
+            Colormap specification
         show_value : bool, optional
             If True, show data value on heatmap rectangle
-        hover_text: list[str] | Literal["default"] | None = "default",
-            Custom hover text for each bar or generated by default.
-            If None, no hover text is shown.
+        hover_text : list[str] | None, optional
+            - "default": Auto-generates hover text (default)
+            - list[str]: Custom hover labels (length must match data points)
+            - None: Disables hover text
         coloraxis : str | None, optional
-            If specified, use this tag.
-            This allows consistent color mapping across multiple traces.
-            If None, a new color axis will be created.
-            See: <https://plotly.com/python/colorscales/#using-a-coloraxis>
+            Color axis identifier
         rect_kws : dict[str, Any] | None, optional
-            Shape properties for ticks/baseline (default: None)
-            e.g. `dict(line=dict(color="black", width=1))`
-            See: <https://plotly.com/python/reference/layout/shapes/>
+            Rectangle properties
         text_kws : dict[str, Any] | None, optional
-            Annotation properties for labels (default: None)
-            e.g. `dict(font=dict(size=12, color="black"))`
-            See: <https://plotly.com/python/reference/layout/annotations/>
+            Text properties
         """
         rect_kws = {} if rect_kws is None else deepcopy(rect_kws)
         text_kws = {} if text_kws is None else deepcopy(text_kws)
 
-        # Check whether array is 1d or 2d (If 1d, reshape 2d)
+        # Check array dimensions
         data = np.array(data)
         if data.ndim == 1:
             data = data.reshape((1, -1))
         elif data.ndim != 2:
             raise ValueError(f"{data=} is not 1d or 2d array!!")
 
-        # Set default value for None properties
+        # Set default values
         vmin = np.min(data) if vmin is None else vmin
         vmax = np.max(data) if vmax is None else vmax
         start = self.start if start is None else start
         end = self.end if end is None else end
         self._check_value_min_max(data, vmin, vmax)
 
-        # Calculate radius & x position range list of heatmap rectangle
+        # Calculate dimensions
         row_num, col_num = data.shape
         unit_r_size = self.r_plot_size / row_num
         unit_x_size = (end - start) / col_num
+
         if width is not None:
             if (col_num - 1) * width < end - start < col_num * width:
                 unit_x_size = width
             else:
                 raise ValueError(f"{width=} is invalid ({start=}, {end=})")
 
-        r_range_list: list[tuple[float, float]] = []
-        for i in range(row_num):
-            max_range = max(self.r_plot_lim) - (unit_r_size * i)
-            min_range = max_range - unit_r_size
-            r_range_list.append((min_range, max_range))
-        x_range_list: list[tuple[float, float]] = []
-        for i in range(col_num):
-            min_range = start + (unit_x_size * i)
-            max_range = min_range + unit_x_size
-            # Avoid max_range exceeds `track.end` value
-            if max_range > self.end:
-                max_range = self.end
-            x_range_list.append((min_range, max_range))
+        # Generate position ranges
+        r_range_list = [
+            (
+                max(self.r_plot_lim) - unit_r_size * (i + 1),
+                max(self.r_plot_lim) - unit_r_size * i,
+            )
+            for i in range(row_num)
+        ]
 
-        # Plot heatmap
+        x_range_list = []
+        for i in range(col_num):
+            min_x = start + unit_x_size * i
+            max_x = min(min_x + unit_x_size, self.end)
+            x_range_list.append((min_x, max_x))
+
+        # Setup colormap
         if isinstance(cmap, str):
             color_scale = get_colorscale(cmap)
         else:
             color_scale = [[pos, utils.parse_color(color)] for pos, color in cmap]
 
         norm = utils.plot.Normalize(vmin=vmin, vmax=vmax)
-        scatter_x, scatter_y, start_x, end_x, values, scatter_colors = (
-            [],
-            [],
-            [],
-            [],
-            [],
-            [],
-        )
+
+        class ScatterData(TypedDict):
+            x: List[float]
+            y: List[float]
+            start_x: List[float]
+            end_x: List[float]
+            values: List[float]
+            colors: List[str]
+
+        scatter_data: ScatterData = {
+            "x": [],
+            "y": [],
+            "start_x": [],
+            "end_x": [],
+            "values": [],
+            "colors": [],
+        }
+
+        # Plot rectangles and collect hover data
         for row_idx, row in enumerate(data):
             for col_idx, v in enumerate(row):
-                # Plot heatmap rectangle
                 rect_start, rect_end = x_range_list[col_idx]
                 rect_r_lim = r_range_list[row_idx]
-                color = sample_colorscale(colorscale=color_scale, samplepoints=norm(v))[
-                    0
-                ]
-                rect_kws = utils.deep_dict_update(rect_kws, dict(fillcolor=color))
+                color = sample_colorscale(color_scale, norm(v))[0]
+
+                rect_kws = utils.deep_dict_update(rect_kws, {"fillcolor": color})
                 self.rect(rect_start, rect_end, r_lim=rect_r_lim, **rect_kws)
 
-                # Inside row/col loop:
-                text_x = (rect_start + rect_end) / 2
-                text_r = sum(rect_r_lim) / 2
+                # Store hover data
+                center_x = (rect_start + rect_end) / 2
+                center_r = sum(rect_r_lim) / 2
                 cx, cy = PolarSVGPatchBuilder._polar_to_cart(
-                    self.x_to_rad(text_x), text_r
+                    self.x_to_rad(center_x), center_r
                 )
 
-                scatter_x.append(cx)
-                scatter_y.append(cy)
-                start_x.append(rect_start)
-                end_x.append(rect_end)
-                values.append(v)
-                scatter_colors.append(color)
+                scatter_data["x"].append(cx)
+                scatter_data["y"].append(cy)
+                scatter_data["start_x"].append(rect_start)
+                scatter_data["end_x"].append(rect_end)
+                scatter_data["values"].append(v)
+                scatter_data["colors"].append(color)
 
                 if show_value:
-                    # Plot value text on heatmap rectangle
                     text_value = f"{v:.2f}" if isinstance(v, float) else str(v)
-                    text_x = (rect_end + rect_start) / 2
-                    text_r = sum(rect_r_lim) / 2
-                    self.text(text_value, text_x, text_r, **text_kws)
+                    self.text(text_value, center_x, center_r, **text_kws)
 
-        # Get hovertext
+        # Handle hover text
+        if hover_text is not None and hover_text != "default":
+            if not isinstance(hover_text, list):
+                raise TypeError("hover_text must be 'default', a list[str], or None")
+            if len(hover_text) != len(data.flatten()):
+                raise ValueError(
+                    "Length of `hover_text` must match the number of heatmap cells"
+                )
+        elif hover_text == "default":
+            hover_text = utils.plot.default_hovertext(
+                x=scatter_data["start_x"],
+                y=scatter_data["values"],
+                x2=scatter_data["end_x"],
+                sector_name=self._parent_sector._name,
+            )
+
+        # Create hover trace if needed
         if hover_text is not None:
-            if hover_text == "default":
-                hover_text = utils.plot.default_hovertext(
-                    x=start_x,
-                    y=values,
-                    x2=end_x,
-                    sector_name=self._parent_sector._name,
-                )
-            elif isinstance(hover_text, list):
-                if len(hover_text) != len(data.flatten()):
-                    raise ValueError(
-                        "Length of `hover_text` must match the number of bars."
-                    )
-            else:
-                raise TypeError(
-                    "hover_text must be 'default', a list of strings, or None"
-                )
-
-            # Create hover trace only if hover_text is not None
             hover_trace = utils.plot.build_scatter_trace(
-                scatter_x,
-                scatter_y,
+                scatter_data["x"],
+                scatter_data["y"],
                 mode="markers",
                 text=hover_text,
                 marker=dict(
                     size=20,
                     opacity=0,
-                    color=scatter_colors,
+                    color=scatter_data["colors"],
                     colorscale=color_scale,
                     cmin=vmin,
                     cmax=vmax,
                     coloraxis=coloraxis if coloraxis else None,
                     showscale=False,
                 ),
-                hoverlabel={"bgcolor": scatter_colors},
+                hoverlabel={"bgcolor": scatter_data["colors"]},
             )
             self._traces.append(hover_trace)
 
