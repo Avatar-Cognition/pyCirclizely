@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from pycirclizely.utils import ColorCycler
+from pycirclizely.utils.color import ColorCycler
 
 
 class Table:
@@ -53,7 +53,7 @@ class Table:
         """Table column count number"""
         return len(self.dataframe.columns)
 
-    def get_col_name2color(self, cmap: str = "tab10") -> dict[str, str]:
+    def get_col_name2color(self, cmap: str = "T10") -> dict[str, str]:
         """Get column name & color dict
 
         Parameters

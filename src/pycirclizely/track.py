@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, List, Literal, TypedDict
 
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
 from Bio.Phylo.BaseTree import Tree
 from Bio.SeqFeature import SeqFeature
@@ -17,8 +18,7 @@ from plotly.colors import (  # type: ignore[attr-defined]
 )
 
 from pycirclizely import config, utils
-
-# from pycirclizely.parser import StackedBarTable
+from pycirclizely.parser import StackedBarTable
 from pycirclizely.patches import PolarSVGPatchBuilder
 from pycirclizely.tree import TreeViz
 
@@ -1044,171 +1044,296 @@ class Track:
             )
             self._traces.append(hover_trace)
 
-    # def stacked_bar(
-    #     self,
-    #     table_data: str | Path | pd.DataFrame | StackedBarTable,
-    #     *,
-    #     delimiter: str = "\t",
-    #     width: float = 0.6,
-    #     cmap: str | dict[str, str] = "tab10",
-    #     vmax: float | None = None,
-    #     show_label: bool = True,
-    #     label_pos: str = "bottom",
-    #     label_margin: float = 2,
-    #     bar_kws: dict[str, Any] | None = None,
-    #     label_kws: dict[str, Any] | None = None,
-    # ) -> StackedBarTable:
-    #     """Plot stacked bar from table data
+    def stacked_bar(
+        self,
+        table_data: str | Path | pd.DataFrame | StackedBarTable,
+        *,
+        delimiter: str = "\t",
+        width: float = 0.6,
+        cmap: str | dict[str, str] = "T10",
+        vmax: float | None = None,
+        hover_text: list[str] | Literal["default"] | None = "default",
+        **kwargs,
+    ) -> StackedBarTable:
+        """Plot stacked bar from table data with hover text support
 
-    #     Parameters
-    #     ----------
-    #     table_data : str | Path | pd.DataFrame | StackedBarTable
-    #         Table file or Table DataFrame or StackedBarTable
-    #     delimiter : str, optional
-    #         Table file delimiter
-    #     width : float, optional
-    #         Bar width ratio (0.0 - 1.0)
-    #     cmap : str | dict[str, str], optional
-    #         Colormap assigned to each stacked bar.
-    #         User can set matplotlib's colormap (e.g. `tab10`, `Set3`) or
-    #         col_name -> color dict (e.g. `dict(A="red", B="blue", C="green", ...)`)
-    #     vmax : float | None, optional
-    #         Stacked bar max value.
-    #         If None, max value in each row values sum is set.
-    #     show_label : bool, optional
-    #         Show table row names as labels
-    #     label_pos : str, optional
-    #         Label position (`bottom`|`top`)
-    #     label_margin : float, optional
-    #         Label margin size
-    #     bar_kws : dict[str, Any] | None, optional
-    #         Axes.bar properties (e.g. `dict(ec="black", lw=0.5, hatch="//", ...)`)
-    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.bar.html>
-    #     label_kws : dict[str, Any] | None, optional
-    #         Text properties (e.g. `dict(size=12, orientation="vertical", ...)`)
-    #         <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.text.html>
+        Parameters
+        ----------
+        table_data : str | Path | pd.DataFrame | StackedBarTable
+            Table file or Table DataFrame or StackedBarTable
+        delimiter : str, optional
+            Table file delimiter
+        width : float, optional
+            Bar width ratio (0.0 - 1.0)
+        cmap : str | dict[str, str], optional
+            Colormap assigned to each stacked bar.
+            User can set matplotlib's colormap (e.g. `T10`, `Set3`) or
+            col_name -> color dict (e.g. `dict(A="red", B="blue", C="green", ...)`)
+        vmax : float | None, optional
+            Stacked bar max value.
+            If None, max value in each row values sum is set.
+        hover_text : list[str] | Literal["default"] | None, optional
+            - "default": Auto-generates hover text (default)
+            - list[str]: Custom hover labels (length must match bars)
+            - None: Disables hover text
+        **kwargs : dict, optional
+            Shape properties (e.g. `fillcolor="blue, line=dict(color="red")`)
+            See: <https://plotly.com/python/reference/layout/shapes/>
 
-    #     Returns
-    #     -------
-    #     sb_table : StackedBarTable
-    #         Stacked bar table
-    #     """
-    #     bar_kws = {} if bar_kws is None else deepcopy(bar_kws)
-    #     label_kws = {} if label_kws is None else deepcopy(label_kws)
+        Returns
+        -------
+        sb_table : StackedBarTable
+            Stacked bar table
+        """
+        if not 0.0 <= width <= 1.0:
+            raise ValueError(f"{width=} is invalid (0.0 <= width <= 1.0).")
 
-    #     if not 0.0 <= width <= 1.0:
-    #         raise ValueError(f"{width=} is invalid (0.0 <= width <= 1.0).")
+        # Load table data
+        if isinstance(table_data, StackedBarTable):
+            sb_table = table_data
+        else:
+            sb_table = StackedBarTable(table_data, delimiter=delimiter)
 
-    #     # Load table data
-    #     if isinstance(table_data, StackedBarTable):
-    #         sb_table = table_data
-    #     else:
-    #         sb_table = StackedBarTable(table_data, delimiter=delimiter)
+        # Make column name & color dict
+        if isinstance(cmap, str):
+            col_name2color = sb_table.get_col_name2color(cmap)
+        else:
+            col_name2color = cmap
 
-    #     # Make column name & color dict
-    #     if isinstance(cmap, str):
-    #         col_name2color = sb_table.get_col_name2color(cmap)
-    #     else:
-    #         col_name2color = cmap
+        # Calculate bar plot parameters
+        x = sb_table.calc_bar_label_x_list(self.size)
+        bar_width = (self.size / len(sb_table.row_names)) * width
+        vmax = sb_table.row_sum_vmax if vmax is None else vmax
+        heights, bottoms = sb_table.stacked_bar_heights, sb_table.stacked_bar_bottoms
 
-    #     # Calculate bar plot parameters
-    #     x = sb_table.calc_bar_label_x_list(self.size)
-    #     width = (self.size / len(sb_table.row_names)) * width
-    #     vmax = sb_table.row_sum_vmax if vmax is None else vmax
-    #     heights, bottoms = sb_table.stacked_bar_heights, sb_table.stacked_bar_bottoms
+        hover_x, hover_y, hover_colors = [], [], []
 
-    #     # Plot bars
-    #     for col_name, height, bottom in zip(sb_table.col_names, heights, bottoms):
-    #         color = col_name2color[col_name]
-    #         self.bar(x, height, width, bottom, vmax=vmax, fc=color, **bar_kws)
+        # Plot stacked bars
+        for col_idx, (col_name, height, bottom) in enumerate(
+            zip(sb_table.col_names, heights, bottoms)
+        ):
+            color = col_name2color[col_name]
 
-    #     # Plot bar labels
-    #     if show_label:
-    #         x_list = sb_table.calc_bar_label_x_list(self.size)
-    #         row_name2sum = sb_table.row_name2sum
-    #         for label, x in zip(sb_table.row_names, x_list):
-    #             # Calculate label r position
-    #             if label_pos == "top":
-    #                 bar_r_height = self.r_size * (row_name2sum[label] / vmax)
-    #                 r = min(self.r_lim) + bar_r_height + label_margin
-    #                 outer = True
-    #             elif label_pos == "bottom":
-    #                 r = min(self.r_lim) - label_margin
-    #                 outer = False
-    #             else:
-    #                 raise ValueError(f"{label_pos=} is invalid ('top' or 'bottom').")
+            # Convert to polar coordinates
+            rad = np.array([self.x_to_rad(pos) for pos in x])
+            r_bottom = np.array([self._y_to_r(v, 0, vmax) for v in bottom])
+            r_height = (
+                np.array(
+                    [
+                        self._y_to_r(v, 0, vmax)
+                        for v in (np.array(height) + np.array(bottom))
+                    ]
+                )
+                - r_bottom
+            )
 
-    #             # Set label text properties
-    #             if label_kws.get("orientation") is None:
-    #                 label_kws["orientation"] = "horizontal"
-    #             params = utils.plot.get_label_params_by_rad(
-    #                 self.x_to_rad(x), label_kws["orientation"], outer
-    #             )
-    #             label_kws.utils.helper.deep_dict_update(params)
+            # Calculate bar positions based on width
+            rad_width = self.rad_size * (bar_width / self.size)
 
-    #             self.text(label, x, r, adjust_rotation=False, **label_kws)
+            # Create bars using arc rectangles
+            for i in range(len(x)):
+                # For hover text positions (only for top segment)
+                if col_idx == len(sb_table.col_names) - 1:
 
-    #     return sb_table
+                    # Find top center of bar for hover
+                    top_r = r_bottom[i] + r_height[i]
+                    cx, cy = PolarSVGPatchBuilder._polar_to_cart(rad[i], top_r)
+                    hover_x.append(cx)
+                    hover_y.append(cy)
+                    hover_colors.append(color)
 
-    # def stacked_barh(
-    #     self,
-    #     table_data: str | Path | pd.DataFrame | StackedBarTable,
-    #     *,
-    #     delimiter: str = "\t",
-    #     width: float = 0.6,
-    #     cmap: str | dict[str, str] = "tab10",
-    #     bar_kws: dict[str, Any] | None = None,
-    # ) -> StackedBarTable:
-    #     """Plot horizontal stacked bar from table data
+                # Create the bar segment
+                path = PolarSVGPatchBuilder.arc_rectangle(
+                    radr=(rad[i] - rad_width / 2, r_bottom[i]),
+                    width=rad_width,
+                    height=r_height[i],
+                )
 
-    #     Parameters
-    #     ----------
-    #     table_data : str | Path | pd.DataFrame | StackedBarTable
-    #         Table file or Table DataFrame or StackedBarTable
-    #     delimiter : str, optional
-    #         Table file delimiter
-    #     width : float, optional
-    #         Bar width ratio (0.0 - 1.0)
-    #     cmap : str | dict[str, str], optional
-    #         Colormap assigned to each stacked bar.
-    #         User can set matplotlib's colormap (e.g. `tab10`, `Set3`) or
-    #         col_name -> color dict (e.g. `dict(A="red", B="blue", C="green", ...)`)
-    #     bar_kws : dict[str, Any] | None, optional
-    #         Patch properties for bar plot (e.g. `dict(ec="black, lw=0.2, ...)`)
+                shape = utils.plot.build_plotly_shape(
+                    path,
+                    defaults=dict(fillcolor=color, line=dict(color=color, width=0)),
+                    **kwargs,
+                )
+                self._shapes.append(shape)
 
-    #     Returns
-    #     -------
-    #     sb_table : StackedBarTable
-    #         Stacked bar table
-    #     """
-    #     bar_kws = {} if bar_kws is None else deepcopy(bar_kws)
+        # Handle hover_text logic
+        if hover_text is not None and hover_text != "default":
+            if not isinstance(hover_text, list):
+                raise TypeError("hover_text must be 'default', a list[str], or None")
+            if len(hover_text) != len(sb_table.row_names) * len(sb_table.col_names):
+                raise ValueError(
+                    f"hover_text length ({len(hover_text)}) must match number of "
+                    f"segments ({len(sb_table.row_names) * len(sb_table.col_names)})"
+                )
+        elif hover_text == "default":
+            hover_text = utils.plot.default_stackedbar_hovertext(sb_table=sb_table)
 
-    #     if not 0.0 <= width <= 1.0:
-    #         raise ValueError(f"{width=} is invalid (0.0 <= width <= 1.0).")
+        # Calculate positions for all segments
+        if hover_text is not None:
+            hover_x, hover_y, hover_colors = [], [], []
+            for col_idx, (col_name, height, bottom) in enumerate(
+                zip(sb_table.col_names, heights, bottoms)
+            ):
+                color = col_name2color[col_name]
+                rad = np.array([self.x_to_rad(pos) for pos in x])
+                r_bottom = np.array([self._y_to_r(v, 0, vmax) for v in bottom])
+                r_height = (
+                    np.array(
+                        [
+                            self._y_to_r(v, 0, vmax)
+                            for v in (np.array(height) + np.array(bottom))
+                        ]
+                    )
+                    - r_bottom
+                )
 
-    #     # Load table data
-    #     if isinstance(table_data, StackedBarTable):
-    #         sb_table = table_data
-    #     else:
-    #         sb_table = StackedBarTable(table_data, delimiter=delimiter)
+                for i in range(len(x)):
+                    # Calculate center position for hover
+                    center_r = r_bottom[i] + r_height[i] / 2
+                    cx, cy = PolarSVGPatchBuilder._polar_to_cart(rad[i], center_r)
+                    hover_x.append(cx)
+                    hover_y.append(cy)
+                    hover_colors.append(color)
 
-    #     # Make column name & color dict
-    #     if isinstance(cmap, str):
-    #         col_name2color = sb_table.get_col_name2color(cmap)
-    #     else:
-    #         col_name2color = cmap
+            hover_trace = utils.plot.build_scatter_trace(
+                hover_x,
+                hover_y,
+                mode="markers",
+                text=hover_text,
+                hoverinfo="text",
+                marker=dict(size=20, opacity=0),
+                hoverlabel=dict(bgcolor=hover_colors),
+            )
+            self._traces.append(hover_trace)
 
-    #     # Calculate bar plot parameters
-    #     r_lim_list = sb_table.calc_barh_r_lim_list(self.r_plot_lim, width)
-    #     heights, bottoms = sb_table.stacked_bar_heights, sb_table.stacked_bar_bottoms
+        return sb_table
 
-    #     # Plot bars
-    #     for col_name, height, bottom in zip(sb_table.col_names, heights, bottoms):
-    #         color = col_name2color[col_name]
-    #         for r_lim, h, b in zip(r_lim_list, height, bottom):
-    #             self.rect(b, b + h, r_lim=r_lim, fc=color, **bar_kws)
+    def stacked_barh(
+        self,
+        table_data: str | Path | pd.DataFrame | StackedBarTable,
+        *,
+        delimiter: str = "\t",
+        width: float = 0.6,
+        cmap: str | dict[str, str] = "tab10",
+        vmax: float | None = None,
+        hover_text: list[str] | Literal["default"] | None = "default",
+        **kwargs,
+    ) -> StackedBarTable:
+        """Plot horizontal stacked bar from table data with hover text support
 
-    #     return sb_table
+        Parameters
+        ----------
+        table_data : str | Path | pd.DataFrame | StackedBarTable
+            Table file or Table DataFrame or StackedBarTable
+        delimiter : str, optional
+            Table file delimiter
+        width : float, optional
+            Bar width ratio (0.0 - 1.0)
+        cmap : str | dict[str, str], optional
+            Colormap assigned to each stacked bar.
+            User can set matplotlib's colormap (e.g. `tab10`, `Set3`) or
+            col_name -> color dict (e.g. `dict(A="red", B="blue", C="green", ...)`)
+        vmax : float | None, optional
+            Stacked bar max value. If None, max row sum is used.
+        hover_text : list[str] | Literal["default"] | None, optional
+            Custom hover text or "default" for auto-generated
+        **kwargs : dict, optional
+            Shape properties (e.g. `fillcolor="blue, line=dict(color="red")`)
+            See: <https://plotly.com/python/reference/layout/shapes/>
+
+        Returns
+        -------
+        sb_table : StackedBarTable
+            Stacked bar table
+        """
+        if not 0.0 <= width <= 1.0:
+            raise ValueError(f"{width=} is invalid (0.0 <= width <= 1.0).")
+
+        # Load table data
+        if isinstance(table_data, StackedBarTable):
+            sb_table = table_data
+        else:
+            sb_table = StackedBarTable(table_data, delimiter=delimiter)
+
+        # Make column name & color dict
+        if isinstance(cmap, str):
+            col_name2color = sb_table.get_col_name2color(cmap)
+        else:
+            col_name2color = cmap
+
+        # Calculate bar plot parameters
+        r_lim_list = sb_table.calc_barh_r_lim_list(self.r_plot_lim, width)
+        heights, bottoms = sb_table.stacked_bar_heights, sb_table.stacked_bar_bottoms
+        vmax = sb_table.row_sum_vmax if vmax is None else vmax
+
+        # Prepare hover text
+        if hover_text is not None and hover_text != "default":
+            if not isinstance(hover_text, list):
+                raise TypeError("hover_text must be 'default', a list[str], or None")
+            if len(hover_text) != len(sb_table.row_names) * len(sb_table.col_names):
+                raise ValueError(
+                    f"hover_text length ({len(hover_text)}) must match number of "
+                    f"segments ({len(sb_table.row_names) * len(sb_table.col_names)})"
+                )
+        elif hover_text == "default":
+            hover_text = utils.plot.default_stackedbar_hovertext(sb_table)
+
+        # Plot bars and prepare hover data
+        hover_x, hover_y, hover_colors = [], [], []
+        hover_texts = [] if hover_text is None else hover_text
+
+        for col_idx, (col_name, height, bottom) in enumerate(
+            zip(sb_table.col_names, heights, bottoms)
+        ):
+            color = col_name2color[col_name]
+            _kwargs = utils.deep_dict_update(
+                dict(fillcolor=color, line=dict(color=color, width=0)), kwargs
+            )
+
+            for row_idx, (r_lim, h, b) in enumerate(zip(r_lim_list, height, bottom)):
+                # Calculate bar coordinates
+                x_start = b
+                x_end = b + h
+                r_start, r_end = r_lim
+
+                # Create bar
+                self.rect(
+                    x_start,
+                    x_end,
+                    r_lim=(r_start, r_end),
+                    **_kwargs,
+                )
+
+                # Prepare hover positions (convert to Cartesian coordinates)
+                if hover_text is not None:
+                    # Calculate center coordinates
+                    x_center = (x_start + x_end) / 2
+                    r_center = (r_start + r_end) / 2
+
+                    # Convert to polar coordinates (angle in radians)
+                    rad_angle = self.x_to_rad(x_center)
+
+                    # Convert to Cartesian coordinates using the same method as rect()
+                    cx, cy = PolarSVGPatchBuilder._polar_to_cart(rad_angle, r_center)
+
+                    hover_x.append(cx)
+                    hover_y.append(cy)
+                    hover_colors.append(color)
+
+        # Add hover trace if needed
+        if hover_text is not None:
+            hover_trace = utils.plot.build_scatter_trace(
+                x=hover_x,
+                y=hover_y,
+                mode="markers",
+                text=hover_texts,
+                hoverinfo="text",
+                marker=dict(size=20, opacity=0),
+                hoverlabel=dict(bgcolor=hover_colors),
+            )
+            self._traces.append(hover_trace)
+
+        return sb_table
 
     def fill_between(
         self,

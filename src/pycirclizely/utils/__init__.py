@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pycirclizely.utils import plot
 from pycirclizely.utils.dataset import (
     fetch_genbank_by_accid,
@@ -5,12 +7,15 @@ from pycirclizely.utils.dataset import (
     load_example_tree_file,
     load_prokaryote_example_file,
 )
-from pycirclizely.utils.helper import (
+
+from .color import (
     ColorCycler,
+    parse_color,
+)
+from .helper import (
     calc_group_spaces,
     deep_dict_update,
     is_pseudo_feature,
-    parse_color,
     precise_position,
 )
 
@@ -20,10 +25,10 @@ __all__ = [
     "load_eukaryote_example_dataset",
     "load_prokaryote_example_file",
     "load_example_tree_file",
-    "ColorCycler",
     "calc_group_spaces",
     "is_pseudo_feature",
     "deep_dict_update",
     "precise_position",
+    "ColorCycler",
     "parse_color",
 ]

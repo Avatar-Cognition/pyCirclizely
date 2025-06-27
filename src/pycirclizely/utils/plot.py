@@ -9,8 +9,10 @@ import numpy as np
 from plotly.graph_objs import graph_objs as go  # type: ignore[attr-defined]
 
 from pycirclizely import config
+from pycirclizely.parser.table import StackedBarTable
 
-from .helper import ColorCycler, deep_dict_update
+from .color import ColorCycler
+from .helper import deep_dict_update
 
 
 def get_default_color(kwargs: dict, target: str = "line") -> str:
@@ -239,6 +241,40 @@ def default_hovertext(
         parts.append(f"Value: {format(yi, value_format)}")
         hovertext.append("<br>".join(parts))
     return hovertext
+
+
+def default_stackedbar_hovertext(
+    sb_table: StackedBarTable,
+) -> list[str]:
+    """Generate default hover text for stacked bars.
+
+    Parameters
+    ----------
+    sb_table : StackedBarTable
+        The stacked bar table object
+
+
+    Returns
+    -------
+    list[str]
+        Formatted hover text for each segment
+    """
+    hover_texts = []
+    totals = list(sb_table.row_name2sum.values())
+
+    # Get values by column (segment)
+    for col_idx, col_name in enumerate(sb_table.col_names):
+        col_values = sb_table.stacked_bar_heights[col_idx]
+        for row_idx, row_name in enumerate(sb_table.row_names):
+            value = col_values[row_idx]
+            parts = []
+
+            parts.append(f"<b>{col_name}</b>: {value:.1f}")
+            parts.append(f"<b>{row_name}</b> (Total: {totals[row_idx]:.1f})")
+
+            hover_texts.append("<br>".join(parts))
+
+    return hover_texts
 
 
 class Normalize:
