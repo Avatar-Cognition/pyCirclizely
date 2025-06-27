@@ -81,6 +81,11 @@ class Track:
         return self.end - self.start
 
     @property
+    def precision_position(self) -> int:
+        """Track precision position"""
+        return max(1, min(10, int(6 - math.log10(self.size))))
+
+    @property
     def start(self) -> float:
         """Track start position (x coordinate)"""
         return self._start
@@ -769,7 +774,10 @@ class Track:
         if hover_text is not None:
             if hover_text == "default":
                 hover_text = utils.plot.default_hovertext(
-                    x, y, sector_name=self._parent_sector._name
+                    x,
+                    y,
+                    sector_name=self._parent_sector._name,
+                    precision_position=self.precision_position,
                 )
             elif isinstance(hover_text, list):
                 if len(hover_text) != len(x):
@@ -866,7 +874,10 @@ class Track:
         if hover_text is not None:
             if hover_text == "default":
                 hover_text = utils.plot.default_hovertext(
-                    x, y, sector_name=self._parent_sector._name
+                    x,
+                    y,
+                    sector_name=self._parent_sector._name,
+                    precision_position=self.precision_position,
                 )
             elif isinstance(hover_text, list):
                 if len(hover_text) != len(x):
@@ -968,7 +979,6 @@ class Track:
             default_line = 0
 
         # Generate bar shapes and hover text locations
-        position_precision = max(1, min(10, int(6 - math.log10(self.size))))
         hover_x, hover_y, start_positions, end_positions = [], [], [], []
         for i in range(len(x)):
             color = colors[i]
@@ -978,10 +988,10 @@ class Track:
             if align == "center":
                 center_rad = rad[i]
                 start_pos = utils.precise_position(
-                    x[i] - bar_width / 2, position_precision
+                    x[i] - bar_width / 2, self.precision_position
                 )
                 end_pos = utils.precise_position(
-                    x[i] + bar_width / 2, position_precision
+                    x[i] + bar_width / 2, self.precision_position
                 )
                 rad_start = rad[i] - bar_rad_width / 2
                 rad_end = rad[i] + bar_rad_width / 2
@@ -1031,6 +1041,7 @@ class Track:
                 y=height,
                 x2=end_positions,
                 sector_name=self._parent_sector._name,
+                precision_position=self.precision_position,
             )
 
         if hover_text is not None:
@@ -1414,7 +1425,10 @@ class Track:
                 )
         elif hover_text == "default":
             hover_text = utils.plot.default_hovertext(
-                x, y1, sector_name=self._parent_sector._name
+                x,
+                y1,
+                sector_name=self._parent_sector._name,
+                precision_position=self.precision_position,
             )
 
         # Only create hover trace if hover_text exists
@@ -1594,6 +1608,7 @@ class Track:
                 y=scatter_data["values"],
                 x2=scatter_data["end_x"],
                 sector_name=self._parent_sector._name,
+                precision_position=self.precision_position,
             )
 
         # Create hover trace if needed

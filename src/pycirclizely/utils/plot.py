@@ -12,7 +12,7 @@ from pycirclizely import config
 from pycirclizely.parser.table import StackedBarTable
 
 from .color import ColorCycler
-from .helper import deep_dict_update
+from .helper import deep_dict_update, precise_position
 
 
 def get_default_color(kwargs: dict, target: str = "line") -> str:
@@ -217,9 +217,11 @@ def default_hovertext(
     y: list[int] | list[float] | np.ndarray,
     x2: list[int] | list[float] | np.ndarray | None = None,
     sector_name: str | None = None,
-    value_format: str = ".2f",
+    precision_position: int = 2,
 ) -> list[str]:
     """Generate default hovertext for a Plotly scatter trace."""
+    value_format = f".{precision_position}f" if precision_position > 0 else ".0f"
+
     # Convert numpy arrays to lists if needed
     if isinstance(x, np.ndarray):
         x = x.tolist()
@@ -231,10 +233,11 @@ def default_hovertext(
     hovertext = []
     for i, (xi, yi) in enumerate(zip(x, y)):
         parts = []
+        xi = precise_position(xi, precision_position)
         if sector_name:
             parts.append(f"Sector: {sector_name}")
         if x2 is not None:
-            xi2 = x2[i]
+            xi2 = precise_position(x2[i], precision_position)
             parts.append(f"Position: {xi}–{xi2}")
         else:
             parts.append(f"Position: {xi}")
