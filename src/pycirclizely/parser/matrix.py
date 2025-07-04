@@ -15,13 +15,10 @@ class Matrix:
         *,
         delimiter: str = "\t",
     ):
-        """Parameters
-        ----------
-        matrix : str | Path | pd.DataFrame
-            Matrix file or Matrix DataFrame
-        delimiter : str, optional
-            Matrix file delimiter. By default, `tab` delimiter.
-
+        """
+        Args:
+            matrix: Matrix file or Matrix DataFrame.
+            delimiter: Matrix file delimiter. By default, `tab` delimiter.
         """
         # If input matrix is file path, convert to pandas dataframe
         if isinstance(matrix, (str, Path)):
@@ -60,36 +57,16 @@ class Matrix:
         delimiter: str = "\t",
         header: bool = True,
     ) -> Matrix:
-        """Parse from-to table and convert to Matrix
+        """Parse from-to table and convert to Matrix.
 
-        ```
-        From-to Table Example
-        # from  to  value
-        #    A   B     10
-        #    A   C      5
-        #    A   D     15
-        #    B   D      8
-        #    C   D      6
-        ```
-
-        Parameters
-        ----------
-        fromto_table : str | Path | pd.DataFrame
-            From-to table file or DataFrame
-        order : str | list[str] | None, optional
-            Sort order of matrix for plotting Chord Diagram. If `None`, no sorting.
-            If `asc`|`desc`, sort in ascending(or descending) order by node size.
-            If node name list is set, sort in user specified node order.
-        delimiter : str, optional
-            From-to table delimiter
-        header : bool, optional
-            If True, from-to table file first line is parsed as header line.
-
-        Returns
-        -------
-        matrix : Matrix
-            Matrix converted from from-to table
-
+        Args:
+            fromto_table: From-to table file or DataFrame.
+            order: Sort order of matrix for plotting Chord Diagram.
+                If `None`, no sorting.
+                If `asc`|`desc`, sort in ascending(or descending) order by node size.
+                If node name list is set, sort in user-specified node order.
+            delimiter: From-to table delimiter.
+            header: If True, from-to table file first line is parsed as header line.
         """
         # If input from-to table is file path, convert to pandas dataframe
         if isinstance(fromto_table, (str, Path)):
@@ -160,20 +137,11 @@ class Matrix:
         return self._matrix
 
     def sort(self, order: str | list[str] = "asc") -> Matrix:
-        """Sort order of matrix
-
-        Parameters
-        ----------
-        order : str | list[str], optional
-            Sort order of matrix for plotting Chord Diagram.
-            If `asc`|`desc`, sort in ascending(or descending) order by node size.
-            If node name list is set, sort in user specified node order.
-
-        Returns
-        -------
-        matrix : Matrix
-            Sorted matrix
-
+        """
+        Args:
+            order: Sort order of matrix for plotting Chord Diagram.
+                   If `asc`|`desc`, sort in ascending(or descending) order by node size.
+                   If node name list is set, sort in user-specified node order.
         """
         fromto_table = self.to_fromto_table()
         return self.parse_fromto_table(fromto_table, order=order)
@@ -185,10 +153,8 @@ class Matrix:
         >>> matrix = Matrix(matrix_file)
         >>> circos = Circos(matrix.to_sectors())
 
-        Returns
-        -------
-        sectors : dict[str, float]
-            Sector dict (e.g. `{"A": 12, "B": 15, "C":20, ...}`)
+        Args:
+            sectors: Sector dict (e.g. `{"A": 12, "B": 15, "C":20, ...}`)
 
         """
         sectors = {}
@@ -201,34 +167,11 @@ class Matrix:
     def to_links(
         self,
     ) -> list[tuple[tuple[str, float, float], tuple[str, float, float]]]:
-        """Convert matrix to links data for `circos.link()` method
-
-        Returns
-        -------
-        link_target1 : tuple[str, float, float]
-            name1, start1, end1
-        link_target2 : tuple[str, float, float]
-            name2, start2, end2
-
-        Examples
-        --------
-        >>> matrix = Matrix(matrix_file)
-        >>> circos = Circos(matrix.to_sectors())
-        >>> for link in matrix.to_links():
-        >>>    circos.link(*link)
-
-        """
+        """Convert matrix to links data for `circos.link()` method."""
         return self._links
 
     def to_fromto_table(self) -> pd.DataFrame:
-        """Convert matrix to from-to table dataframe
-
-        Returns
-        -------
-        fromto_table : pd.DataFrame
-            From-to table dataframe
-
-        """
+        """Convert matrix to from-to table dataframe."""
         fromto_table_data = []
         for row_name in self.row_names:
             for col_name in self.col_names:

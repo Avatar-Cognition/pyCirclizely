@@ -237,7 +237,7 @@ class TestSectorPlots:
 
     def test_sector_rect_plot(self, circos: Circos):
         """Test `sector.rect()`"""
-        ColorCycler.set_palette("T10")
+        color_cycler = ColorCycler("T10")
         for sector in circos.sectors:
             sector.axis()
             sector.rect(r_lim=(90, 100), fillcolor="tomato")
@@ -251,7 +251,7 @@ class TestSectorPlots:
                     i,
                     i + 1,
                     (50, 60),
-                    fillcolor=ColorCycler(),
+                    fillcolor=color_cycler.get_color(),
                     line=dict(color="black", width=1),
                 )
             start, end = sector.start + 3, sector.end - 3
@@ -301,9 +301,10 @@ class TestTrackPlots:
             track1 = sector.add_track((90, 100))
             track1.axis()
             # Plot rect & text (style1)
+            color_cycler = ColorCycler("T10")
             for i in range(int(track1.size)):
                 start, end = i, i + 1
-                track1.rect(start, end, fillcolor=ColorCycler())
+                track1.rect(start, end, fillcolor=color_cycler.get_color())
                 track1.text(str(end), (end + start) / 2)
             # Plot rect & text (style2)
             track2 = sector.add_track((70, 80))
@@ -312,7 +313,7 @@ class TestTrackPlots:
                 track2.rect(
                     start,
                     end,
-                    fillcolor=ColorCycler(),
+                    fillcolor=color_cycler.get_color(),
                     line=dict(color="white", width=1),
                 )
                 track2.text(
@@ -327,7 +328,7 @@ class TestTrackPlots:
 
     def test_track_arrow_plot(self, circos: Circos):
         """Test `track.arrow()`"""
-        ColorCycler.set_palette("T10")
+        color_cycler = ColorCycler("T10")
         sectors = {"A": 10, "B": 20, "C": 15}
         circos = Circos(sectors, space=5)
         for sector in circos.sectors:
@@ -336,13 +337,17 @@ class TestTrackPlots:
             track1 = sector.add_track((90, 100))
             for i in range(int(track1.size)):
                 start, end = i, i + 1
-                track1.arrow(start, end, fillcolor=ColorCycler())
+                track1.arrow(start, end, fillcolor=color_cycler.get_color())
             # Plot reverse arrow with user-specified style
             track2 = sector.add_track((70, 80))
             for i in range(int(track2.size)):
                 start, end = i, i + 1
                 track2.arrow(
-                    end, start, head_length=4, shaft_ratio=1.0, fillcolor=ColorCycler()
+                    end,
+                    start,
+                    head_length=4,
+                    shaft_ratio=1.0,
+                    fillcolor=color_cycler.get_color(),
                 )
 
         fig = circos.plotfig()
@@ -490,8 +495,8 @@ class TestTrackPlots:
             track2.axis()
             track2.xticks_by_interval(1, outer=False)
 
-            ColorCycler.set_palette("T10")
-            tab10_colors = [ColorCycler() for _ in range(len(x))]
+            color_cycler = ColorCycler("T10")
+            tab10_colors = [color_cycler.get_color() for _ in range(len(x))]
             track2.bar(
                 x,
                 y,
@@ -501,8 +506,8 @@ class TestTrackPlots:
                 vmax=vmax * 2,
             )
 
-            ColorCycler.set_palette("Pastel1")
-            pastel_colors = [ColorCycler() for _ in range(len(x))]
+            color_cycler = ColorCycler("Pastel1")
+            pastel_colors = [color_cycler.get_color() for _ in range(len(x))]
             y2 = np.random.randint(vmin, vmax, len(x))
             track2.bar(
                 x,

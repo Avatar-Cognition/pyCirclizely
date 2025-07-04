@@ -9,12 +9,6 @@ class Bed:
     """BED Parser Class"""
 
     def __init__(self, bed_file: str | Path):
-        """Parameters
-        ----------
-        bed_file : str | Path
-            BED format file
-
-        """
         self._bed_file = bed_file
         self._records = BedRecord.parse(bed_file)
 
@@ -39,19 +33,7 @@ class BedRecord:
 
     @staticmethod
     def parse(bed_file: str | Path) -> list[BedRecord]:
-        """Parse BED format file
-
-        Parameters
-        ----------
-        bed_file : str | Path
-            BED format file
-
-        Returns
-        -------
-        bed_records : list[BedRecord]
-            BED records
-
-        """
+        """Parse BED format file."""
         bed_records = []
         with open(bed_file, encoding="utf-8") as f:
             reader = csv.reader(f, delimiter="\t")

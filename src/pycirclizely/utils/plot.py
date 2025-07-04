@@ -6,30 +6,24 @@ from enum import IntEnum
 from typing import Literal
 
 import numpy as np
+from plotly.basedatatypes import BaseTraceType
 from plotly.graph_objs import graph_objs as go  # type: ignore[attr-defined]
 
 from pycirclizely import config
-from pycirclizely.parser.table import StackedBarTable
 
 from .color import ColorCycler
-from .helper import deep_dict_update, precise_position
+from .helper import deep_dict_update
 
 
-def get_default_color(kwargs: dict, target: str = "line") -> str:
+def get_default_color(
+    kwargs: dict, target: str = "line", palette: str = "Plotly"
+) -> str:
     """Returns a consistent color based on kwargs or assigns a new one from ColorCycler.
 
-    Parameters
-    ----------
-    kwargs : dict
-        Dictionary of Plotly styling keyword arguments.
-    target : str
-        The key to check for color (e.g., 'line', 'marker').
-
-    Returns
-    -------
-    str
-        A color string (e.g., "#1f77b4").
-
+    Args:
+        kwargs: Dictionary of Plotly styling keyword arguments.
+        target: The key to check for color (e.g., 'line', 'marker').
+        palette: Name of the palette to use if a new color is needed.
     """
     color = kwargs.get(target, {})
 
@@ -37,7 +31,8 @@ def get_default_color(kwargs: dict, target: str = "line") -> str:
         color = color.get("color")
 
     if color is None:
-        color = ColorCycler.get_color()
+        cycler = ColorCycler(palette)
+        color = cycler.get_color()
 
     return color
 
@@ -45,16 +40,8 @@ def get_default_color(kwargs: dict, target: str = "line") -> str:
 def degrees(rad: float) -> float:
     """Convert radian to positive degree (`0 - 360`)
 
-    Parameters
-    ----------
-    rad : float
-        Target radian
-
-    Returns
-    -------
-    deg : float
-        Positive degree (`0 - 360`)
-
+    Args:
+        rad: Target radian
     """
     # Radian to degree
     deg = math.degrees(rad)
@@ -69,16 +56,8 @@ def degrees(rad: float) -> float:
 def is_lower_loc(rad: float) -> bool:
     """Check target radian is lower location or not
 
-    Parameters
-    ----------
-    rad : float
-        Target radian
-
-    Returns
-    -------
-    result : bool
-        Lower location or not
-
+    Args:
+        rad: Target radian
     """
     deg = math.degrees(rad)
     return -270 <= deg < -90 or 90 <= deg < 270
@@ -87,16 +66,8 @@ def is_lower_loc(rad: float) -> bool:
 def is_right_loc(rad: float) -> bool:
     """Check target radian is right location or not
 
-    Parameters
-    ----------
-    rad : float
-        Target radian
-
-    Returns
-    -------
-    result : bool
-        Right location or not
-
+    Args:
+        rad: Target radian
     """
     deg = math.degrees(rad)
     return -360 <= deg < -180 or 0 <= deg < 180
@@ -105,16 +76,8 @@ def is_right_loc(rad: float) -> bool:
 def is_ann_rad_shift_target_loc(rad: float) -> bool:
     """Check radian is annotation radian shift target or not
 
-    Parameters
-    ----------
-    rad : float
-        Annotation radian position
-
-    Returns
-    -------
-    result : bool
-        Target or not
-
+    Args:
+        rad: Annotation radian position
     """
     deg = degrees(rad)
     return 30 <= deg <= 150 or 210 <= deg <= 330
@@ -123,14 +86,7 @@ def is_ann_rad_shift_target_loc(rad: float) -> bool:
 def get_loc(
     rad: float,
 ) -> Literal["upper-right", "lower-right", "lower-left", "upper-left"]:
-    """Get location of 4 sections
-
-    Returns
-    -------
-    loc : str
-        Location (`upper-right`|`lower-right`|`lower-left`|`upper-left`)
-
-    """
+    """Get location of 4 sections"""
     deg = degrees(rad)
     if 0 <= deg < 90:
         return "upper-right"
@@ -145,16 +101,8 @@ def get_loc(
 def get_ann_relpos(rad: float) -> tuple[float, float]:
     """Get relative position for annotate by radian text position
 
-    Parameters
-    ----------
-    rad : float
-        Radian text position
-
-    Returns
-    -------
-    relpos : tuple[float, float]
-        Relative position
-
+    Args:
+        rad: Radian text position
     """
     deg = degrees(rad)
     if 0 <= deg <= 180:
@@ -203,81 +151,15 @@ def build_plotly_shape(path: str, defaults: dict = {}, **kwargs) -> dict:
     return {"type": "path", "path": path, **shape_defaults}
 
 
-def build_scatter_trace(x: list, y: list, mode: str, **kwargs) -> go.Scatter:
+def build_scatter_trace(
+    x: list | tuple, y: list | tuple, mode: str, **kwargs
+) -> BaseTraceType:
     """Build a Plotly Scatter trace with defaults and custom parameters."""
     scatter_config = deepcopy(config.plotly_scatter_defaults)
     scatter_config["mode"] = mode
     scatter_config = deep_dict_update(scatter_config, kwargs)
 
     return go.Scatter(x=x, y=y, **scatter_config)
-
-
-def default_hovertext(
-    x: list[int] | list[float] | np.ndarray,
-    y: list[int] | list[float] | np.ndarray,
-    x2: list[int] | list[float] | np.ndarray | None = None,
-    sector_name: str | None = None,
-    precision_position: int = 2,
-) -> list[str]:
-    """Generate default hovertext for a Plotly scatter trace."""
-    value_format = f".{precision_position}f" if precision_position > 0 else ".0f"
-
-    # Convert numpy arrays to lists if needed
-    if isinstance(x, np.ndarray):
-        x = x.tolist()
-    if isinstance(y, np.ndarray):
-        y = y.tolist()
-    if x2 is not None and isinstance(x2, np.ndarray):
-        x2 = x2.tolist()
-
-    hovertext = []
-    for i, (xi, yi) in enumerate(zip(x, y)):
-        parts = []
-        xi = precise_position(xi, precision_position)
-        if sector_name:
-            parts.append(f"Sector: {sector_name}")
-        if x2 is not None:
-            xi2 = precise_position(x2[i], precision_position)
-            parts.append(f"Position: {xi}–{xi2}")
-        else:
-            parts.append(f"Position: {xi}")
-        parts.append(f"Value: {format(yi, value_format)}")
-        hovertext.append("<br>".join(parts))
-    return hovertext
-
-
-def default_stackedbar_hovertext(
-    sb_table: StackedBarTable,
-) -> list[str]:
-    """Generate default hover text for stacked bars.
-
-    Parameters
-    ----------
-    sb_table : StackedBarTable
-        The stacked bar table object
-
-
-    Returns
-    -------
-    list[str]
-        Formatted hover text for each segment
-    """
-    hover_texts = []
-    totals = list(sb_table.row_name2sum.values())
-
-    # Get values by column (segment)
-    for col_idx, col_name in enumerate(sb_table.col_names):
-        col_values = sb_table.stacked_bar_heights[col_idx]
-        for row_idx, row_name in enumerate(sb_table.row_names):
-            value = col_values[row_idx]
-            parts = []
-
-            parts.append(f"<b>{col_name}</b>: {value:.1f}")
-            parts.append(f"<b>{row_name}</b> (Total: {totals[row_idx]:.1f})")
-
-            hover_texts.append("<br>".join(parts))
-
-    return hover_texts
 
 
 class Normalize:

@@ -172,6 +172,15 @@ radar_annotation_defaults = {
     "yanchor": "top",
 }
 
+hovertext_dummy_defaults = {
+    "hoverinfo": "text",
+    "marker": {
+        "size": 20,
+        "opacity": 0,
+    },
+}
+
+
 ###########################################################
 # GitHub Eukaryote & Prokaryote Dataset Config
 ###########################################################

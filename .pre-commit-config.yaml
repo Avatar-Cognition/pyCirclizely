@@ -58,7 +58,7 @@ repos:
           - pytz==2025.2
           - six==1.17.*
           - tzdata==2025.2
-          - webcolors
+          - webcolors==24.11.*
           - webcolors-stubs
 
   - repo: https://github.com/nbQA-dev/nbQA
@@ -84,6 +84,13 @@ repos:
           - tzdata==2025.2
           - webcolors
           - webcolors-stubs
+
+  - repo: https://github.com/srstevenson/nb-clean
+    rev: 4.0.1
+    hooks:
+      # https://github.com/srstevenson/nb-clean/issues/323
+      - id: nb-clean
+        entry: nb-clean check --preserve-execution-counts --preserve-notebook-metadata
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.11.6

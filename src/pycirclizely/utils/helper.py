@@ -7,29 +7,11 @@ from Bio.SeqFeature import SeqFeature
 def deep_dict_update(
     orig_dict: Dict[str, Any], new_dict: Mapping[str, Any]
 ) -> Dict[str, Any]:
-    """From deep-dict-update package https://pypi.org/project/deep-dict-update/
-    Recursively updates a nested dictionary with the content of another dictionary.
+    """Recursively updates a nested dictionary with the content of another dictionary.
 
-    Parameters
-    ----------
-    - orig_dict (Dict[str, Any]): The original dictionary to be updated.
-    - new_dict (Mapping[str, Any]): The dictionary containing updates.
-
-    Returns
-    -------
-    - Dict[str, Any]: The updated dictionary.
-
-    Notes
-    -----
-    - If a key in `new_dict` is not present in `orig_dict`,
-      it will be added to `orig_dict`.
-    - If a value in `new_dict` is a dictionary,
-      the corresponding value in `orig_dict` will be updated recursively.
-    - If a value in `new_dict` is a list of dictionaries,
-      each dictionary in the list will be updated recursively.
-    - For non-dictionary and non-list values,
-      the value in `orig_dict` will be updated directly.
-
+    Args:
+        orig_dict: The original dictionary to be updated.
+        new_dict: The dictionary containing updates.
     """
     orig_dict = dict(orig_dict)
     for key, val in dict(new_dict).items():
@@ -69,30 +51,13 @@ def calc_group_spaces(
     space_in_group: float = 2,
     endspace: bool = True,
 ) -> list[float]:
-    """Calculate spaces between/within groups
+    """Calculate spaces between/within groups.
 
-    This function can be used to easily calculate the space size
-    when data is separated into multiple groups for display.
-    For example, to set up a space to divide `[A, B, C, D, E, F, G, H, I, J]`
-    into three groups such as `[(A, B, C, D), (E, F, G), (H, I, J)]`,
-    set `groups=[4, 3, 3]`.
-
-    Parameters
-    ----------
-    groups : list[int]
-        List of each group number (e.g. `[4, 3, 3]`)
-    space_bw_group : float, optional
-        Space size between group
-    space_in_group : float, optional
-        Space size within group
-    endspace : bool, optional
-        If True, insert space after the end group
-
-    Returns
-    -------
-    spaces : list[float]
-        Spaces between/within groups
-
+    Args:
+        groups: List of each group number (e.g., `[4, 3, 3]`).
+        space_bw_group: Space size between groups.
+        space_in_group: Space size within groups.
+        endspace: If True, insert space after the end group.
     """
     if len(groups) == 0:
         raise ValueError(f"{len(groups)=} is invalid.")
@@ -113,25 +78,22 @@ def calc_group_spaces(
 
 
 def is_pseudo_feature(feature: SeqFeature) -> bool:
-    """Check target feature is pseudo or not from qualifiers tag
+    """Check target feature is pseudo or not from qualifiers tag.
 
-    Parameters
-    ----------
-    feature : SeqFeature
-        Target feature
-
-    Returns
-    -------
-    check_result : bool
-        pseudo check result
-
+    Args:
+        feature: Target feature.
     """
     quals = feature.qualifiers
     return True if "pseudo" in quals or "pseudogene" in quals else False
 
 
 def precise_position(val: float, position_precision: int) -> float:
-    """Round positions while preserving important decimals."""
+    """Round positions while preserving important decimals.
+
+    Args:
+        val: Value to round.
+        position_precision: Precision for rounding.
+    """
     # First round to handle floating-point artifacts
     rounded = round(val, position_precision + 2)
     # Then round to target precision

@@ -4,7 +4,7 @@ import math
 import textwrap
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, List, Literal, TypedDict
+from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 import pandas as pd
@@ -21,6 +21,15 @@ from pycirclizely import config, utils
 from pycirclizely.parser import StackedBarTable
 from pycirclizely.patches import PolarSVGPatchBuilder
 from pycirclizely.tree import TreeViz
+from pycirclizely.types import (
+    HoverText,
+    LabelFormatter,
+    Numeric,
+    NumericComponent,
+    NumericSequence,
+    TextFormatter,
+)
+from pycirclizely.utils.hover_formatter import HoverFormatter
 
 if TYPE_CHECKING:
     # Avoid Sector <-> Track circular import error at runtime
@@ -37,17 +46,12 @@ class Track:
         r_pad_ratio: float,
         parent_sector: Sector,
     ):
-        """Parameters
-        ----------
-        name : str
-            Track name
-        r_lim : tuple[float, float]
-            Track radius limit region
-        r_pad_ratio : float
-            Track padding ratio for plot data
-        parent_sector : Sector
-            Parent sector of track
-
+        """
+        Args:
+            name: Track name.
+            r_lim: Track radius limit region.
+            r_pad_ratio: Track padding ratio for plot data.
+            parent_sector: Parent sector of track.
         """
         # Track params
         self._name = name
@@ -63,7 +67,6 @@ class Track:
         self._shapes: list[go.layout.Shape] = []
         self._annotations: list[go.layout.Annotation] = []
         self._traces: list[BaseTraceType] = []
-
         self._trees: list[TreeViz] = []
 
     ############################################################
@@ -178,33 +181,19 @@ class Track:
     ############################################################
 
     def x_to_rad(self, x: float, ignore_range_error: bool = False) -> float:
-        """Convert x coordinate to radian in track start-end range
+        """Convert x coordinate to radian in track start-end range.
 
-        Parameters
-        ----------
-        x : float
-            X coordinate
-        ignore_range_error : bool
-            Ignore x coordinate range error
-
-        Returns
-        -------
-        rad : float
-            Radian coordinate
-
+        Args:
+            x: X coordinate.
+            ignore_range_error: Ignore x coordinate range error.
         """
         return self.parent_sector.x_to_rad(x, ignore_range_error)
 
     def axis(self, **kwargs) -> None:
-        """Plot axis
-
-        Parameters
-        ----------
-        **kwargs : dict, optional
-            Shape properties
-            (e.g. `fillcolor="red", line=dict(color="green", width=2, dash="dash")`)
-            <https://plotly.com/python/reference/layout/shapes/>
-
+        """
+        Args:
+            **kwargs: Shape properties.
+                <https://plotly.com/python/reference/layout/shapes/>
         """
         kwargs = {} if kwargs is None else kwargs
 
@@ -236,30 +225,18 @@ class Track:
         **kwargs,
     ) -> None:
         """Plot text within a track. Uses genomic coordinates (x) mapped to radians.
-        Angle is adjusted to Plotly's coordinate system:
-            - 0° points upward (Plotly's default)
-            - Angles increase clockwise
 
-        Parameters
-        ----------
-        text : str
-            Text content
-        x : float | None, optional
-            Genomic position. If None, track center is used.
-        r : float | None, optional
-            Radius position. If None, track midpoint (`r_center`) is used.
-        adjust_rotation : bool, optional
-            If True, text rotation is auto set based on `x` and `orientation`.
-        orientation : str, optional
-            Text orientation (`horizontal` or `vertical`).
-        ignore_range_error : bool, optional
-            If True, ignores x position outside track bounds.
-        outer : bool, optional
-            If True, text aligns outward from center (for horizontal orientation).
-        **kwargs : dict, optional
-            Annotation properties (e.g. `font=dict(size=12, color='red')`).
-            See: <https://plotly.com/python/reference/layout/annotations/>
-
+        Args:
+            text: Text content.
+            x: Genomic position. If None, track center is used.
+            r: Radius position. If None, track midpoint (`r_center`) is used.
+            adjust_rotation: If True, text rotation auto based on `x` and `orientation`.
+            orientation: Text orientation (`horizontal` or `vertical`).
+            ignore_range_error: If True, ignores x position outside track bounds.
+            outer: If True, text aligns outward from center, in horizontal orientation.
+            axis: Axis type (`x`, `y`, or False).
+            **kwargs: Annotation properties.
+                <https://plotly.com/python/reference/layout/annotations/>
         """
         x = self.center if x is None else x
         r = self.r_center if r is None else r
@@ -315,28 +292,15 @@ class Track:
         **kwargs,
     ) -> None:
         """Plot a rectangle within a track, respecting padding settings.
-        Angle is adjusted to Plotly's coordinate system:
-            - 0° points upward (Plotly's default)
-            - Angles increase clockwise
 
-        Parameters
-        ----------
-        start : float
-            Genomic start position (x coordinate).
-        end : float
-            Genomic end position (x coordinate).
-        r_lim : tuple[float, float] | None, optional
-            Radial limits (min, max). If None, uses track defaults:
-            - `track.r_lim` (ignore_pad=False) or
-            - `track.r_plot_lim` (ignore_pad=True).
-        ignore_pad : bool, optional
-            If True, ignores track padding when auto-setting `r_lim`.
-        **kwargs : dict, optional
-            Shape properties (e.g. `fillcolor="red", line=dict(width=2)`)
-            See: <https://plotly.com/python/reference/layout/shapes/>
-
+        Args:
+            start: Genomic start position (x coordinate).
+            end: Genomic end position (x coordinate).
+            r_lim: Radial limits (min, max). If None, uses track defaults.
+            ignore_pad: If True, ignores track padding when auto-setting `r_lim`.
+            **kwargs: Shape properties.
+                <https://plotly.com/python/reference/layout/shapes/>
         """
-        # Convert genomic coordinates to radians
         rad_rect_start = self.x_to_rad(start)
         rad_rect_end = self.x_to_rad(end)
         rad = min(rad_rect_start, rad_rect_end)
@@ -353,7 +317,6 @@ class Track:
         else:
             radr, height = (rad, min(self.r_plot_lim)), self.r_plot_size
 
-        # Build and add shape
         path = PolarSVGPatchBuilder.arc_rectangle(radr, width, height)
         shape = utils.plot.build_plotly_shape(
             path, config.plotly_shape_defaults, **kwargs
@@ -370,25 +333,16 @@ class Track:
         shaft_ratio: float = 0.5,
         **kwargs,
     ) -> None:
-        """Plot arrow using SVG path
+        """Plot arrow using SVG path.
 
-        Parameters
-        ----------
-        start : float
-            Start position (x coordinate)
-        end : float
-            End position (x coordinate)
-        r_lim : tuple[float, float] | None, optional
-            Radius limit range. If None, `track.r_lim` is set.
-        head_length : float, optional
-            Arrow head length (Degree unit)
-        shaft_ratio : float, optional
-            Arrow shaft ratio (0 - 1.0)
-        **kwargs : dict, optional
-            Patch properties (e.g. `fill="red", line_color="blue", line_width=1.0, ...`)
-
+        Args:
+            start: Start position (x coordinate).
+            end: End position (x coordinate).
+            r_lim: Radius limit range. If None, `track.r_lim` is set.
+            head_length: Arrow head length (Degree unit).
+            shaft_ratio: Arrow shaft ratio (0 - 1.0).
+            **kwargs: Patch properties.
         """
-        # Convert positions to radians
         rad_arrow_start = self.x_to_rad(start)
         rad_arrow_end = self.x_to_rad(end)
 
@@ -402,7 +356,6 @@ class Track:
                 raise ValueError(f"{r_lim=} is invalid track range.\n{self}")
             r, dr = min(r_lim), max(r_lim) - min(r_lim)
 
-        # Create SVG path for the arrow
         path = PolarSVGPatchBuilder.arc_arrow(
             rad=rad_arrow_start,
             r=r,
@@ -418,7 +371,7 @@ class Track:
 
     def xticks(
         self,
-        x: list[int] | list[float] | np.ndarray,
+        x: NumericSequence,
         labels: list[str] | None = None,
         *,
         tick_length: float = 2,
@@ -429,47 +382,29 @@ class Track:
         line_kws: dict[str, Any] | None = None,
         text_kws: dict[str, Any] | None = None,
     ) -> None:
-        """Plot xticks & labels on user-specified position
+        """Plot xticks & labels on user-specified position.
 
-        If you want to plot xticks and their position labels at regular intervals,
-        it is recommended to use `track.xticks_by_interval()` instead.
-
-        Parameters
-        ----------
-        x : list[int] | list[float] | np.ndarray
-            X coordinates
-        labels : list[str] | None, optional
-            Labels on xticks. If None, only plot ticks line.
-        tick_length : float, optional
-            Tick length (Radius unit)
-        outer : bool, optional
-            If True, show ticks on outer. If False, show ticks on inner.
-        show_bottom_line : bool, optional
-            If True, show bottom line.
-        label_margin : float, optional
-            Label margin size
-        label_orientation : str, optional
-            Label orientation (`horizontal` or `vertical`)
-        line_kws : dict[str, Any] | None, optional
-            Shape properties for ticks/baseline (default: None)
-            e.g. `dict(line=dict(color="black", width=1))`
-            See: <https://plotly.com/python/reference/layout/shapes/>
-        text_kws : dict[str, Any] | None, optional
-            Annotation properties for labels (default: None)
-            e.g. `dict(font=dict(size=12, color="black"))`
-            See: <https://plotly.com/python/reference/layout/annotations/>
-
+        Args:
+            x: X coordinates.
+            labels: Labels on xticks. If None, only plot ticks line.
+            tick_length: Tick length (Radius unit).
+            outer: If True, show ticks on outer. If False, show ticks on inner.
+            show_bottom_line: If True, show bottom line.
+            label_margin: Label margin size.
+            label_orientation: Label orientation (`horizontal` or `vertical`).
+            line_kws: Shape properties for ticks/baseline.
+                <https://plotly.com/python/reference/layout/shapes/>
+            text_kws: Annotation properties for labels.
+                <https://plotly.com/python/reference/layout/annotations/>
         """
         line_kws = {} if line_kws is None else deepcopy(line_kws)
         text_kws = {} if text_kws is None else deepcopy(text_kws)
 
-        # Check list length of x & labels
         labels = [""] * len(x) if labels is None else labels
         if len(x) != len(labels):
             err_msg = f"List length is not match ({len(x)=}, {len(labels)=})"
             raise ValueError(err_msg)
 
-        # Plot xticks & labels
         r = max(self.r_lim) if outer else min(self.r_lim)
         tick_r_lim = (r, r + tick_length) if outer else (r - tick_length, r)
         for x_pos, label in zip(x, labels):
@@ -499,7 +434,7 @@ class Track:
 
     def xticks_by_interval(
         self,
-        interval: int | float,
+        interval: Numeric,
         *,
         tick_length: float = 2,
         outer: bool = True,
@@ -508,49 +443,30 @@ class Track:
         show_endlabel: bool = True,
         label_margin: float = 1.7,
         label_orientation: str = "horizontal",
-        label_formatter: Callable[[float], str] | None = None,
+        label_formatter: LabelFormatter = None,
         line_kws: dict[str, Any] | None = None,
         text_kws: dict[str, Any] | None = None,
     ) -> None:
-        """Plot xticks & position labels by user-specified interval using Plotly.
+        """Plot xticks & position labels by user-specified interval.
 
-        `track.xticks_by_interval()` is high-level API function of `track.xticks()`.
-        For custom tick positions, use `track.xticks()` instead.
-
-        Parameters
-        ----------
-        interval : int | float
-            Xticks interval in genomic coordinates
-        tick_length : float, optional
-            Tick length in radius units (default: 2)
-        outer : bool, optional
-            If True, show ticks on outer radius (default: True)
-        show_bottom_line : bool, optional
-            If True, show baseline at bottom of ticks (default: False)
-        show_label : bool, optional
-            If True, show position labels (default: True)
-        show_endlabel : bool, optional
-            If False, hides label at final position to prevent overlap (default: True)
-        label_margin : float, optional
-            Additional radial margin for labels (default: 0.5)
-        label_orientation : str, optional
-            Label orientation ('horizontal' or 'vertical') (default: 'horizontal')
-        label_formatter : Callable[[float], str] | None, optional
-            Function to format tick labels (e.g. `lambda x: f"{x/1000:.1f}kb")
-        line_kws : dict[str, Any] | None, optional
-            Shape properties for ticks/baseline (default: None)
-            e.g. `dict(line=dict(color="black", width=1))`
-            See: <https://plotly.com/python/reference/layout/shapes/>
-        text_kws : dict[str, Any] | None, optional
-            Annotation properties for labels (default: None)
-            e.g. `dict(font=dict(size=12, color="black"))`
-            See: <https://plotly.com/python/reference/layout/annotations/>
-
+        Args:
+            interval: Xticks interval in genomic coordinates.
+            tick_length: Tick length in radius units.
+            outer: If True, show ticks on outer radius.
+            show_bottom_line: If True, show baseline at bottom of ticks.
+            show_label: If True, show position labels.
+            show_endlabel: If False, hides label at final position to prevent overlap.
+            label_margin: Additional radial margin for labels.
+            label_orientation: Label orientation ('horizontal' or 'vertical').
+            label_formatter: Function to format tick labels.
+            line_kws: Shape properties for ticks/baseline.
+                <https://plotly.com/python/reference/layout/shapes/>
+            text_kws: Annotation properties for labels.
+                <https://plotly.com/python/reference/layout/annotations/>
         """
         line_kws = {} if line_kws is None else deepcopy(line_kws)
         text_kws = {} if text_kws is None else deepcopy(text_kws)
 
-        # Setup xtick positions
         x_list = []
         start_pos, end_pos = self.start - (self.start % interval), self.end + interval
         for x in np.arange(start_pos, end_pos, interval):
@@ -558,7 +474,6 @@ class Track:
                 x = int(x) if isinstance(interval, int) else float(x)
                 x_list.append(x)
 
-        # Setup xticks labels
         labels = None
         if show_label:
             map_func = str if label_formatter is None else label_formatter
@@ -567,7 +482,6 @@ class Track:
             if not show_endlabel:
                 labels[-1] = ""
 
-        # Plot xticks by user-specified interval
         self.xticks(
             x=x_list,
             labels=labels,
@@ -582,62 +496,45 @@ class Track:
 
     def yticks(
         self,
-        y: list[int] | list[float] | np.ndarray,
+        y: NumericSequence,
         labels: list[str] | None = None,
         *,
-        vmin: float = 0,
-        vmax: float | None = None,
+        vmin: Numeric = 0,
+        vmax: Numeric | None = None,
         side: str = "right",
-        tick_length: float = 2,
-        label_margin: float = 1,
+        tick_length: Numeric = 2,
+        label_margin: Numeric = 1,
         label_orientation: str = "horizontal",
         line_kws: dict[str, Any] | None = None,
         text_kws: dict[str, Any] | None = None,
     ) -> None:
-        """Plot yticks & labels on user-specified position (for Plotly)
+        """Plot yticks & labels on user-specified position.
 
-        Parameters
-        ----------
-        y : list[int] | list[float] | np.ndarray
-            Y coordinates
-        labels : list[str] | None, optional
-            Labels on yticks. If None, only plot ticks line.
-        vmin : float, optional
-            Y min value
-        vmax : float | None, optional
-            Y max value. If None, `max(y)` is set.
-        side : str, optional
-            Ticks side position (`right` or `left`)
-        tick_length : float, optional
-            Tick length (Degree unit)
-        label_margin : float, optional
-            Label margin size
-        label_orientation : str, optional
-            Label orientation (`horizontal` or `vertical`)
-        line_kws : dict[str, Any] | None, optional
-            Shape properties for ticks/baseline (default: None)
-            e.g. `dict(line=dict(color="black", width=1))`
-            See: <https://plotly.com/python/reference/layout/shapes/>
-        text_kws : dict[str, Any] | None, optional
-            Annotation properties for labels (default: None)
-            e.g. `dict(font=dict(size=12, color="black"))`
-            See: <https://plotly.com/python/reference/layout/annotations/>
-
+        Args:
+            y: Y coordinates.
+            labels: Labels on yticks. If None, only plot ticks line.
+            vmin: Y min value.
+            vmax: Y max value. If None, `max(y)` is set.
+            side: Ticks side position (`right` or `left`).
+            tick_length: Tick length (Degree unit).
+            label_margin: Label margin size.
+            label_orientation: Label orientation (`horizontal` or `vertical`).
+            line_kws: Shape properties for ticks/baseline.
+                <https://plotly.com/python/reference/layout/shapes/>
+            text_kws: Annotation properties for labels.
+                <https://plotly.com/python/reference/layout/annotations/>
         """
         line_kws = {} if line_kws is None else deepcopy(line_kws)
         text_kws = {} if text_kws is None else deepcopy(text_kws)
 
-        # Check list length
         labels = [""] * len(y) if labels is None else labels
         if len(y) != len(labels):
             err_msg = f"List length is not match ({len(y)=}, {len(labels)=})"
             raise ValueError(err_msg)
 
-        # Set vmax & check y range
         vmax = max(y) if vmax is None else vmax
         self._check_value_min_max(y, vmin, vmax)
 
-        # Plot yticks & labels
         r = [self._y_to_r(v, vmin, vmax) for v in y]
         for r_pos, label in zip(r, labels):
             # Set plot properties
@@ -661,7 +558,6 @@ class Track:
                     x_lim, (r_pos, r_pos), ignore_range_error=True, **line_kws
                 )
 
-            # Plot labels
             if label != "":
                 self.text(
                     label,
@@ -680,28 +576,19 @@ class Track:
         x_grid_interval: float | None = None,
         **kwargs,
     ) -> None:
-        """Plot grid
-
-        By default, `color="grey", alpha=0.5, zorder=0` line params are set.
-
-        Parameters
-        ----------
-        y_grid_num : int | None, optional
-            Y-axis grid line number. If None, y-axis grid line is not shown.
-        x_grid_interval : float | None, optional
-            X-axis grid line interval. If None, x-axis grid line is not shown.
-        **kwargs : dict, optional
-            Line properties (e.g. `line=dict(color="red", width=2, dash="dash")`)
-            See: <https://plotly.com/python/reference/layout/shapes/>
-
         """
-        # Check argument values
+        Args:
+            y_grid_num: Y-axis grid line number. If None, y-axis grid line is not shown.
+            x_grid_interval: X-axis grid line interval.
+                If None, x-axis grid line is not shown.
+            **kwargs: Shape properties.
+                <https://plotly.com/python/reference/layout/shapes/>
+        """
         if y_grid_num is not None and not y_grid_num >= 2:
             raise ValueError(f"{y_grid_num=} is invalid (y_grid_num >= 2).")
         if x_grid_interval is not None and not x_grid_interval > 0:
             raise ValueError(f"{x_grid_interval=} is invalid (x_grid_interval > 0).")
 
-        # Set default grid line properties
         kwargs = utils.deep_dict_update(config.plotly_grid_defaults, kwargs)
 
         # Plot y-axis grid line
@@ -726,43 +613,30 @@ class Track:
 
     def line(
         self,
-        x: list[int] | list[float] | np.ndarray,
-        y: list[int] | list[float] | np.ndarray,
+        x: NumericSequence,
+        y: NumericSequence,
         *,
-        vmin: int | float = 0,
-        vmax: int | float | None = None,
+        vmin: Numeric = 0,
+        vmax: Numeric | None = None,
         arc: bool = True,
-        hover_text: list[str] | Literal["default"] | None = "default",
+        hover_text: HoverText = "default",
         **kwargs,
     ) -> None:
-        """Plot lines with SVG paths at plotly.
-
-        Parameters
-        ----------
-        x : list[int] | list[float] | np.ndarray
-            Genomic positions along the track
-        y : list[int] | list[float] | np.ndarray
-            Data values to plot
-        vmin : int | float, optional
-            Minimum value for radial scaling (default: 0)
-        vmax : int | float | None, optional
-            Maximum value for radial scaling. If None, uses max(y)
-        arc : bool, optional
-            If True, creates curved arc lines (polar projection)
-            If False, creates straight chord lines
-        hover_text : list[str] | None, optional
-            - "default": Auto-generates hover text (default)
-            - list[str]: Uses custom hover labels
-            - None: Disables hover text
-        **kwargs : dict, optional
-            Line properties (e.g. `line=dict(color="red", width=2, dash="dash")`)
-            See: <https://plotly.com/python/reference/layout/shapes/>
-
+        """
+        Args:
+            x: Genomic positions along the track.
+            y: Data values to plot.
+            vmin: Minimum value for radial scaling.
+            vmax: Maximum value for radial scaling. If None, uses max(y).
+            arc: If True, creates curved arc lines.
+                If False, creates straight chord lines.
+            hover_text: Hover text for the plot.
+            **kwargs: Shape properties.
+                <https://plotly.com/python/reference/layout/shapes/>
         """
         if len(x) != len(y):
             raise ValueError(f"x and y lengths must match ({len(x)} vs {len(y)})")
 
-        # Convert to polar coordinates
         rad = [self.x_to_rad(pos) for pos in x]
         vmax = max(y) if vmax is None else vmax
         r = [self._y_to_r(val, vmin, vmax) for val in y]
@@ -770,253 +644,160 @@ class Track:
         color = utils.plot.get_default_color(kwargs, target="line")
         kwargs = utils.deep_dict_update(kwargs, {"line": {"color": color}})
 
-        # Handle hover_text logic
-        if hover_text is not None:
-            if hover_text == "default":
-                hover_text = utils.plot.default_hovertext(
-                    x,
-                    y,
-                    sector_name=self._parent_sector._name,
-                    precision_position=self.precision_position,
-                )
-            elif isinstance(hover_text, list):
-                if len(hover_text) != len(x):
-                    raise ValueError(
-                        f"hover_text length ({len(hover_text)}) must match x/y length "
-                        f"({len(x)})"
-                    )
-            else:
-                raise TypeError("hover_text must be 'default', list[str], or None")
-
         path = PolarSVGPatchBuilder.multi_segment_path(rad, r, arc)
         shape = utils.plot.build_plotly_shape(
             path, defaults=config.plotly_shape_defaults, **kwargs
         )
         self._shapes.append(shape)
 
-        # Build invisible trace with proper hover handling
-        if hover_text is not None:
-            x_vals, y_vals = [], []
-            for theta, rho in zip(rad, r):
-                cx, cy = PolarSVGPatchBuilder._polar_to_cart(theta, rho)
-                x_vals.append(cx)
-                y_vals.append(cy)
+        if hover_text is None:
+            return
 
-            trace = utils.plot.build_scatter_trace(
-                x=x_vals,
-                y=y_vals,
-                mode="markers",
-                marker=dict(size=20, opacity=0),
-                text=hover_text,
-                hoverlabel={"bgcolor": color},
-            )
-            self._traces.append(trace)
+        hover_formatter = HoverFormatter(
+            precision_position=self.precision_position,
+        )
+
+        hover_formatter.process_hover_text(
+            x,
+            y,
+            colors=color,
+            sector_name=self._parent_sector.name,
+            hover_text=hover_text,
+        )
+        hover_formatter.add_hover_positions(rad, r)
+        if hover_trace := hover_formatter.create_hover_trace():
+            self._traces.append(hover_trace)
 
     def scatter(
         self,
-        x: list[int] | list[float] | np.ndarray,
-        y: list[int] | list[float] | np.ndarray,
+        x: NumericSequence,
+        y: NumericSequence,
         *,
-        vmin: int | float = 0,
-        vmax: int | float | None = None,
-        hover_text: list[str] | Literal["default"] | None = "default",
+        vmin: Numeric = 0,
+        vmax: Numeric | None = None,
+        hover_text: HoverText = "default",
         **kwargs,
     ) -> None:
-        """Scatter plot using Plotly Scatter trace.
-
-        Parameters
-        ----------
-        x : list[int] | list[float] | np.ndarray
-            X (genomic) positions
-        y : list[int] | list[float] | np.ndarray
-            Data values
-        vmin : int | float, optional
-            Minimum value for radial scaling (default: 0)
-        vmax : int | float | None, optional
-            Maximum value for radial scaling. If None, uses max(y)
-        hover_text : list[str] | None, optional
-            - "default": Auto-generates hover text (default)
-            - list[str]: Uses custom hover labels
-            - None: Disables hover text
-        **kwargs : dict, optional
-            Scatter trace properties that override defaults. Common options include:
-            - marker: dict with properties like size, color, symbol
-            - mode: 'markers', 'lines', 'markers+lines'
-            - name: legend name for the trace
-
+        """
+        Args:
+            x: X (genomic) positions.
+            y: Data values.
+            vmin: Minimum value for radial scaling.
+            vmax: Maximum value for radial scaling. If None, uses max(y).
+            hover_text: Hover text for the plot.
+            **kwargs: Scatter trace properties.
         """
         if len(x) != len(y):
             raise ValueError(f"x and y lengths must match ({len(x)} vs {len(y)})")
-
-        # Get and merge defaults with kwargs
-        kwargs = utils.deep_dict_update(config.plotly_scatter_defaults, kwargs)
 
         color = utils.plot.get_default_color(kwargs, target="marker")
         kwargs = utils.deep_dict_update(kwargs, {"line": {"color": color}})
         kwargs.setdefault("hoverlabel", {"bgcolor": color})
 
-        # Convert to polar coordinates
         rad = [self.x_to_rad(pos) for pos in x]
         vmax = max(y) if vmax is None else vmax
-        self._check_value_min_max(y, vmin, vmax)
         r = [self._y_to_r(val, vmin, vmax) for val in y]
-
-        # Convert polar to Cartesian
-        x_vals, y_vals = [], []
-        for theta, rho in zip(rad, r):
-            cx, cy = PolarSVGPatchBuilder._polar_to_cart(theta, rho)
-            x_vals.append(cx)
-            y_vals.append(cy)
+        x_vals, y_vals = zip(
+            *[
+                PolarSVGPatchBuilder._polar_to_cart(theta, rho)
+                for theta, rho in zip(rad, r)
+            ]
+        )
 
         trace = utils.plot.build_scatter_trace(x_vals, y_vals, "markers", **kwargs)
 
-        # Handle hover_text logic
-        if hover_text is not None:
-            if hover_text == "default":
-                hover_text = utils.plot.default_hovertext(
-                    x,
-                    y,
-                    sector_name=self._parent_sector._name,
-                    precision_position=self.precision_position,
-                )
-            elif isinstance(hover_text, list):
-                if len(hover_text) != len(x):
-                    raise ValueError(
-                        f"hover_text length ({len(hover_text)}) must match x/y length "
-                        f"({len(x)})"
-                    )
-            else:
-                raise TypeError("hover_text must be 'default', list[str], or None")
+        if hover_text is None:
+            self._traces.append(trace)
+            return
 
-        trace.update(text=hover_text)
+        hover_formatter = HoverFormatter(
+            precision_position=self.precision_position,
+        )
+        hover_formatter.process_hover_text(
+            x,
+            y,
+            colors=color,
+            sector_name=self._parent_sector.name,
+            hover_text=hover_text,
+        )
+        trace.update(text=hover_formatter.hover_texts)
 
         self._traces.append(trace)
 
     def bar(
         self,
-        x: list[int] | list[float] | np.ndarray,
-        height: list[int] | list[float] | np.ndarray,
-        width: int | float | list[int] | list[float] | np.ndarray = 0.8,
-        bottom: int | float | list[int] | list[float] | np.ndarray = 0,
+        x: NumericSequence,
+        height: NumericSequence,
+        width: NumericComponent = 0.8,
+        bottom: NumericComponent = 0,
         align: str = "center",
         *,
-        vmin: int | float = 0,
-        vmax: int | float | None = None,
-        hover_text: list[str] | Literal["default"] | None = "default",
+        vmin: Numeric = 0,
+        vmax: Numeric | None = None,
+        hover_text: HoverText = "default",
         **kwargs,
     ) -> None:
-        """Plot bar chart with hover information from scatter traces.
-
-        Parameters
-        ----------
-        x : list[int] | list[float] | np.ndarray
-            Bar x coordinates (genomic positions)
-        height : list[int] | list[float] | np.ndarray
-            Bar heights
-        width : int | float | list[int] | list[float], optional
-            Bar widths in genomic coordinates (default: 0.8)
-        bottom : int | float | list[int] | list[float], optional
-            Bar bottom y-value(s) (default: 0)
-        align : str, optional
-            Bar alignment ("center" or "edge") (default: "center")
-        vmin : int | float, optional
-            Minimum value for radial scaling (default: 0)
-        vmax : int | float | None, optional
-            Maximum value for radial scaling. If None, uses max(height + bottom)
-        hover_text : list[str] | None, optional
-            - "default": Auto-generates hover text (default)
-            - list[str]: Custom hover labels (length must match bars)
-            - None: Disables hover text
-        **kwargs : dict, optional
-            Properties for both shapes and hover text
-
+        """
+        Args:
+            x: Bar x coordinates (genomic positions).
+            height: Bar heights.
+            width: Bar widths in genomic coordinates.
+            bottom: Bar bottom y-value(s).
+            align: Bar alignment ("center" or "edge").
+            vmin: Minimum value for radial scaling.
+            vmax: Maximum value for radial scaling. If None, uses max(height + bottom).
+            hover_text: Hover text for the plot.
+            **kwargs: Properties for both shapes and hover text.
         """
         if len(x) != len(height):
             raise ValueError(
                 f"x and height lengths must match ({len(x)} vs {len(height)})"
             )
+        if align not in ["center", "edge"]:
+            raise ValueError(f"{align=} must be either 'center' or 'edge'")
 
-        # Convert inputs to arrays
-        x = np.asarray(x)
-        height = np.asarray(height)
-        bottom = np.full(len(x), bottom) if np.isscalar(bottom) else np.asarray(bottom)
-
-        # Calculate top and vmax
+        # Convert inputs and calculate metrics
+        x, height, bottom = (
+            np.asarray(x),
+            np.asarray(height),
+            np.asarray(bottom) if not np.isscalar(bottom) else np.full(len(x), bottom),
+        )
         top = height + bottom
         vmax = float(np.max(top)) if vmax is None else vmax
-
-        # Value range checks
-        self._check_value_min_max(bottom, vmin, vmax)
-        self._check_value_min_max(top, vmin, vmax)
-
-        # Convert to polar coordinates
-        rad = np.array([self.x_to_rad(pos) for pos in x])
-        r_bottom = np.array([self._y_to_r(v, vmin, vmax) for v in bottom])
-        r_height = np.array([self._y_to_r(v, vmin, vmax) for v in top]) - r_bottom
-
-        # Handle variable width
-        if isinstance(width, (list, tuple, np.ndarray)):
-            width = np.asarray(width)
-            if len(width) != len(x):
-                raise ValueError(
-                    "If `width` is an array, it must match the length of `x`"
-                )
-            rad_width = self.rad_size * (width / self.size)
+        if isinstance(width, (int, float)):
+            widths = np.full(len(x), width)
         else:
-            width = float(width)
-            width = np.full(len(x), width)
-            rad_width = np.full(len(x), self.rad_size * (width[0] / self.size))
+            widths = np.asarray(width)
 
-        # Support for multiple colors, one for each bar
         if "colors" in kwargs:
             colors = kwargs.pop("colors")
             if len(colors) != len(x):
                 raise ValueError("Length of `colors` must match the number of bars.")
             default_line = 1
         else:
-            color = utils.plot.get_default_color(kwargs, target="fillcolor")
-            colors = [color] * len(x)
+            colors = [utils.plot.get_default_color(kwargs, target="fillcolor")] * len(x)
             default_line = 0
 
-        # Generate bar shapes and hover text locations
-        hover_x, hover_y, start_positions, end_positions = [], [], [], []
-        for i in range(len(x)):
-            color = colors[i]
-            bar_width = width[i]
-            bar_rad_width = rad_width[i]
+        hover_data: dict[str, list[Any]] = {"rad": [], "r": [], "colors": []}
+
+        for i, (xi, hi, bi, color) in enumerate(zip(x, height, bottom, colors)):
+            # Calculate bar geometry
+            rad = self.x_to_rad(xi)
+            rad_width = self.rad_size * (widths[i] / self.size)
 
             if align == "center":
-                center_rad = rad[i]
-                start_pos = utils.precise_position(
-                    x[i] - bar_width / 2, self.precision_position
-                )
-                end_pos = utils.precise_position(
-                    x[i] + bar_width / 2, self.precision_position
-                )
-                rad_start = rad[i] - bar_rad_width / 2
-                rad_end = rad[i] + bar_rad_width / 2
+                rad_start = rad - rad_width / 2
             else:
-                center_rad = rad[i] + bar_rad_width / 2
-                start_pos = x[i]
-                end_pos = x[i] + bar_width
-                rad_start = rad[i]
-                rad_end = rad[i] + bar_rad_width
+                rad_start = rad  # edge alignment
 
-            # Find top center of bar for hover
-            top_r = r_bottom[i] + r_height[i]
-            cx, cy = PolarSVGPatchBuilder._polar_to_cart(center_rad, top_r)
-            hover_x.append(cx)
-            hover_y.append(cy)
-            start_positions.append(start_pos)
-            end_positions.append(end_pos)
+            r_bottom = self._y_to_r(bi, vmin, vmax)
+            r_height = self._y_to_r(bi + hi, vmin, vmax) - r_bottom
 
-            # Build SVG arc rectangle path
             path = PolarSVGPatchBuilder.arc_rectangle(
-                radr=(rad_start, r_bottom[i]),
-                width=rad_end - rad_start,
-                height=r_height[i],
+                radr=(rad_start, r_bottom),
+                width=rad_width,
+                height=r_height,
             )
-
             shape = utils.plot.build_plotly_shape(
                 path,
                 defaults=dict(
@@ -1026,33 +807,27 @@ class Track:
             )
             self._shapes.append(shape)
 
-        # Handle hover_text logic
-        if hover_text is not None and hover_text != "default":
-            if not isinstance(hover_text, list):
-                raise TypeError("hover_text must be 'default', a list[str], or None")
-            if len(hover_text) != len(x):
-                raise ValueError(
-                    f"hover_text length ({len(hover_text)}) must match number of "
-                    f"bars ({len(x)})"
-                )
-        elif hover_text == "default":
-            hover_text = utils.plot.default_hovertext(
-                x=start_positions,
-                y=height,
-                x2=end_positions,
-                sector_name=self._parent_sector._name,
-                precision_position=self.precision_position,
-            )
+            if hover_data is not None:
+                hover_data["rad"].append(rad)
+                hover_data["r"].append(r_bottom + r_height)
+                hover_data["colors"].append(color)
 
-        if hover_text is not None:
-            hover_trace = utils.plot.build_scatter_trace(
-                hover_x,
-                hover_y,
-                mode="markers",
-                text=hover_text,
-                marker=dict(size=20, opacity=0),
-                hoverlabel={"bgcolor": colors},
-            )
+        if hover_data is None:
+            return
+
+        hover_formatter = HoverFormatter(
+            precision_position=self.precision_position,
+        )
+        hover_formatter.add_hover_positions(hover_data["rad"], hover_data["r"])
+        hover_formatter.process_hover_text(
+            x,
+            height,
+            colors=hover_data["colors"],
+            sector_name=self._parent_sector.name,
+            hover_text=hover_text,
+        )
+
+        if hover_trace := hover_formatter.create_hover_trace():
             self._traces.append(hover_trace)
 
     def stacked_bar(
@@ -1063,103 +838,64 @@ class Track:
         width: float = 0.6,
         cmap: str | dict[str, str] = "T10",
         vmax: float | None = None,
-        hover_text: list[str] | Literal["default"] | None = "default",
+        hover_text: HoverText = "default",
         **kwargs,
     ) -> StackedBarTable:
-        """Plot stacked bar from table data with hover text support
-
-        Parameters
-        ----------
-        table_data : str | Path | pd.DataFrame | StackedBarTable
-            Table file or Table DataFrame or StackedBarTable
-        delimiter : str, optional
-            Table file delimiter
-        width : float, optional
-            Bar width ratio (0.0 - 1.0)
-        cmap : str | dict[str, str], optional
-            Colormap assigned to each stacked bar.
-            User can set matplotlib's colormap (e.g. `T10`, `Set3`) or
-            col_name -> color dict (e.g. `dict(A="red", B="blue", C="green", ...)`)
-        vmax : float | None, optional
-            Stacked bar max value.
-            If None, max value in each row values sum is set.
-        hover_text : list[str] | Literal["default"] | None, optional
-            - "default": Auto-generates hover text (default)
-            - list[str]: Custom hover labels (length must match bars)
-            - None: Disables hover text
-        **kwargs : dict, optional
-            Shape properties (e.g. `fillcolor="blue, line=dict(color="red")`)
-            See: <https://plotly.com/python/reference/layout/shapes/>
-
-        Returns
-        -------
-        sb_table : StackedBarTable
-            Stacked bar table
+        """
+        Args:
+            table_data: Table file or Table DataFrame or StackedBarTable.
+            delimiter: Table file delimiter.
+            width: Bar width ratio (0.0 - 1.0).
+            cmap: Colormap assigned to each stacked bar.
+            vmax: Stacked bar max value.
+                If None, max value in each row values sum is set.
+            hover_text: Hover text for the plot.
+            **kwargs: Shape properties.
+                <https://plotly.com/python/reference/layout/shapes/>
         """
         if not 0.0 <= width <= 1.0:
             raise ValueError(f"{width=} is invalid (0.0 <= width <= 1.0).")
 
-        # Load table data
-        if isinstance(table_data, StackedBarTable):
-            sb_table = table_data
-        else:
-            sb_table = StackedBarTable(table_data, delimiter=delimiter)
+        sb_table = (
+            table_data
+            if isinstance(table_data, StackedBarTable)
+            else StackedBarTable(table_data, delimiter=delimiter)
+        )
+        col_name2color = (
+            sb_table.get_col_name2color(cmap) if isinstance(cmap, str) else cmap
+        )
 
-        # Make column name & color dict
-        if isinstance(cmap, str):
-            col_name2color = sb_table.get_col_name2color(cmap)
-        else:
-            col_name2color = cmap
-
-        # Calculate bar plot parameters
         x = sb_table.calc_bar_label_x_list(self.size)
         bar_width = (self.size / len(sb_table.row_names)) * width
         vmax = sb_table.row_sum_vmax if vmax is None else vmax
-        heights, bottoms = sb_table.stacked_bar_heights, sb_table.stacked_bar_bottoms
 
-        hover_x, hover_y, hover_colors = [], [], []
+        hover_data: dict[str, list[Any]] = {"rad": [], "r": [], "colors": []}
 
-        # Plot stacked bars
         for col_idx, (col_name, height, bottom) in enumerate(
-            zip(sb_table.col_names, heights, bottoms)
+            zip(
+                sb_table.col_names,
+                sb_table.stacked_bar_heights,
+                sb_table.stacked_bar_bottoms,
+            )
         ):
             color = col_name2color[col_name]
-
-            # Convert to polar coordinates
             rad = np.array([self.x_to_rad(pos) for pos in x])
             r_bottom = np.array([self._y_to_r(v, 0, vmax) for v in bottom])
             r_height = (
-                np.array(
-                    [
-                        self._y_to_r(v, 0, vmax)
-                        for v in (np.array(height) + np.array(bottom))
-                    ]
-                )
+                np.array([self._y_to_r(v + h, 0, vmax) for v, h in zip(bottom, height)])
                 - r_bottom
             )
 
-            # Calculate bar positions based on width
-            rad_width = self.rad_size * (bar_width / self.size)
-
-            # Create bars using arc rectangles
             for i in range(len(x)):
-                # For hover text positions (only for top segment)
-                if col_idx == len(sb_table.col_names) - 1:
-
-                    # Find top center of bar for hover
-                    top_r = r_bottom[i] + r_height[i]
-                    cx, cy = PolarSVGPatchBuilder._polar_to_cart(rad[i], top_r)
-                    hover_x.append(cx)
-                    hover_y.append(cy)
-                    hover_colors.append(color)
-
-                # Create the bar segment
+                # Create bar segment
                 path = PolarSVGPatchBuilder.arc_rectangle(
-                    radr=(rad[i] - rad_width / 2, r_bottom[i]),
-                    width=rad_width,
+                    radr=(
+                        rad[i] - self.rad_size * (bar_width / self.size) / 2,
+                        r_bottom[i],
+                    ),
+                    width=self.rad_size * (bar_width / self.size),
                     height=r_height[i],
                 )
-
                 shape = utils.plot.build_plotly_shape(
                     path,
                     defaults=dict(fillcolor=color, line=dict(color=color, width=0)),
@@ -1167,54 +903,24 @@ class Track:
                 )
                 self._shapes.append(shape)
 
-        # Handle hover_text logic
-        if hover_text is not None and hover_text != "default":
-            if not isinstance(hover_text, list):
-                raise TypeError("hover_text must be 'default', a list[str], or None")
-            if len(hover_text) != len(sb_table.row_names) * len(sb_table.col_names):
-                raise ValueError(
-                    f"hover_text length ({len(hover_text)}) must match number of "
-                    f"segments ({len(sb_table.row_names) * len(sb_table.col_names)})"
-                )
-        elif hover_text == "default":
-            hover_text = utils.plot.default_stackedbar_hovertext(sb_table=sb_table)
+                if hover_data is not None:
+                    hover_data["rad"].append(rad[i])
+                    hover_data["r"].append(r_bottom[i] + r_height[i] / 2)
+                    hover_data["colors"].append(color)
 
-        # Calculate positions for all segments
-        if hover_text is not None:
-            hover_x, hover_y, hover_colors = [], [], []
-            for col_idx, (col_name, height, bottom) in enumerate(
-                zip(sb_table.col_names, heights, bottoms)
-            ):
-                color = col_name2color[col_name]
-                rad = np.array([self.x_to_rad(pos) for pos in x])
-                r_bottom = np.array([self._y_to_r(v, 0, vmax) for v in bottom])
-                r_height = (
-                    np.array(
-                        [
-                            self._y_to_r(v, 0, vmax)
-                            for v in (np.array(height) + np.array(bottom))
-                        ]
-                    )
-                    - r_bottom
-                )
+        if hover_text is None:
+            return sb_table
 
-                for i in range(len(x)):
-                    # Calculate center position for hover
-                    center_r = r_bottom[i] + r_height[i] / 2
-                    cx, cy = PolarSVGPatchBuilder._polar_to_cart(rad[i], center_r)
-                    hover_x.append(cx)
-                    hover_y.append(cy)
-                    hover_colors.append(color)
+        hover_formatter = HoverFormatter(
+            precision_position=self.precision_position,
+        )
+        hover_formatter.add_hover_positions(hover_data["rad"], hover_data["r"])
+        hover_formatter.hover_colors = hover_data["colors"]
+        hover_formatter.process_stacked_bar_hover_text(
+            sb_table, col_name2color, hover_text=hover_text
+        )
 
-            hover_trace = utils.plot.build_scatter_trace(
-                hover_x,
-                hover_y,
-                mode="markers",
-                text=hover_text,
-                hoverinfo="text",
-                marker=dict(size=20, opacity=0),
-                hoverlabel=dict(bgcolor=hover_colors),
-            )
+        if hover_trace := hover_formatter.create_hover_trace():
             self._traces.append(hover_trace)
 
         return sb_table
@@ -1225,76 +931,51 @@ class Track:
         *,
         delimiter: str = "\t",
         width: float = 0.6,
-        cmap: str | dict[str, str] = "tab10",
+        cmap: str | dict[str, str] = "T10",
         vmax: float | None = None,
-        hover_text: list[str] | Literal["default"] | None = "default",
+        hover_text: HoverText = "default",
         **kwargs,
     ) -> StackedBarTable:
-        """Plot horizontal stacked bar from table data with hover text support
-
-        Parameters
-        ----------
-        table_data : str | Path | pd.DataFrame | StackedBarTable
-            Table file or Table DataFrame or StackedBarTable
-        delimiter : str, optional
-            Table file delimiter
-        width : float, optional
-            Bar width ratio (0.0 - 1.0)
-        cmap : str | dict[str, str], optional
-            Colormap assigned to each stacked bar.
-            User can set matplotlib's colormap (e.g. `tab10`, `Set3`) or
-            col_name -> color dict (e.g. `dict(A="red", B="blue", C="green", ...)`)
-        vmax : float | None, optional
-            Stacked bar max value. If None, max row sum is used.
-        hover_text : list[str] | Literal["default"] | None, optional
-            Custom hover text or "default" for auto-generated
-        **kwargs : dict, optional
-            Shape properties (e.g. `fillcolor="blue, line=dict(color="red")`)
-            See: <https://plotly.com/python/reference/layout/shapes/>
-
-        Returns
-        -------
-        sb_table : StackedBarTable
-            Stacked bar table
+        """
+        Args:
+            table_data: Table file or Table DataFrame or StackedBarTable.
+            delimiter: Table file delimiter.
+            width: Bar width ratio (0.0 - 1.0).
+            cmap: Colormap assigned to each stacked bar.
+            vmax: Stacked bar max value. If None, max row sum is used.
+            hover_text: Hover text for the plot.
+            **kwargs: Shape properties.
+                <https://plotly.com/python/reference/layout/shapes/>
         """
         if not 0.0 <= width <= 1.0:
             raise ValueError(f"{width=} is invalid (0.0 <= width <= 1.0).")
 
-        # Load table data
-        if isinstance(table_data, StackedBarTable):
-            sb_table = table_data
-        else:
-            sb_table = StackedBarTable(table_data, delimiter=delimiter)
+        sb_table = (
+            table_data
+            if isinstance(table_data, StackedBarTable)
+            else StackedBarTable(table_data, delimiter=delimiter)
+        )
+        col_name2color = (
+            sb_table.get_col_name2color(cmap) if isinstance(cmap, str) else cmap
+        )
 
-        # Make column name & color dict
-        if isinstance(cmap, str):
-            col_name2color = sb_table.get_col_name2color(cmap)
-        else:
-            col_name2color = cmap
-
-        # Calculate bar plot parameters
+        # Calculate bar positions
         r_lim_list = sb_table.calc_barh_r_lim_list(self.r_plot_lim, width)
-        heights, bottoms = sb_table.stacked_bar_heights, sb_table.stacked_bar_bottoms
         vmax = sb_table.row_sum_vmax if vmax is None else vmax
 
-        # Prepare hover text
-        if hover_text is not None and hover_text != "default":
-            if not isinstance(hover_text, list):
-                raise TypeError("hover_text must be 'default', a list[str], or None")
-            if len(hover_text) != len(sb_table.row_names) * len(sb_table.col_names):
-                raise ValueError(
-                    f"hover_text length ({len(hover_text)}) must match number of "
-                    f"segments ({len(sb_table.row_names) * len(sb_table.col_names)})"
-                )
-        elif hover_text == "default":
-            hover_text = utils.plot.default_stackedbar_hovertext(sb_table)
+        hover_data: dict[str, list[Any]] = {
+            "x_center": [],
+            "r_center": [],
+            "colors": [],
+        }
 
-        # Plot bars and prepare hover data
-        hover_x, hover_y, hover_colors = [], [], []
-        hover_texts = [] if hover_text is None else hover_text
-
+        # Plot bars and collect hover data
         for col_idx, (col_name, height, bottom) in enumerate(
-            zip(sb_table.col_names, heights, bottoms)
+            zip(
+                sb_table.col_names,
+                sb_table.stacked_bar_heights,
+                sb_table.stacked_bar_bottoms,
+            )
         ):
             color = col_name2color[col_name]
             _kwargs = utils.deep_dict_update(
@@ -1302,86 +983,58 @@ class Track:
             )
 
             for row_idx, (r_lim, h, b) in enumerate(zip(r_lim_list, height, bottom)):
-                # Calculate bar coordinates
-                x_start = b
-                x_end = b + h
-                r_start, r_end = r_lim
+                self.rect(b, b + h, r_lim=r_lim, **_kwargs)
 
-                # Create bar
-                self.rect(
-                    x_start,
-                    x_end,
-                    r_lim=(r_start, r_end),
-                    **_kwargs,
-                )
+                if hover_data is not None:
+                    hover_data["x_center"].append((b + b + h) / 2)
+                    hover_data["r_center"].append((r_lim[0] + r_lim[1]) / 2)
+                    hover_data["colors"].append(color)
 
-                # Prepare hover positions (convert to Cartesian coordinates)
-                if hover_text is not None:
-                    # Calculate center coordinates
-                    x_center = (x_start + x_end) / 2
-                    r_center = (r_start + r_end) / 2
+        if hover_text is None:
+            return sb_table
 
-                    # Convert to polar coordinates (angle in radians)
-                    rad_angle = self.x_to_rad(x_center)
+        hover_formatter = HoverFormatter(
+            precision_position=self.precision_position,
+        )
 
-                    # Convert to Cartesian coordinates using the same method as rect()
-                    cx, cy = PolarSVGPatchBuilder._polar_to_cart(rad_angle, r_center)
+        rad_positions = [self.x_to_rad(x) for x in hover_data["x_center"]]
+        hover_formatter.add_hover_positions(rad_positions, hover_data["r_center"])
 
-                    hover_x.append(cx)
-                    hover_y.append(cy)
-                    hover_colors.append(color)
+        hover_formatter.hover_colors = hover_data["colors"]
+        hover_formatter.process_stacked_bar_hover_text(
+            sb_table, col_name2color, hover_text=hover_text
+        )
 
-        # Add hover trace if needed
-        if hover_text is not None:
-            hover_trace = utils.plot.build_scatter_trace(
-                x=hover_x,
-                y=hover_y,
-                mode="markers",
-                text=hover_texts,
-                hoverinfo="text",
-                marker=dict(size=20, opacity=0),
-                hoverlabel=dict(bgcolor=hover_colors),
-            )
+        if hover_trace := hover_formatter.create_hover_trace():
             self._traces.append(hover_trace)
 
         return sb_table
 
     def fill_between(
         self,
-        x: list[int] | list[float] | np.ndarray,
-        y1: list[int] | list[float] | np.ndarray,
-        y2: int | float | list[int] | list[float] | np.ndarray = 0,
+        x: NumericSequence,
+        y1: NumericSequence,
+        y2: NumericComponent = 0,
         *,
-        vmin: int | float = 0,
-        vmax: int | float | None = None,
+        vmin: Numeric = 0,
+        vmax: Numeric | None = None,
         arc: bool = True,
-        hover_text: list[str] | Literal["default"] | None = "default",
+        hover_text: HoverText = "default",
         **kwargs,
     ) -> None:
-        """Fill the area between two curves with SVG paths at plotly.
+        """Fill the area between two curves with SVG paths.
 
-        Parameters
-        ----------
-        x : list[int] | list[float] | np.ndarray
-            Genomic positions along the track
-        y1 : list[int] | list[float] | np.ndarray
-            Upper boundary values to plot
-        y2 : int | float | list[int] | list[float] | np.ndarray, optional
-            Lower boundary values or constant baseline (default: 0)
-        vmin : float, optional
-            Minimum value for radial scaling (default: 0)
-        vmax : float | None, optional
-            Maximum value for radial scaling. If None, uses max(y1 + y2)
-        arc : bool, optional
-            If True, creates curved arc fills (polar projection)
-            If False, creates straight chord fills
-        hover_text : list[str] | None, optional
-            - "default": Auto-generates hover text (default)
-            - list[str]: Custom hover labels (length must match x/y1)
-            - None: Disables hover text
-        **kwargs : dict, optional
-            Fill properties
-            (e.g. `fillcolor="red", line=dict(color="black", width=0.5)`)
+        Args:
+            x: Genomic positions along the track.
+            y1: Upper boundary values to plot.
+            y2: Lower boundary values or constant baseline.
+            vmin: Minimum value for radial scaling.
+            vmax: Maximum value for radial scaling. If None, uses max(y1 + y2).
+            arc: If True, creates curved arc fills.
+                If False, creates straight chord fills.
+            hover_text: Hover text for the plot.
+            **kwargs: Shape properties.
+                <https://plotly.com/python/reference/layout/shapes/>
         """
         # Input validation
         x = np.asarray(x)
@@ -1398,124 +1051,86 @@ class Track:
         vmax = y_all.max() if vmax is None else vmax
         self._check_value_min_max(y_all, vmin, vmax)
 
-        # Convert to polar coordinates
         rad = [self.x_to_rad(pos) for pos in x]
         r1 = [self._y_to_r(v, vmin, vmax) for v in y1]
         r2 = [self._y_to_r(v, vmin, vmax) for v in y2]
 
-        # Handle aesthetics
         color = utils.plot.get_default_color(kwargs, target="fillcolor")
         kwargs.update({"fillcolor": color})
 
-        # Generate filled shape
         path = PolarSVGPatchBuilder.build_filled_path(rad, r1, r2, arc=arc)
         shape = utils.plot.build_plotly_shape(
             path, defaults=dict(fillcolor=color, line=dict(width=0)), **kwargs
         )
         self._shapes.append(shape)
 
-        # Handle hover_text logic
-        if hover_text is not None and hover_text != "default":
-            if not isinstance(hover_text, list):
-                raise TypeError("hover_text must be 'default', a list[str], or None")
-            if len(hover_text) != len(x):
-                raise ValueError(
-                    f"hover_text length ({len(hover_text)}) must match x/y1 length "
-                    f"({len(x)})"
-                )
-        elif hover_text == "default":
-            hover_text = utils.plot.default_hovertext(
-                x,
-                y1,
-                sector_name=self._parent_sector._name,
-                precision_position=self.precision_position,
-            )
+        if hover_text is None:
+            return
 
-        # Only create hover trace if hover_text exists
-        if hover_text is not None:
-            hover_x, hover_y = zip(
-                *[
-                    PolarSVGPatchBuilder._polar_to_cart(theta, rho)
-                    for theta, rho in zip(rad, r1)
-                ]
-            )
-            hover_trace = utils.plot.build_scatter_trace(
-                list(hover_x),
-                list(hover_y),
-                mode="markers",
-                text=hover_text,
-                marker=dict(size=20, opacity=0),
-                hoverlabel={"bgcolor": color},
-            )
+        hover_formatter = HoverFormatter(
+            precision_position=self.precision_position,
+        )
+
+        hover_formatter.add_hover_positions(rad, r1)
+        hover_formatter.process_hover_text(
+            x,
+            y1,
+            colors=color,
+            sector_name=self._parent_sector.name,
+            hover_text=hover_text,
+        )
+
+        if hover_trace := hover_formatter.create_hover_trace():
             self._traces.append(hover_trace)
 
     def heatmap(
         self,
         data: list | np.ndarray,
         *,
-        vmin: int | float | None = None,
-        vmax: int | float | None = None,
-        start: int | float | None = None,
-        end: int | float | None = None,
-        width: int | float | None = None,
+        vmin: Numeric | None = None,
+        vmax: Numeric | None = None,
+        start: Numeric | None = None,
+        end: Numeric | None = None,
+        width: Numeric | None = None,
         cmap: str | list[tuple[float, str]] = "RdBu_r",
         show_value: bool = False,
-        hover_text: list[str] | Literal["default"] | None = "default",
+        hover_text: HoverText = "default",
         coloraxis: str | None = None,
         rect_kws: dict[str, Any] | None = None,
         text_kws: dict[str, Any] | None = None,
     ) -> None:
-        """Plot heatmap
-
-        Parameters
-        ----------
-        data : list | np.ndarray
-            Numerical list, numpy 1d or 2d array
-        vmin : int | float | None, optional
-            Min value for heatmap plot. If None, `np.min(data)` is set.
-        vmax : int | float | None, optional
-            Max value for heatmap plot. If None, `np.max(data)` is set.
-        start : int | float | None, optional
-            Start position for heatmap plot (x coordinate).
-            If None, `track.start` is set.
-        end : int | float | None, optional
-            End position for heatmap plot (x coordinate).
-            If None, `track.end` is set.
-        width : int | float | None, optional
-            Heatmap rectangle x width size.
-        cmap : str | list[list[float, str]], optional
-            Colormap specification
-        show_value : bool, optional
-            If True, show data value on heatmap rectangle
-        hover_text : list[str] | None, optional
-            - "default": Auto-generates hover text (default)
-            - list[str]: Custom hover labels (length must match data points)
-            - None: Disables hover text
-        coloraxis : str | None, optional
-            Color axis identifier
-        rect_kws : dict[str, Any] | None, optional
-            Rectangle properties
-        text_kws : dict[str, Any] | None, optional
-            Text properties
+        """
+        Args:
+            data: Numerical list, numpy 1d or 2d array.
+            vmin: Min value for heatmap plot. If None, `np.min(data)` is set.
+            vmax: Max value for heatmap plot. If None, `np.max(data)` is set.
+            start: Start position for heatmap plot (x coordinate).
+            end: End position for heatmap plot (x coordinate).
+            width: Heatmap rectangle x width size.
+            cmap: Colormap specification.
+            show_value: If True, show data value on heatmap rectangle.
+            hover_text: Hover text for the plot.
+            coloraxis: Color axis identifier.
+            rect_kws: Shape properties.
+                <https://plotly.com/python/reference/layout/shapes/>
+            text_kws: Text properties.
+                <https://plotly.com/python/reference/layout/annotations/>
         """
         rect_kws = {} if rect_kws is None else deepcopy(rect_kws)
         text_kws = {} if text_kws is None else deepcopy(text_kws)
 
-        # Check array dimensions
         data = np.array(data)
         if data.ndim == 1:
             data = data.reshape((1, -1))
         elif data.ndim != 2:
             raise ValueError(f"{data=} is not 1d or 2d array!!")
 
-        # Set default values
         vmin = np.min(data) if vmin is None else vmin
         vmax = np.max(data) if vmax is None else vmax
         start = self.start if start is None else start
         end = self.end if end is None else end
         self._check_value_min_max(data, vmin, vmax)
 
-        # Calculate dimensions
         row_num, col_num = data.shape
         unit_r_size = self.r_plot_size / row_num
         unit_x_size = (end - start) / col_num
@@ -1526,7 +1141,6 @@ class Track:
             else:
                 raise ValueError(f"{width=} is invalid ({start=}, {end=})")
 
-        # Generate position ranges
         r_range_list = [
             (
                 max(self.r_plot_lim) - unit_r_size * (i + 1),
@@ -1541,29 +1155,20 @@ class Track:
             max_x = min(min_x + unit_x_size, self.end)
             x_range_list.append((min_x, max_x))
 
-        # Setup colormap
-        if isinstance(cmap, str):
-            color_scale = get_colorscale(cmap)
-        else:
-            color_scale = [[pos, utils.parse_color(color)] for pos, color in cmap]
-
+        color_scale = (
+            get_colorscale(cmap)
+            if isinstance(cmap, str)
+            else [[pos, utils.parse_color(color)] for pos, color in cmap]
+        )
         norm = utils.plot.Normalize(vmin=vmin, vmax=vmax)
 
-        class ScatterData(TypedDict):
-            x: List[float]
-            y: List[float]
-            start_x: List[float]
-            end_x: List[float]
-            values: List[float]
-            colors: List[str]
-
-        scatter_data: ScatterData = {
-            "x": [],
-            "y": [],
+        hover_data: dict[str, list[Any]] = {
+            "rad": [],
+            "r": [],
+            "colors": [],
             "start_x": [],
             "end_x": [],
             "values": [],
-            "colors": [],
         }
 
         # Plot rectangles and collect hover data
@@ -1576,60 +1181,46 @@ class Track:
                 rect_kws = utils.deep_dict_update(rect_kws, {"fillcolor": color})
                 self.rect(rect_start, rect_end, r_lim=rect_r_lim, **rect_kws)
 
-                # Store hover data
-                center_x = (rect_start + rect_end) / 2
-                center_r = sum(rect_r_lim) / 2
-                cx, cy = PolarSVGPatchBuilder._polar_to_cart(
-                    self.x_to_rad(center_x), center_r
-                )
-
-                scatter_data["x"].append(cx)
-                scatter_data["y"].append(cy)
-                scatter_data["start_x"].append(rect_start)
-                scatter_data["end_x"].append(rect_end)
-                scatter_data["values"].append(v)
-                scatter_data["colors"].append(color)
+                if hover_data is not None:
+                    center_x = (rect_start + rect_end) / 2
+                    center_r = sum(rect_r_lim) / 2
+                    hover_data["rad"].append(self.x_to_rad(center_x))
+                    hover_data["r"].append(center_r)
+                    hover_data["colors"].append(color)
+                    hover_data["start_x"].append(rect_start)
+                    hover_data["end_x"].append(rect_end)
+                    hover_data["values"].append(v)
 
                 if show_value:
                     text_value = f"{v:.2f}" if isinstance(v, float) else str(v)
                     self.text(text_value, center_x, center_r, **text_kws)
 
-        # Handle hover text
-        if hover_text is not None and hover_text != "default":
-            if not isinstance(hover_text, list):
-                raise TypeError("hover_text must be 'default', a list[str], or None")
-            if len(hover_text) != len(data.flatten()):
-                raise ValueError(
-                    "Length of `hover_text` must match the number of heatmap cells"
-                )
-        elif hover_text == "default":
-            hover_text = utils.plot.default_hovertext(
-                x=scatter_data["start_x"],
-                y=scatter_data["values"],
-                x2=scatter_data["end_x"],
-                sector_name=self._parent_sector._name,
-                precision_position=self.precision_position,
-            )
+        if hover_text is None:
+            return
 
-        # Create hover trace if needed
-        if hover_text is not None:
-            hover_trace = utils.plot.build_scatter_trace(
-                scatter_data["x"],
-                scatter_data["y"],
-                mode="markers",
-                text=hover_text,
-                marker=dict(
-                    size=20,
-                    opacity=0,
-                    color=scatter_data["colors"],
-                    colorscale=color_scale,
-                    cmin=vmin,
-                    cmax=vmax,
-                    coloraxis=coloraxis if coloraxis else None,
-                    showscale=False,
-                ),
-                hoverlabel={"bgcolor": scatter_data["colors"]},
+        hover_formatter = HoverFormatter(
+            precision_position=self.precision_position,
+        )
+
+        hover_formatter.add_hover_positions(hover_data["rad"], hover_data["r"])
+        hover_formatter.process_hover_text(
+            hover_data["start_x"],
+            hover_data["values"],
+            hover_data["colors"],
+            hover_data["end_x"],
+            sector_name=self._parent_sector.name,
+            hover_text=hover_text,
+        )
+
+        if hover_trace := hover_formatter.create_hover_trace(
+            marker=dict(
+                colorscale=color_scale,
+                cmin=vmin,
+                cmax=vmax,
+                coloraxis=coloraxis if coloraxis else None,
+                showscale=False,
             )
+        ):
             self._traces.append(hover_trace)
 
     def tree(
@@ -1646,50 +1237,25 @@ class Track:
         ladderize: bool = False,
         line_kws: dict[str, Any] | None = None,
         align_line_kws: dict[str, Any] | None = None,
-        label_formatter: Callable[[str], str] | None = None,
+        label_formatter: TextFormatter = None,
     ) -> TreeViz:
-        """Plot tree
-
-        It is recommended that the track(sector) size be the same as the number of
-        leaf nodes in the tree, to make it easier to combine with `bar` and `heatmap`.
-
-        Parameters
-        ----------
-        tree_data : str | Path | Tree
-            Tree data (`File`|`File URL`|`Tree Object`|`Tree String`)
-        format : str, optional
-            Tree format (`newick`|`phyloxml`|`nexus`|`nexml`|`cdao`)
-        outer : bool, optional
-            If True, plot tree on outer side. If False, plot tree on inner side.
-        align_leaf_label: bool, optional
-            If True, align leaf label.
-        ignore_branch_length : bool, optional
-            If True, ignore branch length for plotting tree.
-        leaf_label_size : float, optional
-            Leaf label size
-        leaf_label_rmargin : float, optional
-            Leaf label radius margin
-        reverse : bool, optional
-            If True, reverse tree
-        ladderize : bool, optional
-            If True, ladderize tree
-        line_kws : dict[str, Any] | None, optional
-            Shape properties (default: None)
-            e.g. `dict(line=dict(color="red", width=1, dash="dash"))`
-            See: <https://plotly.com/python/reference/layout/shapes/>
-        align_line_kws : dict[str, Any] | None, optional
-            Shape properties (default: None)
-            e.g. `dict(line=dict(color="black", dash="dot"), opacity=0.5)`
-            See: <https://plotly.com/python/reference/layout/shapes/>
-        label_formatter : Callable[[str], str] | None, optional
-            User-defined label text format function to change plot label text content.
-            For example, if you want to change underscore of the label to space,
-            set `lambda t: t.replace("_", " ")`.
-
-        Returns
-        -------
-        tv : TreeViz
-            TreeViz instance
+        """
+        Args:
+            tree_data: Tree data (`File`|`File URL`|`Tree Object`|`Tree String`).
+            format: Tree format (`newick`|`phyloxml`|`nexus`|`nexml`|`cdao`).
+            outer: If True, plot tree on outer side. If False, plot tree on inner side.
+            align_leaf_label: If True, align leaf label.
+            ignore_branch_length: If True, ignore branch length for plotting tree.
+            leaf_label_size: Leaf label size.
+            leaf_label_rmargin: Leaf label radius margin.
+            reverse: If True, reverse tree.
+            ladderize: If True, ladderize tree.
+            line_kws: Shape properties.
+                <https://plotly.com/python/reference/layout/shapes/>
+            align_line_kws: Shape properties.
+                <https://plotly.com/python/reference/layout/shapes/>
+            label_formatter:
+                User-defined label text format function to change label text content.
         """
         tv = TreeViz(
             tree_data,
@@ -1719,23 +1285,14 @@ class Track:
         hover_text_formatter: Callable[[SeqFeature], str] | None = None,
         **kwargs,
     ) -> None:
-        """Plot genomic features
-
-        Parameters
-        ----------
-        features : SeqFeature | list[SeqFeature]
-            Biopython's SeqFeature or SeqFeature list
-        plotstyle : str, optional
-            Plot style (`box` or `arrow`)
-        r_lim : tuple[float, float] | None, optional
-            Radius limit range. If None, `track.r_plot_lim` is set.
-        hover_text_formatter : Callable[[SeqFeature], str] | None, optional
-            User-defined function for hover text format.
-            If None, no hover text is shown.
-        **kwargs : dict, optional
-            Shape properties (default: None)
-            e.g. `dict(line=dict(color="red", width=1, dash="dash"))`
-            See: <https://plotly.com/python/reference/layout/shapes/>
+        """
+        Args:
+            features: Biopython's SeqFeature or SeqFeature list.
+            plotstyle: Plot style (`box` or `arrow`).
+            r_lim: Radius limit range. If None, `track.r_plot_lim` is set.
+            hover_text_formatter: User-defined function for hover text format.
+            **kwargs: Shape properties.
+                <https://plotly.com/python/reference/layout/shapes/>
         """
         if isinstance(features, SeqFeature):
             features = [features]
@@ -1746,18 +1303,15 @@ class Track:
             if not min(self.r_lim) <= min(r_lim) < max(r_lim) <= max(self.r_lim):
                 raise ValueError(f"{r_lim=} is invalid track range.\n{self}")
 
-        # Manager hovertext
-        if hover_text_formatter:
-            hover_texts = []
+        # Default feature hover color hierarchy
+        bg_color = (
+            kwargs.get("fillcolor", None)
+            or (kwargs.get("line", {}).get("color") if "line" in kwargs else None)
+            or "lightgrey"
+        )
 
-            bg_color = (
-                kwargs.get("fillcolor", None)
-                or (kwargs.get("line", {}).get("color") if "line" in kwargs else None)
-                or "lightgrey"
-            )
+        hover_data: dict[str, list[Any]] = {"rad": [], "r": [], "texts": []}
 
-        hover_x = []
-        hover_y = []
         for feature in features:
             try:
                 start = int(str(feature.location.parts[0].start))
@@ -1766,18 +1320,11 @@ class Track:
                 print(f"Failed to parse feature's start-end position.\n{feature}")
                 continue
 
-            if hover_text_formatter:
-                # Calculate midpoint for hover point
-                midpoint = (start + end) / 2
-                rad = self.x_to_rad(midpoint)
-                r = sum(r_lim) / 2
-                cx, cy = PolarSVGPatchBuilder._polar_to_cart(rad, r)
-                hover_x.append(cx)
-                hover_y.append(cy)
-                hover_texts.append(hover_text_formatter(feature))
-
+            # Reverse coordinates if negative strand
             if feature.location.strand == -1:
                 start, end = end, start
+
+            # Plot the feature with style
             if plotstyle == "box":
                 self.rect(start, end, r_lim=r_lim, **kwargs)
             elif plotstyle == "arrow":
@@ -1785,18 +1332,24 @@ class Track:
             else:
                 raise ValueError(f"{plotstyle=} is invalid ('box' or 'arrow').")
 
-        if hover_text_formatter:
-            hover_trace = utils.plot.build_scatter_trace(
-                hover_x,
-                hover_y,
-                mode="markers",
-                text=hover_texts,
-                marker=dict(
-                    size=20,
-                    opacity=0,
-                ),
-                hoverlabel={"bgcolor": bg_color},
-            )
+            if hover_text_formatter:
+                midpoint = (start + end) / 2
+                hover_data["rad"].append(self.x_to_rad(midpoint))
+                hover_data["r"].append(sum(r_lim) / 2)
+                hover_data["texts"].append(hover_text_formatter(feature))
+
+        if hover_text_formatter is None:
+            return
+
+        hover_formatter = HoverFormatter(
+            precision_position=self.precision_position,
+        )
+
+        hover_formatter.add_hover_positions(hover_data["rad"], hover_data["r"])
+        hover_formatter.hover_texts = hover_data["texts"]
+        hover_formatter.hover_colors = [bg_color] * len(hover_data["rad"])
+
+        if hover_trace := hover_formatter.create_hover_trace():
             self._traces.append(hover_trace)
 
     ############################################################
@@ -1804,23 +1357,7 @@ class Track:
     ############################################################
 
     def _y_to_r(self, y: float, vmin: float, vmax: float) -> float:
-        """Convert y coordinate to radius in track
-
-        Parameters
-        ----------
-        y : float
-            Y coordinate
-        vmin : float
-            Min y coordinate
-        vmax : float
-            Max y coordinate
-
-        Returns
-        -------
-        r : float
-            Converted radius position
-
-        """
+        """Convert y coordinate to radius in track."""
         norm = utils.plot.Normalize(vmin, vmax)
         r = min(self.r_plot_lim) + (self.r_plot_size * norm(y))
         return r
@@ -1863,22 +1400,11 @@ class Track:
 
     def _check_value_min_max(
         self,
-        value: float | list[int] | list[float] | np.ndarray,
+        value: float | NumericSequence,
         vmin: float,
         vmax: float,
     ) -> None:
-        """Check if value(s) is in valid min-max range
-
-        Parameters
-        ----------
-        value : float | list[int] | list[float] | np.ndarray
-            Check value(s)
-        vmin : float
-            Min value
-        vmax : float
-            Max value
-
-        """
+        """Check if value(s) is in valid min-max range."""
         if isinstance(value, (list, tuple, np.ndarray)):
             if isinstance(value, np.ndarray):
                 value = list(value.flatten())
@@ -1887,7 +1413,8 @@ class Track:
                     err_msg = f"value={v} is not in valid range ({vmin=}, {vmax=})"
                     raise ValueError(err_msg)
         else:
-            if not vmin <= value <= vmax:
+            float_value: float = value  # type: ignore[assignment]
+            if not vmin <= float_value <= vmax:
                 err_msg = f"{value=} is not in valid range ({vmin=}, {vmax=})"
                 raise ValueError(err_msg)
 

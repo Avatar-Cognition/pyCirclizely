@@ -15,23 +15,34 @@ class Table:
         table_data: str | Path | pd.DataFrame,
         *,
         delimiter: str = "\t",
+        color_cycler: ColorCycler | None = None,
     ):
-        """Parameters
-        ----------
-        table_data : str | Path | pd.DataFrame
-            Table file or Table DataFrame
-        delimiter : str, optional
-            Table file delimiter. By default, `tab` delimiter.
-
+        """
+        Args:
+            table_data: Table file or Table DataFrame.
+            delimiter: Table file delimiter. By default, `tab` delimiter.
+            color_cycler: Optional ColorCycler instance.
+                If None, creates a default one.
         """
         if isinstance(table_data, (str, Path)):
             table_data = pd.read_csv(table_data, sep=delimiter, index_col=0)
         self._dataframe = table_data
+        self._color_cycler = color_cycler or ColorCycler("T10")  # Default palette
 
     @property
     def dataframe(self) -> pd.DataFrame:
         """Table dataframe"""
         return self._dataframe
+
+    @property
+    def color_cycler(self) -> ColorCycler:
+        """Get the color cycler instance"""
+        return self._color_cycler
+
+    @color_cycler.setter
+    def color_cycler(self, cycler: ColorCycler):
+        """Set the color cycler instance"""
+        self._color_cycler = cycler
 
     @property
     def row_names(self) -> list[str]:
@@ -54,38 +65,22 @@ class Table:
         return len(self.dataframe.columns)
 
     def get_col_name2color(self, cmap: str = "T10") -> dict[str, str]:
-        """Get column name & color dict
-
-        Parameters
-        ----------
-        cmap : str, optional
-            Colormap (e.g. `tab10`, `Set3`)
-
-        Returns
-        -------
-        col_name2color : dict[str, str]
-            Column name & color dict
-
         """
-        ColorCycler.set_palette(cmap)
-        return {n: ColorCycler.get_color() for n in self.col_names}
+        Args:
+            cmap: Colormap (e.g. `tab10`, `Set3`).
+        """
+        # Update the existing cycler's palette
+        self._color_cycler = ColorCycler(cmap)
+        return {n: self._color_cycler.get_color() for n in self.col_names}
 
     def get_row_name2color(self, cmap: str = "tab10") -> dict[str, str]:
-        """Get row name & color dict
-
-        Parameters
-        ----------
-        cmap : str, optional
-            Colormap (e.g. `tab10`, `Set3`)
-
-        Returns
-        -------
-        col_name2color : dict[str, str]
-            Column name & color dict
-
         """
-        ColorCycler.set_palette(cmap)
-        return {n: ColorCycler.get_color() for n in self.row_names}
+        Args:
+            cmap: Colormap (e.g. `tab10`, `Set3`).
+        """
+        # Update the existing cycler's palette
+        self._color_cycler = ColorCycler(cmap)
+        return {n: self._color_cycler.get_color() for n in self.row_names}
 
     def __str__(self):
         return str(self.dataframe)
@@ -130,18 +125,10 @@ class StackedBarTable(Table):
         self,
         track_size: float,
     ) -> list[float]:
-        """Calculate list of x position for bar label plot
+        """Calculate list of x position for bar label plot.
 
-        Parameters
-        ----------
-        track_size : float
-            Track size
-
-        Returns
-        -------
-        x_list : list[float]
-            List of x position for bar label plot
-
+        Args:
+            track_size: Size of the track.
         """
         interval = track_size / len(self.row_names)
         return [cnt * interval + (interval / 2) for cnt in range(len(self.row_names))]
@@ -150,18 +137,10 @@ class StackedBarTable(Table):
         self,
         track_r_lim: tuple[float, float],
     ) -> list[float]:
-        """Calculate list of radius position for horizontal bar label plot
+        """Calculate list of radius position for horizontal bar label plot.
 
-        Parameters
-        ----------
-        track_r_lim : tuple[float, float]
-            Track radius limit region
-
-        Returns
-        -------
-        bar_label_r_list : list[float]
-            List of radius position for horizontal bar label plot
-
+        Args:
+            track_r_lim: Track radius limit region.
         """
         rmin, rmax = track_r_lim
         interval = (rmax - rmin) / len(self.row_names)
@@ -176,20 +155,11 @@ class StackedBarTable(Table):
         track_r_lim: tuple[float, float],
         width: float = 0.8,
     ) -> list[tuple[float, float]]:
-        """Calculate list of radius limit for horizontal bar plot
+        """Calculate list of radius limit for horizontal bar plot.
 
-        Parameters
-        ----------
-        track_r_lim : tuple[float, float]
-            Track radius limit region
-        width : float, optional
-            Bar width ratio (0.0 - 1.0)
-
-        Returns
-        -------
-        list[tuple[float, float]]
-            List of radius limit for horizontal bar plot
-
+        Args:
+            track_r_lim: Track radius limit region.
+            width: Bar width ratio (0.0 - 1.0).
         """
         rmin, rmax = track_r_lim
         interval = (rmax - rmin) / len(self.row_names)

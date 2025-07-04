@@ -24,17 +24,12 @@ class Sector:
         rad_lim: tuple[float, float],
         clockwise: bool = True,
     ):
-        """Parameters
-        ----------
-        name : str
-            Sector name
-        size : float | tuple[float, float]
-            Sector size (or range)
-        rad_lim : tuple[float, float]
-            Sector radian limit region
-        clockwise : bool, optional
-            Sector coordinate direction (clockwise or anti-clockwise).
-
+        """
+        Args:
+            name: Sector name.
+            size: Sector size (or range).
+            rad_lim: Sector radian limit region.
+            clockwise: Sector coordinate direction (clockwise or anti-clockwise).
         """
         self._name = name
         if isinstance(size, (tuple, list)):
@@ -138,22 +133,11 @@ class Sector:
         r_pad_ratio: float = 0,
         name: str | None = None,
     ) -> Track:
-        """Add track to sector
-
-        Parameters
-        ----------
-        r_lim : tuple[float, float]
-            Radius limit region (0 - 100)
-        r_pad_ratio : float
-            Radius padding ratio for plot data (0 - 1.0)
-        name : str | None, optional
-            Track name. If None, `Track{track_idx}` is set.
-
-        Returns
-        -------
-        track : Track
-            Track
-
+        """
+        Args:
+            r_lim: Radius limit region.
+            r_pad_ratio: Track padding ratio for plot data.
+            name: Track name. If None, a default name is generated.
         """
         name = f"Track{len(self.tracks) + 1:02d}" if name is None else name
         if name in [t.name for t in self.tracks]:
@@ -166,52 +150,24 @@ class Sector:
         return track
 
     def get_track(self, name: str) -> Track:
-        """Get track by name
-
-        Parameters
-        ----------
-        name : str
-            Track name
-
-        Returns
-        -------
-        track : Track
-            Target name track
-
-        """
+        """Get track instance by name."""
         name2track = {t.name: t for t in self.tracks}
         if name not in name2track:
             raise ValueError(f"{name=} track not exists.")
         return name2track[name]
 
     def get_lowest_r(self) -> float:
-        """Get lowest radius position of sector from tracks data
-
-        Returns
-        -------
-        lowest_r : float
-            Lowest radius position. If no tracks found, `lowest_r=100`.
-
-        """
+        """Get lowest radius position of sector from tracks data."""
         if len(self.tracks) == 0:
             return config.MAX_R
         return min([min(t.r_lim) for t in self.tracks])
 
     def x_to_rad(self, x: float, ignore_range_error: bool = False) -> float:
-        """Convert x coordinate to radian in sector start-end range
+        """Convert x coordinate to radian in sector start-end range.
 
-        Parameters
-        ----------
-        x : float
-            X coordinate
-        ignore_range_error : bool
-            Ignore x coordinate range error
-
-        Returns
-        -------
-        rad : float
-            Radian coordinate
-
+        Args:
+            x: X coordinate.
+            ignore_range_error: Ignore x coordinate range error.
         """
         # Check target x is in valid sector range
         if not ignore_range_error:
@@ -232,15 +188,11 @@ class Sector:
         return rad
 
     def axis(self, **kwargs) -> None:
-        """Plot axis
+        """Plot axis shapes for the sector.
 
-        Parameters
-        ----------
-        **kwargs : dict, optional
-            Shape properties
-            (e.g. `fillcolor="red", line=dict(color="green", width=2, dash="dash")`)
-            <https://plotly.com/python/reference/layout/shapes/>
-
+        Args:
+            **kwargs: Shape properties.
+                <https://plotly.com/python/reference/layout/shapes/>
         """
         kwargs = {} if kwargs is None else kwargs
 
@@ -267,34 +219,19 @@ class Sector:
         adjust_rotation: bool = True,
         orientation: str = "horizontal",
         ignore_range_error: bool = False,
-        outer: bool = True,
         **kwargs,
     ) -> None:
         """Plot text within a sector. Uses genomic coordinates (x) mapped to radians.
-        Angle is adjusted to Plotly's coordinate system:
-            - 0° points upward (Plotly's default)
-            - Angles increase clockwise
 
-        Parameters
-        ----------
-        text : str
-            Text content
-        x : float | None, optional
-            Genomic position. If None, sector center is used.
-        r : float, optional
-            Radius position (default: 105, outer edge).
-        adjust_rotation : bool, optional
-            If True, text rotation is auto set based on `x` and `orientation`.
-        orientation : str, optional
-            Text orientation (`horizontal` or `vertical`).
-        ignore_range_error : bool, optional
-            If True, ignores x position outside sector bounds.
-        outer : bool, optional
-            If True, text aligns outward from center (for horizontal orientation).
-        **kwargs : dict, optional
-            Annotation properties (e.g. `font=dict(size=12, color='red')`).
-            See: <https://plotly.com/python/reference/layout/annotations/>
-
+        Args:
+            text: Text content.
+            x: Genomic position. If None, sector center is used.
+            r: Radius position (default: 105, outer edge).
+            adjust_rotation: If True, text rotation auto based on `x` and `orientation`.
+            orientation: Text orientation (`horizontal` or `vertical`).
+            ignore_range_error: If True, ignores x position outside sector bounds.
+            **kwargs: Annotation properties (e.g. `font=dict(size=12, color='red')`).
+                <https://plotly.com/python/reference/layout/annotations/>
         """
         x = self.center if x is None else x
         rad = self.x_to_rad(x, ignore_range_error)
@@ -326,22 +263,17 @@ class Sector:
         arc: bool = True,
         **kwargs,
     ) -> None:
-        """Plot line using Plotly shapes with sector-relative coordinates.
+        """Plot line with sector-relative coordinates.
 
-        Parameters
-        ----------
-        r : float | tuple[float, float]
-            Radius position(s). If float, creates constant-radius line.
-        start : float | None, optional
-            Genomic start position. Uses sector start if None.
-        end : float | None, optional
-            Genomic end position. Uses sector end if None.
-        arc : bool, optional
-            If True, creates curved arc line (polar projection).
-            If False, creates straight chord line.
-        **kwargs : dict, optional
-            Line properties (e.g. `line=dict(color="red", width=2, dash="dash")`)
-
+        Args:
+            r: Radius position(s). If float, creates constant-radius line.
+            start: Genomic start position. Uses sector start if None.
+            end: Genomic end position. Uses sector end if None.
+            arc: If True, creates curved arc line (polar projection).
+                If False, creates straight chord line.
+            **kwargs: Shape properties
+                (e.g. `line=dict(color="red", width=2, dash="dash")`).
+                <https://plotly.com/python/reference/layout/shapes/>
         """
         # Set default genomic coordinates
         start = self.start if start is None else start
@@ -372,23 +304,14 @@ class Sector:
         **kwargs,
     ) -> None:
         """Plot a rectangle spanning angular and radial ranges.
-        Angle is adjusted to Plotly's coordinate system:
-            - 0° points upward (Plotly's default)
-            - Angles increase clockwise
 
-        Parameters
-        ----------
-        start : float | None, optional
-            Start position (x coordinate). If None, `sector.start` is set.
-        end : float | None, optional
-            End position (x coordinate). If None, `sector.end` is set.
-        r_lim : tuple[float, float] | None, optional
-            Radius limit region. If None, (0, 100) is set.
-        **kwargs : dict, optional
-            Shape properties
-            (e.g. `fillcolor="red", line: {color: "blue", width: 2, ... } ...`)
-            <https://plotly.com/python/reference/layout/shapes/>
-
+        Args:
+            start: Start position (x coordinate). If None, `sector.start` is set.
+            end: End position (x coordinate). If None, `sector.end` is set.
+            r_lim: Radius limit region. If None, (0, 100) is set.
+            **kwargs: Shape properties
+                (e.g. `fillcolor="red", line: {color: "blue", width: 2, ... } ...`)
+                <https://plotly.com/python/reference/layout/shapes/>
         """
         start = self.start if start is None else start
         end = self.end if end is None else end

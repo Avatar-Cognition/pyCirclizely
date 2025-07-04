@@ -14,6 +14,7 @@ from Bio import Phylo
 from Bio.Phylo.BaseTree import Clade, Tree
 
 from pycirclizely import config, utils
+from pycirclizely.types import TextFormatter
 
 if TYPE_CHECKING:
     from pycirclizely.track import Track
@@ -39,44 +40,27 @@ class TreeViz:
         ladderize: bool = False,
         line_kws: dict[str, Any] | None = None,
         align_line_kws: dict[str, Any] | None = None,
-        label_formatter: Callable[[str], str] | None = None,
+        label_formatter: TextFormatter = None,
         track: Track,
     ):
         """
-        Parameters
-        ----------
-        tree_data : str | Path | Tree
-            Tree data (`File`|`File URL`|`Tree Object`|`Tree String`)
-        format : str, optional
-            Tree format (`newick`|`phyloxml`|`nexus`|`nexml`|`cdao`)
-        outer : bool, optional
-            If True, plot tree on outer side. If False, plot tree on inner side.
-        align_leaf_label: bool, optional
-            If True, align leaf label.
-        ignore_branch_length : bool, optional
-            If True, ignore branch length for plotting tree.
-        leaf_label_size : float, optional
-            Leaf label size
-        leaf_label_rmargin : float, optional
-            Leaf label radius margin
-        reverse : bool, optional
-            If True, reverse tree
-        ladderize : bool, optional
-            If True, ladderize tree
-        line_kws : dict[str, Any] | None, optional
-            Shape properties (default: None)
-            e.g. `dict(line=dict(color="red", width=1, dash="dash"))`
-            See: <https://plotly.com/python/reference/layout/shapes/>
-        align_line_kws : dict[str, Any] | None, optional
-            Shape properties (default: None)
-            e.g. `dict(line=dict(color="black", dash="dot"), opacity=0.5)`
-            See: <https://plotly.com/python/reference/layout/shapes/>
-        label_formatter : Callable[[str], str] | None, optional
-            User-defined label text format function to change plot label text content.
-            For example, if you want to change underscore of the label to space,
-            set `lambda t: t.replace("_", " ")`.
-        track : Track
-            Track for tree visualization
+        Args:
+            tree_data: Tree data (`File`|`File URL`|`Tree Object`|`Tree String`).
+            format: Tree format (`newick`|`phyloxml`|`nexus`|`nexml`|`cdao`).
+            outer: If True, plot tree on outer side. If False, plot tree on inner side.
+            align_leaf_label: If True, align leaf label.
+            ignore_branch_length: If True, ignore branch length for plotting tree.
+            leaf_label_size: Leaf label size.
+            leaf_label_rmargin: Leaf label radius margin.
+            reverse: If True, reverse tree.
+            ladderize: If True, ladderize tree.
+            line_kws: Shape properties.
+                <https://plotly.com/python/reference/layout/shapes/>
+            align_line_kws: Shape properties.
+                <https://plotly.com/python/reference/layout/shapes/>
+            label_formatter: User-defined label text format function
+                to change label text content.
+            track: Track for tree visualization.
         """
         tree = self.load_tree(tree_data, format=format)
 
@@ -113,7 +97,7 @@ class TreeViz:
         self._node2label_props: dict[str, dict[str, Any]] = defaultdict(lambda: {})
         self._node2line_props: dict[str, dict[str, Any]] = defaultdict(lambda: {})
 
-        self._label_formatter: Callable[[str], str] | None = label_formatter
+        self._label_formatter = label_formatter
 
     ############################################################
     # Properties
@@ -170,19 +154,10 @@ class TreeViz:
 
     @staticmethod
     def load_tree(data: str | Path | Tree, format: str) -> Tree:
-        """Load tree data
-
-        Parameters
-        ----------
-        data : str | Path | Tree
-            Tree data
-        format : str
-            Tree format
-
-        Returns
-        -------
-        tree : Tree
-            Tree object
+        """
+        Args:
+            data: Tree data.
+            format: Tree format.
         """
         if isinstance(data, str) and urlparse(data).scheme in ("http", "https"):
             # Load tree file from URL
@@ -204,18 +179,10 @@ class TreeViz:
         self,
         query: str | list[str] | tuple[str],
     ) -> str:
-        """Search target node name from query
-
-        Parameters
-        ----------
-        query : str | list[str] | tuple[str]
-            Search query node name(s). If multiple node names are set,
-            MRCA(Most Recent Common Ancester) node is set.
-
-        Returns
-        -------
-        target_node_name : str
-            Target node name
+        """
+        Args:
+            query: Search query node name(s). If multiple node names are set,
+                MRCA(Most Recent Common Ancestor) node is set.
         """
         self._check_node_name_exist(query)
         if isinstance(query, (list, tuple)):
@@ -228,19 +195,11 @@ class TreeViz:
         self,
         query: str | list[str] | tuple[str],
     ) -> tuple[float, float]:
-        """Get target node x limit by query
-
-        Parameters
-        ----------
-        query : str | list[str] | tuple[str]
-            Search query node name(s) for getting x limit.
-            If multiple node names are set,
-            MRCA(Most Recent Common Ancester) node is set.
-
-        Returns
-        -------
-        xlim : tuple[float, float]
-            X limit tuple
+        """
+        Args:
+            query: Search query node name(s) for getting x limit.
+                If multiple node names are set,
+                MRCA(Most Recent Common Ancestor) node is set.
         """
         target_node_name = self.search_target_node_name(query)
         target_rect = self.name2rect[target_node_name]
@@ -257,20 +216,16 @@ class TreeViz:
         hover_text_formatter: Callable[[list[dict]], list[str]] | None = None,
         **kwargs,
     ) -> None:
-        """Show node information as hovertext on nodes of the phylogenetic tree
+        """Show node information as hovertext.
 
-        Parameters
-        ----------
-        node_type : Literal["all", "internal", "leaf"], optional
-            Which nodes to show information for:
+        Args:
+            node_type: Which nodes to show information for:
             - "all": All nodes
             - "internal": Only internal nodes (default)
             - "leaf": Only leaf nodes
-        hover_text_formatter : Callable[[list[dict]], str] | None, optional
-            User-defined function for hover text format.
-        **kwargs : dict, optional
-            Scatter trace properties that override defaults.
-            Note: The scatter points will be invisible by default (opacity=0).
+            hover_text_formatter: User-defined function for hover text format.
+            **kwargs: Scatter trace properties that override defaults.
+                Note: The scatter points will be invisible by default (opacity=0).
         """
         kwargs = utils.deep_dict_update(dict(opacity=0), kwargs)
         default_bgcolor = config.tree_hovertext_defaults.get("hoverlabel", {}).get(
@@ -362,17 +317,13 @@ class TreeViz:
         query: str | list[str] | tuple[str],
         **kwargs,
     ) -> None:
-        """Plot highlight for target node
-
-        Parameters
-        ----------
-        query : str | list[str] | tuple[str]
-            Search query node name(s) for highlight. If multiple node names are set,
-            MRCA(Most Recent Common Ancester) node is set.
-        **kwargs : dict, optional
-            Shape properties
-            (e.g. `fillcolor="red", line=dict(color="blue", width=2), opacity=0.5`)
-            See: <https://plotly.com/python/reference/layout/shapes/>
+        """
+        Args:
+            query: Search query node name(s) for highlight. If multiple node names
+                are set, MRCA(Most Recent Common Ancestor) node is set.
+            **kwargs: Shape properties
+                (e.g. `fillcolor="red", line=dict(color="blue", width=2), opacity=0.5`)
+                See: <https://plotly.com/python/reference/layout/shapes/>
         """
         # Get target rectangle for highlight
         target_node_name = self.search_target_node_name(query)
@@ -395,24 +346,19 @@ class TreeViz:
         hover_text: list[str] | None = None,
         **kwargs,
     ) -> None:
-        """Plot marker on target node(s)
-
-        Parameters
-        ----------
-        query : str | list[str] | tuple[str]
-            Search query node name(s) for plotting marker.
-            If multiple node names are set,
-            MRCA(Most Recent Common Ancester) node is set.
-        descendent : bool, optional
-            If True, plot markers on target node's descendent as well.
-        hover_text : list[str] | None, optional
-            Custom hover text for each marker.
-            If None, generates default phylogenetic info.
-        **kwargs : dict, optional
-            Scatter trace properties that override defaults. Common options include:
-            - marker: dict with properties like size, color, symbol,..
-            - mode: 'markers', 'lines', 'markers+lines'
-            - name: legend name for the trace
+        """
+        Args:
+            query: Search query node name(s) for plotting marker.
+                If multiple node names are set,
+                MRCA(Most Recent Common Ancestor) node is set.
+            descendent: If True, plot markers on target node's descendent as well.
+            hover_text: Custom hover text for each marker.
+                If None, generates default phylogenetic info.
+            **kwargs: Scatter trace properties that override defaults.
+                Common options include:
+                - marker: dict with properties like size, color, symbol,..
+                - mode: 'markers', 'lines', 'markers+lines'
+                - name: legend name for the trace
         """
         target_node_name = self.search_target_node_name(query)
 
@@ -456,15 +402,12 @@ class TreeViz:
         self.track.scatter(x, r, vmin=rmin, vmax=rmax, hover_text=hover_text, **kwargs)
 
     def set_node_label_props(self, target_node_label: str, **kwargs) -> None:
-        """Set tree node label properties
-
-        Parameters
-        ----------
-        target_node_label : str
-            Target node label name
-        kwargs : dict, optional
-            Annotation properties (e.g. `dict(font=dict(size=12, color="black"))`)
-            See: <https://plotly.com/python/reference/layout/annotations/>
+        """
+        Args:
+            target_node_label: Target node label name.
+            kwargs: Annotation properties
+                (e.g. `dict(font=dict(size=12, color="black"))`).
+                <https://plotly.com/python/reference/layout/annotations/>.
         """
         self.search_target_node_name(target_node_label)
         self._node2label_props[target_node_label] = utils.deep_dict_update(
@@ -479,22 +422,17 @@ class TreeViz:
         apply_label_color: bool = False,
         **kwargs,
     ) -> None:
-        """Set tree node line properties
-
-        Parameters
-        ----------
-        query : str | list[str] | tuple[str]
-            Search query node name(s) for coloring tree node line.
-            If multiple node names are set,
-            MRCA(Most Recent Common Ancester) node is set.
-        descendent : bool, optional
-            If True, set properties on target node's descendent as well.
-        apply_label_color : bool, optional
-            If True & `descendent=True` & kwargs contain color keyword,
-            apply node line color to node label color as well.
-        **kwargs : dict, optional
-            Shape properties (e.g. `dict(line=dict(color="red", width=1, dash="dash"))`)
-            See: <https://plotly.com/python/reference/layout/shapes/>
+        """
+        Args:
+            query: Search query node name(s) for coloring tree node line.
+                If multiple node names are set,
+                MRCA(Most Recent Common Ancestor) node is set.
+            descendent: If True, set properties on target node's descendent as well.
+            apply_label_color: If True & `descendent=True` & kwargs contain color
+                keyword, apply node line color to node label color as well.
+            **kwargs: Shape properties
+                (e.g. `dict(line=dict(color="red", width=1, dash="dash"))`)
+                See: <https://plotly.com/python/reference/layout/shapes/>
         """
         target_node_name = self.search_target_node_name(query)
 
@@ -517,20 +455,7 @@ class TreeViz:
     ############################################################
 
     def _set_uniq_innode_name(self, tree: Tree) -> tuple[Tree, list[str]]:
-        """Set unique internal node name (N_1, N_2, ..., N_XXX)
-
-        Parameters
-        ----------
-        tree : Tree
-            Tree object
-
-        Returns
-        -------
-        tree : Tree
-            Tree (set unique node names)
-        uniq_node_names : list[str]
-            Unique node names
-        """
+        """Set unique internal node name (N_1, N_2, ..., N_XXX)."""
         tree = deepcopy(tree)
         uniq_innode_names: list[str] = []
         for idx, node in enumerate(tree.get_nonterminals(), 1):
@@ -541,18 +466,7 @@ class TreeViz:
         return tree, uniq_innode_names
 
     def _to_ultrametric_tree(self, tree: Tree) -> Tree:
-        """Convert to ultrametric tree
-
-        Parameters
-        ----------
-        tree : Tree
-            Tree
-
-        Returns
-        -------
-        tree : Tree
-            Ultrametric tree
-        """
+        """Convert to ultrametric tree."""
         tree = deepcopy(tree)
         # Get unit branch depth info
         name2depth = {str(n.name): float(d) for n, d in tree.depths(True).items()}
@@ -588,13 +502,7 @@ class TreeViz:
         return tree
 
     def _check_node_name_dup(self, tree: Tree) -> None:
-        """Check node name duplication in tree
-
-        Parameters
-        ----------
-        tree : Tree
-            Tree object
-        """
+        """Check node name duplication in tree."""
         all_node_names = [str(n.name) for n in tree.find_clades()]
         err_msg = ""
         for node_name, count in Counter(all_node_names).items():
@@ -608,13 +516,7 @@ class TreeViz:
         self,
         query: str | list[str] | tuple[str],
     ) -> None:
-        """Check node name exist in tree
-
-        Parameters
-        ----------
-        query : str | list[str] | tuple[str]
-            Query node name(s) for checking exist
-        """
+        """Check node name exist in tree."""
         if isinstance(query, str):
             query = [query]
         err_msg = ""
@@ -626,13 +528,7 @@ class TreeViz:
             raise ValueError(err_msg)
 
     def _calc_name2xr(self) -> dict[str, tuple[float, float]]:
-        """Calculate node name & xr coordinate
-
-        Returns
-        -------
-        name2xr : dict[str, tuple[float, float]]
-            Tree node name & xr coordinate
-        """
+        """Calculate node name & xr coordinate."""
         track = self.track
         name2depth = {str(n.name): float(d) for n, d in self.tree.depths().items()}
         # Calculate x, r unit size of depth
@@ -659,13 +555,7 @@ class TreeViz:
         return name2xr
 
     def _calc_name2rect(self) -> dict[str, dict[str, float]]:
-        """Calculate tree node name & rectangle
-
-        Returns
-        -------
-        name2rect : dict[str, Rectangle]
-            Tree node name & rectangle dict
-        """
+        """Calculate tree node name & rectangle."""
         name2rect: dict[str, dict[str, float]] = {}
         for name, xr in self.name2xr.items():
             # Get parent node
@@ -710,7 +600,7 @@ class TreeViz:
         return name2rect
 
     def _plot_tree_line(self) -> None:
-        """Plot tree line"""
+        """Plot tree line."""
         # Plot tree line by node (x, r) coordinate
         for node in self.tree.get_nonterminals():
             parent_x, parent_r = self.name2xr[node.name]
@@ -742,7 +632,7 @@ class TreeViz:
                     self.track._simpleline(*v_align_line_points, **_align_line_kws)
 
     def _plot_tree_label(self) -> None:
-        """Plot tree label"""
+        """Plot tree label."""
         text_kws: dict[str, Any] = dict(
             font=dict(size=self._leaf_label_size), orientation="vertical"
         )
@@ -768,18 +658,7 @@ class TreeViz:
                 self.track.text(label, x, r, outer=self._outer, axis="x", **text_kws)
 
     def _generate_phylogeny_hovertext(self, node_info: list[dict]) -> list[str]:
-        """Generate phylogenetic hover text for nodes.
-
-        Parameters
-        ----------
-        node_info : list[dict]
-            List of dictionaries containing phylogenetic info for each node
-
-        Returns
-        -------
-        list[str]
-            Formatted hover text for each node
-        """
+        """Generate phylogenetic hover text for nodes."""
         hovertext = []
         for info in node_info:
             parts = []
