@@ -15,15 +15,18 @@ from .color import ColorCycler
 from .helper import deep_dict_update
 
 
+_DEFAULT_CYCLER = ColorCycler("Plotly")
+
 def get_default_color(
-    kwargs: dict, target: str = "line", palette: str = "Plotly"
+    kwargs: dict, target: str = "line",  cycler: ColorCycler | None = _DEFAULT_CYCLER
 ) -> str:
     """Returns a consistent color based on kwargs or assigns a new one from ColorCycler.
 
     Args:
         kwargs: Dictionary of Plotly styling keyword arguments.
         target: The key to check for color (e.g., 'line', 'marker').
-        palette: Name of the palette to use if a new color is needed.
+        color_cycler : ColorCycler, optional
+            ColorCycler instance to use. If None, use default one.
     """
     color = kwargs.get(target, {})
 
@@ -31,7 +34,6 @@ def get_default_color(
         color = color.get("color")
 
     if color is None:
-        cycler = ColorCycler(palette)
         color = cycler.get_color()
 
     return color
