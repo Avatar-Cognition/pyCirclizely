@@ -35,16 +35,6 @@ class Table:
         return self._dataframe
 
     @property
-    def color_cycler(self) -> ColorCycler:
-        """Get the color cycler instance"""
-        return self._color_cycler
-
-    @color_cycler.setter
-    def color_cycler(self, cycler: ColorCycler):
-        """Set the color cycler instance"""
-        self._color_cycler = cycler
-
-    @property
     def row_names(self) -> list[str]:
         """Table row names"""
         return list(map(str, self.dataframe.index))

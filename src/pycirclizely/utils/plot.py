@@ -14,11 +14,11 @@ from pycirclizely import config
 from .color import ColorCycler
 from .helper import deep_dict_update
 
-
 _DEFAULT_CYCLER = ColorCycler("Plotly")
 
+
 def get_default_color(
-    kwargs: dict, target: str = "line",  cycler: ColorCycler | None = _DEFAULT_CYCLER
+    kwargs: dict, target: str = "line", cycler: ColorCycler = _DEFAULT_CYCLER
 ) -> str:
     """Returns a consistent color based on kwargs or assigns a new one from ColorCycler.
 
@@ -28,15 +28,12 @@ def get_default_color(
         color_cycler : ColorCycler, optional
             ColorCycler instance to use. If None, use default one.
     """
-    color = kwargs.get(target, {})
-
-    if isinstance(color, dict):
-        color = color.get("color")
-
-    if color is None:
-        color = cycler.get_color()
-
-    return color
+    color = (
+        kwargs.get(target, {}).get("color")
+        if isinstance(kwargs.get(target), dict)
+        else kwargs.get(target)
+    )
+    return color if color is not None else cycler.get_color()
 
 
 def degrees(rad: float) -> float:

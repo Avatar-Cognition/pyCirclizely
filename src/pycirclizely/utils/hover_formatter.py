@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Union
 
 import numpy as np
@@ -12,11 +13,13 @@ from .helper import deep_dict_update, precise_position
 from .plot import build_scatter_trace
 
 
+@dataclass
 class HoverFormatter:
     hover_texts: List[str]
     hover_x: List[float]
     hover_y: List[float]
     hover_colors: List[str]
+    precision_position: int
 
     def __init__(
         self,
@@ -137,10 +140,10 @@ class HoverFormatter:
 
     def clear(self) -> None:
         """Clear all stored hover data."""
-        self.hover_texts = []
-        self.hover_x = []
-        self.hover_y = []
-        self.hover_colors = []
+        self.hover_texts.clear()
+        self.hover_x.clear()
+        self.hover_y.clear()
+        self.hover_colors.clear()
 
     ############################################################
     # Private Method
