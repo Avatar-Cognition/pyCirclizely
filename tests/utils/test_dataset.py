@@ -12,15 +12,8 @@ from pycirclizely.utils import (
 def check_network_conn(url: str = "https://github.com/moshi4/pyCirclize") -> bool:
     """Check network connection
 
-    Parameters
-    ----------
-    url : str, optional
-        Check target URL
-
-    Returns
-    -------
-    check_result : bool
-        Network connection check result
+    Args:
+        url: Check target URL
 
     """
     try:

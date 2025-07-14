@@ -25,19 +25,15 @@ class Gff:
         min_range: None = None,
         max_range: None = None,
     ):
-        """Parameters
-        ----------
-        gff_file : str | Path
-            GFF file (`*.gz`, `*.bz2`, `*.zip` compressed file can be readable)
-        name : str | None, optional
-            name (If None, `file name` is set)
-        target_seqid : str | None, optional
-            Target seqid to be extracted. If None, only first seqid record is extracted.
-        min_range : None, optional
-            No longer used. Left for backward compatibility.
-        max_range : None, optional
-            No longer used. Left for backward compatibility.
-
+        """
+        Args:
+            gff_file: GFF file
+                (`*.gz`, `*.bz2`, `*.zip` compressed file can be readable).
+            name: Name (If None, `file name` is set).
+            target_seqid: Target seqid to be extracted.
+                If None, only first seqid record is extracted.
+            min_range: No longer used. Left for backward compatibility.
+            max_range: No longer used. Left for backward compatibility.
         """
         self._gff_file = Path(gff_file)
         self._name = name
@@ -115,11 +111,6 @@ class Gff:
         If `##sequence-region` is not found, size is defined by max coordinate size in
         target seqid features. This may differ from actual genome size.
 
-        Returns
-        -------
-        seqid2size : dict[str, int]
-            seqid & genome size dict
-
         """
         return self._seqid2size
 
@@ -128,21 +119,12 @@ class Gff:
         feature_type: str | list[str] | None = "CDS",
         target_strand: int | None = None,
     ) -> dict[str, list[SeqFeature]]:
-        """Get seqid & features in target seqid genome dict
+        """Get seqid & features in target seqid genome dict.
 
-        Parameters
-        ----------
-        feature_type : str | list[str] | None, optional
-            Feature type (`CDS`, `gene`, `mRNA`, etc...)
-            If None, extract regardless of feature type.
-        target_strand : int | None, optional
-            Extract target strand. If None, extract regardless of strand.
-
-        Returns
-        -------
-        seqid2features : dict[str, list[SeqFeature]]
-            seqid & features dict
-
+        Args:
+            feature_type: Feature type (`CDS`, `gene`, `mRNA`, etc...).
+                If None, extract regardless of feature type.
+            target_strand: Extract target strand. If None, extract regardless of strand.
         """
         if isinstance(feature_type, str):
             feature_type = [feature_type]
@@ -166,27 +148,12 @@ class Gff:
         target_strand: int | None = None,
         target_range: tuple[int, int] | None = None,
     ) -> list[SeqFeature]:
-        """Extract features
-
-        If `target_seqid` is specified when the Gff instance initialized,
-        then the features of the target seqid are extracted.
-        Otherwise, extract the features of the seqid in the first row.
-
-        Parameters
-        ----------
-        feature_type : str | list[str] | None, optional
-            Feature type (`CDS`, `gene`, `mRNA`, etc...)
-            If None, extract regardless of feature type.
-        target_strand : int | None, optional
-            Extract target strand. If None, extract regardless of strand.
-        target_range : tuple[int, int] | None, optional
-            Extract target range. If None, extract regardless of range.
-
-        Returns
-        -------
-        features : list[SeqFeature]
-            Feature list
-
+        """
+        Args:
+            feature_type: Feature type (`CDS`, `gene`, `mRNA`, etc...).
+                If None, extract regardless of feature type.
+            target_strand: Extract target strand. If None, extract regardless of strand.
+            target_range: Extract target range. If None, extract regardless of range.
         """
         gff_records = GffRecord.filter_records(
             self.records,
@@ -197,20 +164,9 @@ class Gff:
         return [rec.to_seq_feature() for rec in gff_records]
 
     def extract_exon_features(self, feature_type: str = "mRNA") -> list[SeqFeature]:
-        """Extract exon structure features
-
-        Extract exons based on `parent feature` and `exon` ID-Parent relation
-
-        Parameters
-        ----------
-        feature_type : str, optional
-            Feature type (e.g. `mRNA`, `ncRNA` , etc...)
-
-        Returns
-        -------
-        features : list[SeqFeature]
-            Feature list
-
+        """
+        Args:
+            feature_type: Feature type (e.g. `mRNA`, `ncRNA`, etc...).
         """
         # Extract exon features by mRNA-exon relation
         parent_id = None
@@ -261,27 +217,10 @@ class Gff:
         gff_file: str | Path,
         target_seqid: str | None,
     ) -> tuple[list[GffRecord], int, int]:
-        """Parse GFF file
-
-        Only parse target seqid record.
-        If target_record is None, only parse first seqid record.
-
-        Parameters
-        ----------
-        gff_file : str | Path
-            GFF file
-        target_seqid : str | None
-            Target seqid to be extracted
-
-        Returns
-        -------
-        gff_records : list[GffRecord]
-            GFF record list
-        start : int
-            Start position of target_seqid record
-        end : int
-            End position of target_seqid record
-
+        """
+        Args:
+            gff_file: GFF file
+            target_seqid: Target seqid to be extracted
         """
         gff_file = Path(gff_file)
         if gff_file.suffix == ".gz":
@@ -306,24 +245,10 @@ class Gff:
         handle: TextIO,
         target_seqid: str | None = None,
     ) -> tuple[list[GffRecord], int, int]:
-        """Parse GFF file TextIO
-
-        Parameters
-        ----------
-        handle : TextIO
-            GFF TextIO handle
-        target_seqid : str | None, optional
-            GFF target seqid
-
-        Returns
-        -------
-        gff_records : list[GffRecord]
-            GFF record list
-        start : int
-            Start position of target_seqid record
-        end : int
-            End position of target_seqid record
-
+        """
+        Args:
+            handle: GFF TextIO handle
+            target_seqid: GFF target seqid
         """
         # Parse GFF lines
         gff_all_lines = handle.read().splitlines()
@@ -385,28 +310,14 @@ class GffRecord:
     attrs: dict[str, list[str]]
 
     def is_within_range(self, min_range: int, max_range: int) -> bool:
-        """Check within target range or not
-
-        Parameters
-        ----------
-        min_range : int
-            Min range
-        max_range : int
-            Max range
-
-        Returns
-        -------
-        check_result : bool
-            Check result
-
-        """
+        """Check within target range or not."""
         if min_range <= self.start <= self.end <= max_range:
             return True
         else:
             return False
 
     def to_seq_feature(self) -> SeqFeature:
-        """Convert GffRecord to SeqFeature (1-based to 0-based coordinate)"""
+        """Convert GffRecord to SeqFeature (1-based to 0-based coordinate)."""
         return SeqFeature(
             location=self.to_feature_location(),
             type=self.type,
@@ -415,25 +326,11 @@ class GffRecord:
         )
 
     def to_feature_location(self) -> SimpleLocation:
-        """Convert GffRecord to SimpleLocation (1-based to 0-based coordinate)
-
-        Returns
-        -------
-        feature_location : SimpleLocation
-            Simple location
-
-        """
+        """Convert GffRecord to SimpleLocation (1-based to 0-based coordinate)."""
         return SimpleLocation(self.start - 1, self.end, self.strand)
 
     def to_gff_line(self) -> str:
-        """Convert GffRecord to GFF record line
-
-        Returns
-        -------
-        gff_line : str
-            GFF record line
-
-        """
+        """Convert GffRecord to GFF record line."""
         return "\t".join(
             (
                 self.seqid,
@@ -450,19 +347,7 @@ class GffRecord:
 
     @staticmethod
     def is_gff_line(line: str) -> bool:
-        """Check GFF record line or not
-
-        Parameters
-        ----------
-        line : str
-            GFF line
-
-        Returns
-        -------
-        check_result : bool
-            Check result
-
-        """
+        """Check of GFF record in line or not."""
         if line.startswith("#") or len(line.split("\t")) < 9:
             return False
         else:
@@ -470,19 +355,7 @@ class GffRecord:
 
     @staticmethod
     def parse_gff_line(gff_line: str) -> GffRecord:
-        """Parse GFF record line
-
-        Parameters
-        ----------
-        gff_line : str
-            GFF record line
-
-        Returns
-        -------
-        gff_record : GffRecord
-            GFF record
-
-        """
+        """Parse GFF record line."""
         gff_elms: list[Any] = gff_line.split("\t")[0:9]
         # start, end
         gff_elms[3], gff_elms[4] = int(gff_elms[3]), int(gff_elms[4])
@@ -515,24 +388,14 @@ class GffRecord:
         target_strand: int | None = None,
         target_range: tuple[int, int] | None = None,
     ) -> list[GffRecord]:
-        """Filter GFF records by feature_type, strand, range
+        """Filter GFF records by feature_type, strand, range,...
 
-        Parameters
-        ----------
-        gff_records : list[GffRecord]
-            GFF records to be filterd
-        feature_type : str | list[str] | None, optional
-            Feature type (`CDS`, `gene`, `mRNA`, etc...). If None, no filter.
-        target_strand : int | None, optional
-            Target strand. If None, no filter.
-        target_range : tuple[int, int] | None, optional
-            Target range. If None, no filter.
-
-        Returns
-        -------
-        filter_gff_records : list[SeqFeature]
-            Filtered GFF records
-
+        Args:
+            gff_records: GFF records to be filtered
+            feature_type: Feature type (`CDS`, `gene`, `mRNA`, etc...).
+                If None, no filter.
+            target_strand: Target strand. If None, no filter.
+            target_range: Target range. If None, no filter.
         """
         if isinstance(feature_type, str):
             feature_type = [feature_type]

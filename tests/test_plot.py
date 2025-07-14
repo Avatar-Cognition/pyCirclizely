@@ -1,25 +1,20 @@
 import random
+from io import StringIO
+from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import plotly.graph_objs as go
+from Bio import Phylo
 
 from pycirclizely import Circos
-
-# from pycirclizely.parser import Genbank, Gff, StackedBarTable
+from pycirclizely.parser import Genbank, Gff, StackedBarTable
 from pycirclizely.utils import (
     ColorCycler,
+    load_eukaryote_example_dataset,
+    load_example_tree_file,
+    load_prokaryote_example_file,
 )
-
-# load_eukaryote_example_dataset,;;
-# load_example_tree_file,;; load_prokaryote_example_file,
-
-# from io import StringIO
-# from pathlib import Path
-
-
-# import pandas as pd
-# from Bio import Phylo
-
 
 np.random.seed(0)
 random.seed(0)
@@ -144,61 +139,55 @@ class TestCircosPlots:
         fig = circos.plotfig()
         assert isinstance(fig, go.Figure)
 
+    def test_radar_chart_plot(self, tsv_radar_table_file: Path):
+        """Test radar chart plot"""
+        circos = Circos.radar_chart(tsv_radar_table_file, vmax=100, marker_size=6)
 
-# def test_radar_chart_plot(fig_outfile: Path, tsv_radar_table_file: Path):
-#     """Test radar chart plot"""
-#     circos = Circos.radar_chart(tsv_radar_table_file, vmax=100, marker_size=6)
-#     circos.savefig(fig_outfile)
-#     assert fig_outfile.exists()
+        fig = circos.plotfig()
+        assert isinstance(fig, go.Figure)
 
+    def test_chord_diagram_plot(self, tsv_matrix_file: pd.DataFrame):
+        """Test chord diagram plot"""
+        circos = Circos.chord_diagram(tsv_matrix_file)
 
-# def test_chord_diagram_plot(fig_outfile: Path, tsv_matrix_file: pd.DataFrame):
-#     """Test chord diagram plot"""
-#     circos = Circos.chord_diagram(tsv_matrix_file)
-#     circos.savefig(fig_outfile)
-#     assert fig_outfile.exists()
+        fig = circos.plotfig()
+        assert isinstance(fig, go.Figure)
 
-#     # For backward compatibility method
-#     circos = Circos.initialize_from_matrix(tsv_matrix_file)
-#     circos.savefig(fig_outfile)
-#     assert fig_outfile.exists()
+    def test_cytoband_plot(self, hg38_testdata_dir: Path):
+        """Test hg38 cytoband plot"""
+        # Add tracks for cytoband plot
+        chr_bed_file, cytoband_file, _ = load_eukaryote_example_dataset(
+            "hg38", cache_dir=hg38_testdata_dir
+        )
+        circos = Circos.initialize_from_bed(chr_bed_file, space=2)
+        circos.add_cytoband_tracks((95, 100), cytoband_file)
 
+        fig = circos.plotfig()
+        assert isinstance(fig, go.Figure)
 
-# def test_cytoband_plot(fig_outfile: Path, hg38_testdata_dir: Path):
-#     """Test hg38 cytoband plot"""
-#     # Add tracks for cytoband plot
-#     chr_bed_file, cytoband_file, _ = load_eukaryote_example_dataset(
-#         "hg38", cache_dir=hg38_testdata_dir
-#     )
-#     circos = Circos.initialize_from_bed(chr_bed_file, space=2)
-#     circos.add_cytoband_tracks((95, 100), cytoband_file)
+    def test_phylogenetic_tree_plot(self):
+        """Test phylogenetic tree plot"""
+        tree_file = load_example_tree_file("alphabet.nwk")
+        circos, tv = Circos.initialize_from_tree(tree_file)
 
-#     # Plot and check fig file exists
-#     circos.savefig(fig_outfile)
-#     assert fig_outfile.exists()
+        tv.highlight("A", fillcolor="red")
+        tv.highlight(["D", "E", "F"], fillcolor="blue")
 
+        tv.marker(["G", "H"], marker=dict(color="green"))
+        tv.marker(["J", "K"], marker=dict(color="magenta"), descendent=False)
 
-# def test_phylogenetic_tree_plot(fig_outfile: Path):
-#     """Test phylogenetic tree plot"""
-#     tree_file = load_example_tree_file("alphabet.nwk")
-#     circos, tv = Circos.initialize_from_tree(tree_file)
+        tv.set_node_label_props("A", font=dict(color="red"))
 
-#     tv.highlight("A", color="red")
-#     tv.highlight(["D", "E", "F"], color="blue")
+        tv.set_node_line_props(["P", "O", "N"], line=dict(color="orange"))
+        tv.set_node_line_props(["S", "R"], line=dict(color="lime"), descendent=False)
+        tv.set_node_line_props(
+            ["X", "Y", "Z"], line=dict(color="purple"), apply_label_color=True
+        )
 
-#     tv.marker(["G", "H"], color="green")
-#     tv.marker(["J", "K"], color="magenta", descendent=False)
+        tv.show_node_info()
 
-#     tv.set_node_label_props("A", color="red")
-
-#     tv.set_node_line_props(["P", "O", "N"], color="orange")
-#     tv.set_node_line_props(["S", "R"], color="lime", descendent=False)
-#     tv.set_node_line_props(["X", "Y", "Z"], color="purple", apply_label_color=True)
-
-#     tv.show_confidence()
-
-#     circos.savefig(fig_outfile)
-#     assert fig_outfile.exists()
+        fig = circos.plotfig()
+        assert isinstance(fig, go.Figure)
 
 
 ###########################################################
@@ -248,7 +237,7 @@ class TestSectorPlots:
 
     def test_sector_rect_plot(self, circos: Circos):
         """Test `sector.rect()`"""
-        ColorCycler.set_palette("T10")
+        color_cycler = ColorCycler("T10")
         for sector in circos.sectors:
             sector.axis()
             sector.rect(r_lim=(90, 100), fillcolor="tomato")
@@ -262,7 +251,7 @@ class TestSectorPlots:
                     i,
                     i + 1,
                     (50, 60),
-                    fillcolor=ColorCycler(),
+                    fillcolor=color_cycler.get_color(),
                     line=dict(color="black", width=1),
                 )
             start, end = sector.start + 3, sector.end - 3
@@ -312,9 +301,10 @@ class TestTrackPlots:
             track1 = sector.add_track((90, 100))
             track1.axis()
             # Plot rect & text (style1)
+            color_cycler = ColorCycler("T10")
             for i in range(int(track1.size)):
                 start, end = i, i + 1
-                track1.rect(start, end, fillcolor=ColorCycler())
+                track1.rect(start, end, fillcolor=color_cycler.get_color())
                 track1.text(str(end), (end + start) / 2)
             # Plot rect & text (style2)
             track2 = sector.add_track((70, 80))
@@ -323,7 +313,7 @@ class TestTrackPlots:
                 track2.rect(
                     start,
                     end,
-                    fillcolor=ColorCycler(),
+                    fillcolor=color_cycler.get_color(),
                     line=dict(color="white", width=1),
                 )
                 track2.text(
@@ -338,7 +328,7 @@ class TestTrackPlots:
 
     def test_track_arrow_plot(self, circos: Circos):
         """Test `track.arrow()`"""
-        ColorCycler.set_palette("T10")
+        color_cycler = ColorCycler("T10")
         sectors = {"A": 10, "B": 20, "C": 15}
         circos = Circos(sectors, space=5)
         for sector in circos.sectors:
@@ -347,50 +337,21 @@ class TestTrackPlots:
             track1 = sector.add_track((90, 100))
             for i in range(int(track1.size)):
                 start, end = i, i + 1
-                track1.arrow(start, end, fillcolor=ColorCycler())
+                track1.arrow(start, end, fillcolor=color_cycler.get_color())
             # Plot reverse arrow with user-specified style
             track2 = sector.add_track((70, 80))
             for i in range(int(track2.size)):
                 start, end = i, i + 1
                 track2.arrow(
-                    end, start, head_length=4, shaft_ratio=1.0, fillcolor=ColorCycler()
+                    end,
+                    start,
+                    head_length=4,
+                    shaft_ratio=1.0,
+                    fillcolor=color_cycler.get_color(),
                 )
 
         fig = circos.plotfig()
         assert isinstance(fig, go.Figure)
-
-    # def test_track_annotate_plot(fig: go.Figure):
-    #     """Test `track.annotate()`"""
-    #     gff_file = load_prokaryote_example_file("enterobacteria_phage.gff")
-    #     gff = Gff(gff_file)
-
-    #     seqid2size = gff.get_seqid2size()
-    #     space = 0 if len(seqid2size) == 1 else 2
-    #     circos = Circos(sectors=seqid2size, space=space, start=0, end=360)
-
-    #     seqid2features = gff.get_seqid2features(feature_type="CDS")
-    #     for sector in circos.sectors:
-    #         track = sector.add_track((90, 100))
-    #         track.axis(fc="#EEEEEE", ec="none")
-
-    #         features = seqid2features[sector.name]
-    #         for feature in features:
-    #             # Plot CDS feature
-    #             if feature.location.strand == 1:
-    #                 track.genomic_features(feature, r_lim=(95, 100), fc="salmon")
-    #             else:
-    #                 track.genomic_features(feature, r_lim=(90, 95), fc="skyblue")
-    #             # Plot feature annotation label
-    #             start = int(feature.location.start)  # type: ignore
-    #             end = int(feature.location.end)  # type: ignore
-    #             label_pos = (start + end) / 2
-    #             label = feature.qualifiers.get("product", [""])[0]
-    #             if label == "" or label.startswith("hypothetical"):
-    #                 continue
-    #             track.annotate(label_pos, label, label_size=7)
-
-    #     circos.savefig(fig_outfile)
-    #     assert fig_outfile.exists()
 
     def test_track_xticks_plot(self, circos: Circos):
         """Test `track.xticks()`"""
@@ -534,8 +495,8 @@ class TestTrackPlots:
             track2.axis()
             track2.xticks_by_interval(1, outer=False)
 
-            ColorCycler.set_palette("T10")
-            tab10_colors = [ColorCycler() for _ in range(len(x))]
+            color_cycler = ColorCycler("T10")
+            tab10_colors = [color_cycler.get_color() for _ in range(len(x))]
             track2.bar(
                 x,
                 y,
@@ -545,8 +506,8 @@ class TestTrackPlots:
                 vmax=vmax * 2,
             )
 
-            ColorCycler.set_palette("Pastel1")
-            pastel_colors = [ColorCycler() for _ in range(len(x))]
+            color_cycler = ColorCycler("Pastel1")
+            pastel_colors = [color_cycler.get_color() for _ in range(len(x))]
             y2 = np.random.randint(vmin, vmax, len(x))
             track2.bar(
                 x,
@@ -564,58 +525,65 @@ class TestTrackPlots:
         fig = circos.plotfig()
         assert isinstance(fig, go.Figure)
 
-    # def test_track_stacked_bar_plot(fig_outfile: Path):
-    #     """Test `track.stacked_bar()`"""
-    #     # Generate matrix data for stacked bar plot
-    #     row_num, col_num = 12, 6
-    #     matrix = np.random.randint(5, 20, (row_num, col_num))
-    #     row_names = [f"R{i}" for i in range(row_num)]
-    #     col_names = [f"group{i}" for i in range(col_num)]
-    #     table_df = pd.DataFrame(matrix, index=row_names, columns=col_names)
+    def test_track_stacked_bar_plot(self):
+        """Test `track.stacked_bar()`"""
+        # Generate matrix data for stacked bar plot
+        row_num, col_num = 12, 6
+        matrix = np.random.randint(5, 20, (row_num, col_num))
+        row_names = [f"R{i}" for i in range(row_num)]
+        col_names = [f"group{i}" for i in range(col_num)]
+        table_df = pd.DataFrame(matrix, index=row_names, columns=col_names)
 
-    #     # Initialize Circos sector & track
-    #     circos = Circos(sectors=dict(bar=len(table_df.index)))
-    #     sector = circos.sectors[0]
-    #     track = sector.add_track((50, 100))
+        # Initialize Circos sector & track
+        circos = Circos(sectors=dict(bar=len(table_df.index)))
+        sector = circos.sectors[0]
+        track = sector.add_track((50, 100))
 
-    #     # Plot stacked bar
-    #     track.stacked_bar(
-    #         table_df,
-    #         width=0.6,
-    #         cmap="Set3",
-    #         bar_kws=dict(ec="black", lw=0.2),
-    #         label_pos="bottom",
-    #         label_kws=dict(size=10, orientation="horizontal"),
-    #     )
+        # Plot stacked bar
+        sb_table = track.stacked_bar(
+            table_df,
+            width=0.6,
+            cmap="Set3",
+        )
+        x_list = sb_table.calc_bar_label_x_list(track.size)
+        track.xticks(
+            x=x_list,
+            labels=sb_table.row_names,
+            outer=False,
+            tick_length=0,
+            label_margin=2,
+            label_orientation="horizontal",
+            text_kws=dict(font=dict(size=12)),
+        )
 
-    #     circos.savefig(fig_outfile)
-    #     assert fig_outfile.exists()
+        fig = circos.plotfig()
+        assert isinstance(fig, go.Figure)
 
-    # def test_track_stacked_barh_plot(fig_outfile: Path):
-    #     """Test `track.stacked_barh()`"""
-    #     # Generate & load matrix data for horizontal stacked bar plot
-    #     row_names = list("ABCDEF")
-    #     col_names = ["group1", "group2", "group3", "group4", "group5", "group6"]
-    #     matrix = np.random.randint(5, 20, (len(row_names), len(col_names)))
-    #     table_df = pd.DataFrame(matrix, index=row_names, columns=col_names)
-    #     sb_table = StackedBarTable(table_df)
+    def test_track_stacked_barh_plot(self):
+        """Test `track.stacked_barh()`"""
+        # Generate & load matrix data for horizontal stacked bar plot
+        row_names = list("ABCDEF")
+        col_names = ["group1", "group2", "group3", "group4", "group5", "group6"]
+        matrix = np.random.randint(5, 20, (len(row_names), len(col_names)))
+        table_df = pd.DataFrame(matrix, index=row_names, columns=col_names)
+        sb_table = StackedBarTable(table_df)
 
-    #     # Initialize Circos sector & track (0 <= range <= 270)
-    #     circos = Circos(sectors=dict(bar=sb_table.row_sum_vmax), start=0, end=270)
-    #     sector = circos.sectors[0]
-    #     track = sector.add_track((30, 100))
-    #     track.axis(fc="lightgrey", ec="black", alpha=0.5)
+        # Initialize Circos sector & track (0 <= range <= 270)
+        circos = Circos(sectors=dict(bar=sb_table.row_sum_vmax), start=0, end=270)
+        sector = circos.sectors[0]
+        track = sector.add_track((30, 100))
+        track.axis(fillcolor="lightgrey", line=dict(color="black"), opacity=0.5)
 
-    #     # Plot horizontal stacked bar & label & xticks
-    #     track.stacked_barh(sb_table.dataframe, cmap="tab10", width=0.6)
-    #     label_r_list = sb_table.calc_barh_label_r_list(track.r_plot_lim)
-    #     for label_r, row_name in zip(label_r_list, sb_table.row_names):
-    #         track.text(f"{row_name} ", x=0, r=label_r, ha="right")
-    #     track.xticks_by_interval(interval=5)
-    #     track.xticks_by_interval(interval=1, tick_length=1, show_label=False)
+        # Plot horizontal stacked bar & label & xticks
+        track.stacked_barh(sb_table.dataframe, cmap="T10", width=0.6)
+        label_r_list = sb_table.calc_barh_label_r_list(track.r_plot_lim)
+        for label_r, row_name in zip(label_r_list, sb_table.row_names):
+            track.text(f"{row_name} ", x=0, r=label_r, xanchor="right")
+        track.xticks_by_interval(interval=5)
+        track.xticks_by_interval(interval=1, tick_length=1, show_label=False)
 
-    #     circos.savefig(fig_outfile)
-    #     assert fig_outfile.exists()
+        fig = circos.plotfig()
+        assert isinstance(fig, go.Figure)
 
     def test_track_fill_between_plot(self, circos: Circos):
         """Test `track.fill_between()`"""
@@ -664,85 +632,94 @@ class TestTrackPlots:
         fig = circos.plotfig()
         assert isinstance(fig, go.Figure)
 
+    def test_track_tree_plot(self):
+        """Test `track.heatmap()`"""
+        # Load newick tree
+        tree_text = "((((A:1,B:1)100:1,(C:1,D:1)100:1)100:1,(E:2,F:2)90:1):1,G:6)100;"
+        tree = Phylo.read(StringIO(tree_text), "newick")
+        # Initialize circos sector by tree size
+        circos = Circos(sectors={"Tree": tree.count_terminals()})
+        sector = circos.sectors[0]
+        # Plot tree
+        track = sector.add_track((50, 100))
+        track.axis(line=dict(color="lightgrey"))
+        track.tree(tree, leaf_label_size=12)
 
-# def test_track_tree_plot(fig_outfile: Path):
-#     """Test `track.heatmap()`"""
-#     # Load newick tree
-#     tree_text = "((((A:1,B:1)100:1,(C:1,D:1)100:1)100:1,(E:2,F:2)90:1):1,G:6)100;"
-#     tree = Phylo.read(StringIO(tree_text), "newick")
-#     # Initialize circos sector by tree size
-#     circos = Circos(sectors={"Tree": tree.count_terminals()})
-#     sector = circos.sectors[0]
-#     # Plot tree
-#     track = sector.add_track((50, 100))
-#     track.axis(ec="lightgrey")
-#     track.tree(tree, leaf_label_size=12)
+        fig = circos.plotfig()
+        assert isinstance(fig, go.Figure)
 
-#     circos.savefig(fig_outfile)
-#     assert fig_outfile.exists()
+    def test_track_genomic_features_genbank_plot(
+        self,
+        prokaryote_testdata_dir: Path,
+    ):
+        """Test `track.genomic_features()` with genbank file"""
+        # Load Genbank file
+        gbk_file = load_prokaryote_example_file(
+            "enterobacteria_phage.gbk",
+            cache_dir=prokaryote_testdata_dir,
+        )
+        gbk = Genbank(gbk_file)
+        # Initialize circos sector by genome size
+        circos = Circos(sectors={gbk.name: gbk.range_size})
+        circos.text("Enterobacteria phage\n(NC_000902)", font=dict(size=15))
+        sector = circos.sectors[0]
+        # Outer track
+        outer_track = sector.add_track((98, 100))
+        outer_track.axis(fillcolor="lightgrey")
+        outer_track.xticks_by_interval(
+            5000, label_formatter=lambda v: f"{v / 1000:.0f} Kb"
+        )
+        outer_track.xticks_by_interval(1000, tick_length=1, show_label=False)
+        # Plot forward & reverse CDS genomic features
+        cds_track = sector.add_track((90, 95))
+        cds_track.genomic_features(
+            gbk.extract_features("CDS", target_strand=1),
+            plotstyle="arrow",
+            fillcolor="salmon",
+        )
+        cds_track.genomic_features(
+            gbk.extract_features("CDS", target_strand=-1),
+            plotstyle="arrow",
+            fillcolor="skyblue",
+        )
 
+        fig = circos.plotfig()
+        assert isinstance(fig, go.Figure)
 
-# def test_track_genomic_features_genbank_plot(
-#     fig_outfile: Path,
-#     prokaryote_testdata_dir: Path,
-# ):
-#     """Test `track.genomic_features()` with genbank file"""
-#     # Load Genbank file
-#     gbk_file = load_prokaryote_example_file(
-#         "enterobacteria_phage.gbk",
-#         cache_dir=prokaryote_testdata_dir,
-#     )
-#     gbk = Genbank(gbk_file)
-#     # Initialize circos sector by genome size
-#     circos = Circos(sectors={gbk.name: gbk.range_size})
-#     circos.text("Enterobacteria phage\n(NC_000902)", size=15)
-#     sector = circos.sectors[0]
-#     # Outer track
-#     outer_track = sector.add_track((98, 100))
-#     outer_track.axis(fc="lightgrey")
-#   outer_track.xticks_by_interval(5000, label_formatter=lambda v: f"{v / 1000:.0f} Kb")
-#     outer_track.xticks_by_interval(1000, tick_length=1, show_label=False)
-#     # Plot forward & reverse CDS genomic features
-#     cds_track = sector.add_track((90, 95))
-#     cds_track.genomic_features(
-#         gbk.extract_features("CDS", target_strand=1), plotstyle="arrow", fc="salmon"
-#     )
-#     cds_track.genomic_features(
-#         gbk.extract_features("CDS", target_strand=-1), plotstyle="arrow", fc="skyblue"
-#     )
+    def test_track_genomic_features_gff_plot(
+        self,
+        prokaryote_testdata_dir: Path,
+    ):
+        """Test `track.genomic_features()` with gff file"""
+        # Load Genbank file
+        gff_file = load_prokaryote_example_file(
+            "enterobacteria_phage.gff",
+            cache_dir=prokaryote_testdata_dir,
+        )
+        gff = Gff(gff_file)
+        # Initialize circos sector by genome size
+        circos = Circos(sectors={gff.name: gff.range_size})
+        circos.text("Enterobacteria phage\n(NC_000902)", font=dict(size=15))
+        sector = circos.sectors[0]
+        # Outer track
+        outer_track = sector.add_track((98, 100))
+        outer_track.axis(fillcolor="lightgrey")
+        outer_track.xticks_by_interval(
+            5000, label_formatter=lambda v: f"{v / 1000:.0f} Kb"
+        )
+        outer_track.xticks_by_interval(1000, tick_length=1, show_label=False)
+        # Plot forward & reverse CDS genomic features
+        cds_track = sector.add_track((90, 95))
+        cds_track.genomic_features(
+            gff.extract_features("CDS", target_strand=1),
+            plotstyle="arrow",
+            fillcolor="salmon",
+        )
+        cds_track.genomic_features(
+            gff.extract_features("CDS", target_strand=-1),
+            plotstyle="arrow",
+            fillcolor="skyblue",
+        )
 
-#     circos.savefig(fig_outfile)
-#     assert fig_outfile.exists()
-
-
-# def test_track_genomic_features_gff_plot(
-#     fig_outfile: Path,
-#     prokaryote_testdata_dir: Path,
-# ):
-#     """Test `track.genomic_features()` with gff file"""
-#     # Load Genbank file
-#     gff_file = load_prokaryote_example_file(
-#         "enterobacteria_phage.gff",
-#         cache_dir=prokaryote_testdata_dir,
-#     )
-#     gff = Gff(gff_file)
-#     # Initialize circos sector by genome size
-#     circos = Circos(sectors={gff.name: gff.range_size})
-#     circos.text("Enterobacteria phage\n(NC_000902)", size=15)
-#     sector = circos.sectors[0]
-#     # Outer track
-#     outer_track = sector.add_track((98, 100))
-#     outer_track.axis(fc="lightgrey")
-#   outer_track.xticks_by_interval(5000, label_formatter=lambda v: f"{v / 1000:.0f} Kb")
-#     outer_track.xticks_by_interval(1000, tick_length=1, show_label=False)
-#     # Plot forward & reverse CDS genomic features
-#     cds_track = sector.add_track((90, 95))
-#     cds_track.genomic_features(
-#         gff.extract_features("CDS", target_strand=1), plotstyle="arrow", fc="salmon"
-#     )
-#     cds_track.genomic_features(
-#         gff.extract_features("CDS", target_strand=-1), plotstyle="arrow", fc="skyblue"
-#     )
-
-#     circos.savefig(fig_outfile)
-#     assert fig_outfile.exists()
+        fig = circos.plotfig()
+        assert isinstance(fig, go.Figure)

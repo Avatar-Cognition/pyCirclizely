@@ -1,4 +1,4 @@
-from typing import ClassVar, List, Tuple
+from typing import ClassVar
 
 import numpy as np
 
@@ -11,7 +11,7 @@ class PolarSVGPatchBuilder:
     n_points: ClassVar[int] = int(config.ARC_POINTS)  # Ensure this is an integer
 
     @staticmethod
-    def _polar_to_cart(theta: float, r: float) -> Tuple[float, float]:
+    def _polar_to_cart(theta: float, r: float) -> tuple[float, float]:
         """Convert polar to Cartesian coordinates with Plotly orientation."""
         adjusted_theta = -(theta - np.pi / 2)  # 0°=up, clockwise
         x = r * np.cos(adjusted_theta)
@@ -20,7 +20,7 @@ class PolarSVGPatchBuilder:
 
     @classmethod
     def arc_rectangle(
-        cls, radr: Tuple[float, float], width: float, height: float
+        cls, radr: tuple[float, float], width: float, height: float
     ) -> str:
         """Create rectangular arc sector approximated with line segments."""
         min_rad, min_r = radr
@@ -50,7 +50,7 @@ class PolarSVGPatchBuilder:
         return path
 
     @classmethod
-    def arc_line(cls, rad_lim: Tuple[float, float], r_lim: Tuple[float, float]) -> str:
+    def arc_line(cls, rad_lim: tuple[float, float], r_lim: tuple[float, float]) -> str:
         """Create smooth arc between two points."""
         rad_start, rad_end = rad_lim
         r_start, r_end = r_lim
@@ -78,7 +78,7 @@ class PolarSVGPatchBuilder:
 
     @classmethod
     def multi_segment_path(
-        cls, rad: List[float], r: List[float], arc: bool = True
+        cls, rad: list[float], r: list[float], arc: bool = True
     ) -> str:
         """Builds a full line path by chaining segments between adjacent points."""
         if len(rad) != len(r):
@@ -102,7 +102,7 @@ class PolarSVGPatchBuilder:
 
     @classmethod
     def straight_line(
-        cls, rad_lim: Tuple[float, float], r_lim: Tuple[float, float]
+        cls, rad_lim: tuple[float, float], r_lim: tuple[float, float]
     ) -> str:
         """Create straight line between two points."""
         start = cls._polar_to_cart(rad_lim[0], r_lim[0])

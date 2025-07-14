@@ -32,3 +32,5 @@ tenacity==9.1.2
     # via plotly
 tzdata==2025.2
     # via pandas
+webcolors==24.11.1
+    # via pycirclizely

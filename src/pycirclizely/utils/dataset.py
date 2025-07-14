@@ -18,32 +18,22 @@ def load_prokaryote_example_file(
     cache_dir: str | Path | None = None,
     overwrite_cache: bool = False,
 ) -> Path:
-    """Load pycirclize example Genbank or GFF file
+    """Load pycirclize example Genbank or GFF file.
 
     Load example file from <https://github.com/moshi4/pycirclize-data/>
     and cache file in local directory (Default: `~/.cache/pycirclize/`).
 
-    List of example Genbank or GFF filename
+    List of example Genbank or GFF filename:
 
     - `enterobacteria_phage.[gbk|gff]`
     - `mycoplasma_alvi.[gbk|gff]`
     - `escherichia_coli.[gbk|gff].gz`
 
-    Parameters
-    ----------
-    filename : str
-        Genbank or GFF filename (e.g. `enterobacteria_phage.gff`)
-    cache_dir : str | Path | None, optional
-        Output cache directory (Default: `~/.cache/pycirclize/`)
-    overwrite_cache : bool, optional
-        If True, overwrite cache file.
-        Assumed to be used when cache file is corrupt.
-
-    Returns
-    -------
-    file_path : Path
-        Genbank or GFF file
-
+    Args:
+        filename: Genbank or GFF filename (e.g. `enterobacteria_phage.gff`).
+        cache_dir: Output cache directory (Default: `~/.cache/pycirclize/`).
+        overwrite_cache: If True, overwrite cache file.
+            Assumed to be used when cache file is corrupt.
     """
     # Check specified filename exists or not
     if filename not in config.PROKARYOTE_FILES:
@@ -75,36 +65,22 @@ def load_eukaryote_example_dataset(
     cache_dir: str | Path | None = None,
     overwrite_cache: bool = False,
 ) -> tuple[Path, Path, list[ChrLink]]:
-    """Load pycirclize eukaryote example dataset
+    """Load pycirclize eukaryote example dataset.
 
     Load example file from <https://github.com/moshi4/pycirclize-data/>
     and cache file in local directory (Default: `~/.cache/pycirclize/`).
 
-    List of dataset contents (download from UCSC)
+    List of dataset contents (download from UCSC):
 
     1. Chromosome BED file (e.g. `chr1 0 248956422`)
     2. Cytoband file (e.g. `chr1 0 2300000 p36.33 gneg`)
     3. Chromosome links (e.g. `chr1 1000 4321 chr3 8000 5600`)
 
-    Parameters
-    ----------
-    name : str, optional
-        Dataset name (`hg38`|`hs1`|`mm10`|`mm39`)
-    cache_dir : str | Path | None, optional
-        Output cache directory (Default: `~/.cache/pycirclize/`)
-    overwrite_cache : bool
-        If True, overwrite cache dataset.
-        Assumed to be used when cache dataset is corrupt.
-
-    Returns
-    -------
-    chr_bed_file : Path
-        BED file
-    cytoband_file : Path
-        Cytoband file
-    chr_links : list[ChrLink]
-        Chromosome links
-
+    Args:
+        name: Dataset name (`hg38`|`hs1`|`mm10`|`mm39`).
+        cache_dir: Output cache directory (Default: `~/.cache/pycirclize/`).
+        overwrite_cache: If True, overwrite cache dataset.
+            Assumed to be used when cache dataset is corrupt.
     """
     # Check specified name dataset exists or not
     if name not in config.EUKARYOTE_DATASET:
@@ -139,25 +115,17 @@ def load_eukaryote_example_dataset(
 
 
 def load_example_tree_file(filename: str) -> Path:
-    """Load example phylogenetic tree file
+    """Load example phylogenetic tree file.
 
-    List of example tree filename
+    List of example tree filename:
 
     - `small_example.nwk` (7 species)
     - `medium_example.nwk` (21 species)
     - `large_example.nwk` (190 species)
     - `alphabet.nwk` (26 species)
 
-    Parameters
-    ----------
-    filename : str
-        Target filename
-
-    Returns
-    -------
-    tree_file : Path
-        Tree file (Newick format)
-
+    Args:
+        filename: Target filename.
     """
     example_data_dir = Path(__file__).parent / "example_data" / "trees"
     example_files = example_data_dir.glob("*.nwk")
@@ -173,27 +141,12 @@ def fetch_genbank_by_accid(
     gbk_outfile: Union[str, Path, None] = None,
     email: Union[str, None] = None,
 ) -> TextIO:
-    """Fetch genbank text by `Accession ID`
+    """Fetch genbank text by `Accession ID`.
 
-    Parameters
-    ----------
-    accid : str
-        Accession ID
-    gbk_outfile : str | Path | None, optional
-        If file path is set, write fetch data to file
-    email : str | None, optional
-        Email address to notify download limitation (Required for bulk download)
-
-    Returns
-    -------
-    TextIO
-        Genbank data (either TextIOWrapper or StringIO)
-
-    Examples
-    --------
-    >>> gbk_fetch_data = fetch_genbank_by_accid("NC_002483")
-    >>> gbk = Genbank(gbk_fetch_data)
-
+    Args:
+        accid: Accession ID.
+        gbk_outfile: If file path is set, write fetch data to file.
+        email: Email address to notify download limitation (Required for bulk download).
     """
     # Handle email assignment
     setattr(Entrez, "email", email if email is not None else "")
@@ -220,7 +173,7 @@ def fetch_genbank_by_accid(
 
 @dataclass
 class ChrLink:
-    """Chromosome Link DataClass"""
+    """Chromosome Link DataClass."""
 
     query_chr: str
     query_start: int
@@ -231,18 +184,9 @@ class ChrLink:
 
     @staticmethod
     def load(chr_link_file: str | Path) -> list[ChrLink]:
-        """Load chromosome link file
-
-        Parameters
-        ----------
-        chr_link_file : str | Path
-            Chromosome link file
-
-        Returns
-        -------
-        chr_link_list : list[ChrLink]
-            Chromosome link list
-
+        """
+        Args:
+            chr_link_file: Chromosome link file.
         """
         chr_link_list = []
         with open(chr_link_file, encoding="utf-8") as f:

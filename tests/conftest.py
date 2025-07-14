@@ -112,5 +112,5 @@ def circos():
 @pytest.fixture
 def fig(circos: Circos):
     """Fixture that returns a Figure object"""
-    circos.axis()  # Add default axis
+    circos.axis()
     return circos.plotfig()
