@@ -1,5 +1,5 @@
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Union
+from dataclasses import dataclass, field
+from typing import Optional, Union
 
 import numpy as np
 from plotly.basedatatypes import BaseTraceType
@@ -15,31 +15,17 @@ from .plot import build_scatter_trace
 
 @dataclass
 class HoverFormatter:
-    hover_texts: List[str]
-    hover_x: List[float]
-    hover_y: List[float]
-    hover_colors: List[str]
-    precision_position: int
-
-    def __init__(
-        self,
-        precision_position: int = 2,
-    ):
-        """
-        Args:
-            precision_position: Decimal precision for position values
-        """
-        self.precision_position = precision_position
-        self.hover_texts = []
-        self.hover_x = []
-        self.hover_y = []
-        self.hover_colors = []
+    hover_texts: list[str] = field(default_factory=list)
+    hover_x: list[float] = field(default_factory=list)
+    hover_y: list[float] = field(default_factory=list)
+    hover_colors: list[str] = field(default_factory=list)
+    precision_position: int = 2
 
     def process_hover_text(
         self,
         x: NumericSequence,
         y: NumericSequence,
-        colors: Union[str, List[str]],
+        colors: Union[str, list[str]],
         x2: Optional[NumericSequence] = None,
         sector_name: Optional[str] = None,
         hover_text: HoverText = "default",
@@ -72,7 +58,7 @@ class HoverFormatter:
     def process_stacked_bar_hover_text(
         self,
         sb_table: StackedBarTable,
-        col_name2color: Dict[str, str],
+        col_name2color: dict[str, str],
         hover_text: HoverText = "default",
     ) -> None:
         """
@@ -155,7 +141,7 @@ class HoverFormatter:
         y: NumericSequence,
         x2: Optional[NumericSequence] = None,
         sector_name: Optional[str] = None,
-    ) -> List[str]:
+    ) -> list[str]:
         value_format = (
             f".{self.precision_position}f" if self.precision_position > 0 else ".0f"
         )
@@ -186,7 +172,7 @@ class HoverFormatter:
     def _default_stackedbar_hovertext(
         self,
         sb_table: StackedBarTable,
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Generate default hover text for stacked bar plots.
 

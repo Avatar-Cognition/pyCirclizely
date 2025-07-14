@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 
 import pandas as pd
 
@@ -19,17 +19,17 @@ def chord_diagram_impl(
     *,
     start: float = 0,
     end: float = 360,
-    space: Union[float, List[float]] = 0,
+    space: Union[float, list[float]] = 0,
     endspace: bool = True,
     r_lim: tuple[float, float] = (97, 100),
-    cmap: Union[str, Dict[str, str]] = "Viridis",
-    link_cmap: Optional[List[tuple[str, str, str]]] = None,
+    cmap: Union[str, dict[str, str]] = "Viridis",
+    link_cmap: Optional[list[tuple[str, str, str]]] = None,
     ticks_interval: Optional[int] = None,
-    order: Union[str, List[str], None] = None,
-    label_kws: Optional[Dict[str, Any]] = None,
-    ticks_kws: Optional[Dict[str, Any]] = None,
-    link_kws: Optional[Dict[str, Any]] = None,
-    link_kws_handler: Optional[Callable[[str, str], Optional[Dict[str, Any]]]] = None,
+    order: Union[str, list[str], None] = None,
+    label_kws: Optional[dict[str, Any]] = None,
+    ticks_kws: Optional[dict[str, Any]] = None,
+    link_kws: Optional[dict[str, Any]] = None,
+    link_kws_handler: Optional[Callable[[str, str], Optional[dict[str, Any]]]] = None,
 ) -> Circos:
     """Chord diagram implementation for visualizing relationships in a matrix."""
     from ..circos import Circos  # Local import to avoid circular import
@@ -47,7 +47,7 @@ def chord_diagram_impl(
 
     # Get name2color dict from user-specified colormap
     names = matrix.all_names
-    name2color: Dict[str, str]
+    name2color: dict[str, str]
     if isinstance(cmap, str):
         color_cycler = utils.ColorCycler(cmap)
         colors = [color_cycler.get_color(i) for i in range(len(names))]

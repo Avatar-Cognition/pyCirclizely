@@ -6,7 +6,7 @@ import textwrap
 from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -163,15 +163,15 @@ class Circos:
         marker_size: int = 0,
         bg_color: Optional[str] = "#eeeeee80",
         circular: bool = False,
-        cmap: Union[str, Dict[str, str]] = "Set2",
+        cmap: Union[str, dict[str, str]] = "Set2",
         show_grid_label: bool = True,
         grid_interval_ratio: Optional[float] = 0.2,
-        grid_line_kws: Optional[Dict[str, Any]] = None,
-        grid_label_kws: Optional[Dict[str, Any]] = None,
+        grid_line_kws: Optional[dict[str, Any]] = None,
+        grid_label_kws: Optional[dict[str, Any]] = None,
         grid_label_formatter: LabelFormatter = None,
-        label_kws_handler: Optional[Callable[[str], Dict[str, Any]]] = None,
-        line_kws_handler: Optional[Callable[[str], Dict[str, Any]]] = None,
-        marker_kws_handler: Optional[Callable[[str], Dict[str, Any]]] = None,
+        label_kws_handler: Optional[Callable[[str], dict[str, Any]]] = None,
+        line_kws_handler: Optional[Callable[[str], dict[str, Any]]] = None,
+        marker_kws_handler: Optional[Callable[[str], dict[str, Any]]] = None,
     ) -> Circos:
         """
         Args:
@@ -222,18 +222,18 @@ class Circos:
         *,
         start: float = 0,
         end: float = 360,
-        space: Union[float, List[float]] = 0,
+        space: Union[float, list[float]] = 0,
         endspace: bool = True,
         r_lim: tuple[float, float] = (97, 100),
-        cmap: Union[str, Dict[str, str]] = "Viridis",
-        link_cmap: Optional[List[tuple[str, str, str]]] = None,
+        cmap: Union[str, dict[str, str]] = "Viridis",
+        link_cmap: Optional[list[tuple[str, str, str]]] = None,
         ticks_interval: Optional[int] = None,
-        order: Union[str, List[str], None] = None,
-        label_kws: Optional[Dict[str, Any]] = None,
-        ticks_kws: Optional[Dict[str, Any]] = None,
-        link_kws: Optional[Dict[str, Any]] = None,
+        order: Union[str, list[str], None] = None,
+        label_kws: Optional[dict[str, Any]] = None,
+        ticks_kws: Optional[dict[str, Any]] = None,
+        link_kws: Optional[dict[str, Any]] = None,
         link_kws_handler: Optional[
-            Callable[[str, str], Optional[Dict[str, Any]]]
+            Callable[[str, str], Optional[dict[str, Any]]]
         ] = None,
     ) -> Circos:
         """Plot chord diagram from matrix data.

@@ -7,7 +7,7 @@ import zipfile
 from collections import defaultdict
 from io import StringIO, TextIOWrapper
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
 from Bio import SeqIO, SeqUtils
@@ -122,7 +122,7 @@ class Genbank:
         step_size: Optional[int] = None,
         *,
         seq: Optional[str] = None,
-    ) -> Tuple[NDArray[np.int64], NDArray[np.float64]]:
+    ) -> tuple[NDArray[np.int64], NDArray[np.float64]]:
         """
         Args:
             window_size: Window size (Default: `genome_size / 500`).
@@ -211,9 +211,9 @@ class Genbank:
 
     def get_seqid2features(
         self,
-        feature_type: Union[str, List[str], None] = "CDS",
+        feature_type: Union[str, list[str], None] = "CDS",
         target_strand: Optional[int] = None,
-    ) -> Dict[str, List[SeqFeature]]:
+    ) -> dict[str, list[SeqFeature]]:
         """Get seqid & features in target seqid genome dict
 
         Args:
@@ -225,7 +225,7 @@ class Genbank:
         if isinstance(feature_type, str):
             feature_type = [feature_type]
 
-        seqid2features: Dict[str, List[SeqFeature]] = defaultdict(list)
+        seqid2features: dict[str, list[SeqFeature]] = defaultdict(list)
         for rec in self.records:
             for feature in rec.features:
                 # Ignore feature if parsing of location fails

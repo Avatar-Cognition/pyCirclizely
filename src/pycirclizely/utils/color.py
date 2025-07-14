@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from plotly.colors import qualitative, sequential  # type: ignore[attr-defined]
 from webcolors import hex_to_rgb, name_to_rgb
@@ -10,15 +10,15 @@ from webcolors import hex_to_rgb, name_to_rgb
 class ColorPalette:
     """Container for color palette configuration."""
 
-    class PaletteType(Enum):
+    class Type(Enum):
         """Type of ploty color palettes."""
 
         QUALITATIVE = "qualitative"
         SEQUENTIAL = "sequential"
 
     name: str
-    colors: List[str]
-    palette_type: PaletteType
+    colors: list[str]
+    palette_type: Type
     counter: int = 0
 
 
@@ -36,8 +36,8 @@ class ColorCycler:
 
     def __init__(
         self,
-        palette: Union[str, List[str]] = "Plotly",
-        palette_type: Optional[ColorPalette.PaletteType] = None,
+        palette: Union[str, list[str]] = "Plotly",
+        palette_type: Optional[ColorPalette.Type] = None,
     ):
         """
         Args:
@@ -49,25 +49,25 @@ class ColorCycler:
 
     def _initialize_palette(
         self,
-        palette: Union[str, List[str]],
-        palette_type: Optional[ColorPalette.PaletteType] = None,
+        palette: Union[str, list[str]],
+        palette_type: Optional[ColorPalette.Type] = None,
     ) -> ColorPalette:
         """Initialize a color palette from name or list of colors."""
         if isinstance(palette, str):
             # Handle built-in plotly palettes
             palette_type = palette_type or self._detect_palette_type(palette)
 
-            if palette_type == ColorPalette.PaletteType.QUALITATIVE:
+            if palette_type == ColorPalette.Type.QUALITATIVE:
                 if not hasattr(qualitative, palette):
                     raise ValueError(f"Qualitative palette '{palette}' not found")
                 colors = getattr(qualitative, palette)
-            elif palette_type == ColorPalette.PaletteType.SEQUENTIAL:
+            elif palette_type == ColorPalette.Type.SEQUENTIAL:
                 if not hasattr(sequential, palette):
                     raise ValueError(f"Sequential palette '{palette}' not found")
                 colors = getattr(sequential, palette)
         else:
             # Handle custom color lists
-            if not isinstance(palette_type, ColorPalette.PaletteType):
+            if not isinstance(palette_type, ColorPalette.Type):
                 raise ValueError(
                     "palette_type must be specified for custom color lists"
                 )
@@ -79,12 +79,12 @@ class ColorCycler:
             palette_type=palette_type,
         )
 
-    def _detect_palette_type(self, palette_name: str) -> ColorPalette.PaletteType:
+    def _detect_palette_type(self, palette_name: str) -> ColorPalette.Type:
         """Detect if a palette is qualitative or sequential."""
         if hasattr(qualitative, palette_name):
-            return ColorPalette.PaletteType.QUALITATIVE
+            return ColorPalette.Type.QUALITATIVE
         elif hasattr(sequential, palette_name):
-            return ColorPalette.PaletteType.SEQUENTIAL
+            return ColorPalette.Type.SEQUENTIAL
         raise ValueError(f"Could not detect palette type for '{palette_name}'")
 
     def get_color(self, index: Optional[int] = None) -> str:
@@ -99,7 +99,7 @@ class ColorCycler:
             index = self._palette.counter
             self._palette.counter += 1
 
-        if self._palette.palette_type == ColorPalette.PaletteType.SEQUENTIAL:
+        if self._palette.palette_type == ColorPalette.Type.SEQUENTIAL:
             # For sequential palettes, distribute colors evenly
             idx = int(
                 (index % len(self._palette.colors))
@@ -111,7 +111,7 @@ class ColorCycler:
             # For qualitative palettes, cycle through colors
             return self._palette.colors[index % len(self._palette.colors)]
 
-    def get_colors(self, count: int) -> List[str]:
+    def get_colors(self, count: int) -> list[str]:
         """Get multiple colors from the palette.
 
         Args:
@@ -121,7 +121,7 @@ class ColorCycler:
         if count <= 0:
             raise ValueError(f"Count must be positive, got {count}")
 
-        if self._palette.palette_type == ColorPalette.PaletteType.SEQUENTIAL:
+        if self._palette.palette_type == ColorPalette.Type.SEQUENTIAL:
             if count == 1:
                 return [self._palette.colors[len(self._palette.colors) // 2]]
             return [
@@ -142,8 +142,8 @@ class ColorCycler:
 
     def set_palette(
         self,
-        palette: Union[str, List[str]],
-        palette_type: Optional[ColorPalette.PaletteType] = None,
+        palette: Union[str, list[str]],
+        palette_type: Optional[ColorPalette.Type] = None,
     ) -> None:
         """Change the current color palette.
 
@@ -161,7 +161,7 @@ class ColorCycler:
         return self._palette.name
 
     @property
-    def palette_type(self) -> ColorPalette.PaletteType:
+    def palette_type(self) -> ColorPalette.Type:
         """Get the type of the current palette."""
         return self._palette.palette_type
 

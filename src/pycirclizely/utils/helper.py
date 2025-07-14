@@ -1,12 +1,12 @@
 import collections.abc
-from typing import Any, Dict, Mapping, cast
+from typing import Any, Mapping, cast
 
 from Bio.SeqFeature import SeqFeature
 
 
 def deep_dict_update(
-    orig_dict: Dict[str, Any], new_dict: Mapping[str, Any]
-) -> Dict[str, Any]:
+    orig_dict: dict[str, Any], new_dict: Mapping[str, Any]
+) -> dict[str, Any]:
     """Recursively updates a nested dictionary with the content of another dictionary.
 
     Args:
@@ -30,7 +30,7 @@ def deep_dict_update(
                 (
                     deep_dict_update(
                         orig_dict[key][i] if i < len(orig_dict[key]) else {},
-                        cast(Dict[str, Any], item),  # Cast to Dict for type checker
+                        cast(dict[str, Any], item),  # Cast to dict for type checker
                     )
                     if isinstance(item, collections.abc.Mapping)
                     else item
