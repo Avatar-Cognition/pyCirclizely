@@ -1068,7 +1068,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <!-- End of mermaid configuration --><div class="jupyter-wrapper">
 <div class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
 <div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=3c6325a1">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=b0deba44">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -1095,7 +1095,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 </div>
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=e47d407f">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=39d7c46d">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -1138,7 +1138,7 @@ from urllib.request import urlopen</div>
 </div>
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=04004751">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=195a7fef">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -1167,7 +1167,7 @@ from Bio.Phylo.BaseTree import Clade, Tree</div>
 </div>
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=99287ada">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=666bd24a">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -1196,7 +1196,7 @@ from pycirclizely.types import TextFormatter</div>
 </div>
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=7508d5ca">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=89712a7b">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -1225,7 +1225,7 @@ from pycirclizely.types import TextFormatter</div>
 </div>
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=f7d68bf5">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=c007a08d">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -1666,9 +1666,9 @@ from pycirclizely.types import TextFormatter</div>
                 <span class="n">node_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">descendent_node</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_node2line_props</span><span class="p">[</span><span class="n">node_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">kwargs</span>
                 <span class="k">if</span> <span class="n">apply_label_color</span> <span class="ow">and</span> <span class="s2">"color"</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">"line"</span><span class="p">]:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_node2line_props</span><span class="p">[</span><span class="n">node_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">deep_dict_update</span><span class="p">(</span>
-                        <span class="nb">dict</span><span class="p">(</span><span class="n">line</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">"line"</span><span class="p">][</span><span class="s2">"color"</span><span class="p">])),</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">_node2line_props</span><span class="p">[</span><span class="n">node_name</span><span class="p">],</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_node2label_props</span><span class="p">[</span><span class="n">node_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">deep_dict_update</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_node2label_props</span><span class="p">[</span><span class="n">node_name</span><span class="p">],</span>
+                        <span class="nb">dict</span><span class="p">(</span><span class="n">font</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">"line"</span><span class="p">][</span><span class="s2">"color"</span><span class="p">])),</span>
                     <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_node2line_props</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">clade</span><span class="o">.</span><span class="n">name</span><span class="p">)]</span> <span class="o">=</span> <span class="n">kwargs</span>
@@ -2325,9 +2325,9 @@ from pycirclizely.types import TextFormatter</div>
                 node_name = str(descendent_node.name)
                 self._node2line_props[node_name] = kwargs
                 if apply_label_color and "color" in kwargs["line"]:
-                    self._node2line_props[node_name] = utils.deep_dict_update(
-                        dict(line=dict(color=kwargs["line"]["color"])),
-                        self._node2line_props[node_name],
+                    self._node2label_props[node_name] = utils.deep_dict_update(
+                        self._node2label_props[node_name],
+                        dict(font=dict(color=kwargs["line"]["color"])),
                     )
         else:
             self._node2line_props[str(clade.name)] = kwargs
