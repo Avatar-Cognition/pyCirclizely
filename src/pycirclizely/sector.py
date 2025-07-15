@@ -4,6 +4,7 @@ import math
 import textwrap
 import warnings
 from copy import deepcopy
+from typing import Any
 
 import numpy as np
 import plotly.graph_objects as go
@@ -187,7 +188,7 @@ class Sector:
         rad = min(self.rad_lim) + rad_from_start
         return rad
 
-    def axis(self, **kwargs) -> None:
+    def axis(self, **kwargs: Any) -> None:
         """Plot axis shapes for the sector.
 
         Args:
@@ -219,7 +220,7 @@ class Sector:
         adjust_rotation: bool = True,
         orientation: str = "horizontal",
         ignore_range_error: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Plot text within a sector. Uses genomic coordinates (x) mapped to radians.
 
@@ -261,7 +262,7 @@ class Sector:
         start: float | None = None,
         end: float | None = None,
         arc: bool = True,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Plot line with sector-relative coordinates.
 
@@ -301,7 +302,7 @@ class Sector:
         start: int | float | None = None,
         end: int | float | None = None,
         r_lim: tuple[float, float] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Plot a rectangle spanning angular and radial ranges.
 

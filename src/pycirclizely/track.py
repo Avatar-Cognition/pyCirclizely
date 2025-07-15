@@ -189,7 +189,7 @@ class Track:
         """
         return self.parent_sector.x_to_rad(x, ignore_range_error)
 
-    def axis(self, **kwargs) -> None:
+    def axis(self, **kwargs: Any) -> None:
         """
         Args:
             **kwargs: Shape properties.
@@ -222,7 +222,7 @@ class Track:
         ignore_range_error: bool = False,
         outer: bool = True,
         axis: str | bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Plot text within a track. Uses genomic coordinates (x) mapped to radians.
 
@@ -289,7 +289,7 @@ class Track:
         *,
         r_lim: tuple[float, float] | None = None,
         ignore_pad: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Plot a rectangle within a track, respecting padding settings.
 
@@ -331,7 +331,7 @@ class Track:
         r_lim: tuple[float, float] | None = None,
         head_length: float = 2,
         shaft_ratio: float = 0.5,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Plot arrow using SVG path.
 
@@ -574,7 +574,7 @@ class Track:
         self,
         y_grid_num: int | None = 6,
         x_grid_interval: float | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """
         Args:
@@ -620,7 +620,7 @@ class Track:
         vmax: Numeric | None = None,
         arc: bool = True,
         hover_text: HoverText = "default",
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """
         Args:
@@ -676,7 +676,7 @@ class Track:
         vmin: Numeric = 0,
         vmax: Numeric | None = None,
         hover_text: HoverText = "default",
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """
         Args:
@@ -735,7 +735,7 @@ class Track:
         vmin: Numeric = 0,
         vmax: Numeric | None = None,
         hover_text: HoverText = "default",
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """
         Args:
@@ -839,7 +839,7 @@ class Track:
         cmap: str | dict[str, str] = "T10",
         vmax: float | None = None,
         hover_text: HoverText = "default",
-        **kwargs,
+        **kwargs: Any,
     ) -> StackedBarTable:
         """
         Args:
@@ -934,7 +934,7 @@ class Track:
         cmap: str | dict[str, str] = "T10",
         vmax: float | None = None,
         hover_text: HoverText = "default",
-        **kwargs,
+        **kwargs: Any,
     ) -> StackedBarTable:
         """
         Args:
@@ -1020,7 +1020,7 @@ class Track:
         vmax: Numeric | None = None,
         arc: bool = True,
         hover_text: HoverText = "default",
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Fill the area between two curves with SVG paths.
 
@@ -1283,7 +1283,7 @@ class Track:
         plotstyle: str = "box",
         r_lim: tuple[float, float] | None = None,
         hover_text_formatter: Callable[[SeqFeature], str] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """
         Args:
@@ -1367,7 +1367,7 @@ class Track:
         x_lim: tuple[float, float],
         r_lim: tuple[float, float],
         ignore_range_error=False,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Plot a line between two positions at specified radial distances."""
         # Convert genomic positions to radians

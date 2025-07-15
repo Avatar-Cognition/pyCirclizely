@@ -448,10 +448,10 @@ class Circos:
         max_deg = max([max(s.deg_lim) for s in group_sectors])
         return min_deg, max_deg
 
-    def axis(self, **kwargs) -> None:
+    def axis(self, **kwargs: Any) -> None:
         """
         Args:
-            kwargs: Shape properties
+            **kwargs: Shape properties
                 (e.g. `fillcolor="red", line=dict(color="green", width=2, dash="dash")`)
                 <https://plotly.com/python/reference/layout/shapes/>
         """
@@ -479,7 +479,7 @@ class Circos:
         deg: float = 0,
         adjust_rotation: bool = False,
         orientation: str = "horizontal",
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Plot text using angular positioning (0-360°).
         Angle is adjusted to Plotly's coordinate system:
@@ -522,7 +522,7 @@ class Circos:
         r: float | tuple[float, float],
         deg_lim: tuple[float, float] | None = None,
         arc: bool = True,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """
         Args:
@@ -557,7 +557,7 @@ class Circos:
         self,
         r_lim: tuple[float, float] = (0, 100),
         deg_lim: tuple[float, float] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Plot a rectangle spanning angular and radial ranges.
         Angle is adjusted to Plotly's coordinate system:
@@ -601,7 +601,7 @@ class Circos:
         arrow_length_ratio: float = 0.05,
         allow_twist: bool = True,
         hover_text: HoverText = "default",
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Plot curved link between two regions within or between sectors.
 
@@ -681,7 +681,7 @@ class Circos:
         arrow_height: float = 3.0,
         arrow_width: float = 0.05,
         hover_text: HoverText = "default",
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Plot link line to specified position within or between sectors
 
@@ -689,9 +689,9 @@ class Circos:
             sector_pos1: Link line sector position1 (name, position).
             sector_pos2: Link line sector position2 (name, position).
             r1: Link line radius end position for sector_pos1.
-            If None, lowest radius position of track in target sector is set.
+                If None, lowest radius position of track in target sector is set.
             r2: Link line radius end position for sector_pos2.
-            If None, lowest radius position of track in target sector is set.
+                If None, lowest radius position of track in target sector is set.
             height_ratio: Bezier curve height ratio.
             direction: Direction of arrow edge shape.
                 0: No direction edge shape (Default).
@@ -755,7 +755,7 @@ class Circos:
         vmin: Numeric = 0,
         vmax: Numeric = 1,
         cmap: str = "RdBu_r",
-        **kwargs,
+        **kwargs: Any,
     ) -> str:
         """Plot colorbar using Plotly's coloraxis system.
 
@@ -787,8 +787,8 @@ class Circos:
     def plotfig(
         self,
         dpi: int = 100,
-        figsize: tuple[float, float] = (8, 8),
-        **kwargs,
+        figsize: tuple[float, float] = (7, 7),
+        **kwargs: Any,
     ) -> go.Figure:
         """Create Plotly figure with all shapes, annotations, and traces.
 
@@ -850,7 +850,7 @@ class Circos:
 
     @staticmethod
     def _initialize_plotly_layout(
-        figsize: tuple[float, float] = (8, 8),
+        figsize: tuple[float, float] = (7, 7),
         dpi: int = 100,
     ) -> dict:
         """Initialize default Plotly layout based on config and figure size."""

@@ -214,15 +214,15 @@ class TreeViz:
         *,
         node_type: Literal["all", "internal", "leaf"] = "all",
         hover_text_formatter: Callable[[list[dict]], list[str]] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Show node information as hovertext.
 
         Args:
             node_type: Which nodes to show information for:
-            - "all": All nodes
-            - "internal": Only internal nodes (default)
-            - "leaf": Only leaf nodes
+                - "all": All nodes
+                - "internal": Only internal nodes (default)
+                - "leaf": Only leaf nodes
             hover_text_formatter: User-defined function for hover text format.
             **kwargs: Scatter trace properties that override defaults.
                 Note: The scatter points will be invisible by default (opacity=0).
@@ -315,7 +315,7 @@ class TreeViz:
     def highlight(
         self,
         query: str | list[str] | tuple[str],
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """
         Args:
@@ -344,7 +344,7 @@ class TreeViz:
         *,
         descendent: bool = True,
         hover_text: list[str] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """
         Args:
@@ -401,11 +401,11 @@ class TreeViz:
 
         self.track.scatter(x, r, vmin=rmin, vmax=rmax, hover_text=hover_text, **kwargs)
 
-    def set_node_label_props(self, target_node_label: str, **kwargs) -> None:
+    def set_node_label_props(self, target_node_label: str, **kwargs: Any) -> None:
         """
         Args:
             target_node_label: Target node label name.
-            kwargs: Annotation properties
+            **kwargs: Annotation properties
                 (e.g. `dict(font=dict(size=12, color="black"))`).
                 <https://plotly.com/python/reference/layout/annotations/>.
         """
@@ -420,7 +420,7 @@ class TreeViz:
         *,
         descendent: bool = True,
         apply_label_color: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """
         Args:

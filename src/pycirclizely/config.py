@@ -9,7 +9,7 @@ from enum import IntEnum
 # Fundamental Plot Parameters
 MIN_R = 0
 MAX_R = 100
-R_PLOT_MARGIN = 15
+R_PLOT_MARGIN = 7
 ARC_POINTS = 100
 R_LIM = (MIN_R, MAX_R)
 AXIS_FACE_PARAM = dict(layer="below", line=dict(color="rgba(0,0,0,0)"))
