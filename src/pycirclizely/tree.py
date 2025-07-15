@@ -443,9 +443,9 @@ class TreeViz:
                 node_name = str(descendent_node.name)
                 self._node2line_props[node_name] = kwargs
                 if apply_label_color and "color" in kwargs["line"]:
-                    self._node2line_props[node_name] = utils.deep_dict_update(
-                        dict(line=dict(color=kwargs["line"]["color"])),
-                        self._node2line_props[node_name],
+                    self._node2label_props[node_name] = utils.deep_dict_update(
+                        self._node2label_props[node_name],
+                        dict(font=dict(color=kwargs["line"]["color"])),
                     )
         else:
             self._node2line_props[str(clade.name)] = kwargs

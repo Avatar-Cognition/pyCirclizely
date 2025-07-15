@@ -121,6 +121,7 @@ jupyterlab-pygments==0.3.0
     # via nbconvert
 jupytext==1.17.2
     # via mkdocs-jupyter
+kaleido==0.2.1
 kiwisolver==1.4.8
     # via matplotlib
 libsass==0.23.0

@@ -1,4 +1,4 @@
-# pyCirclize: Circular visualization in Python
+# pyCirclizely: Circular visualization in Python with plotly
 
 ![Python3](https://img.shields.io/badge/Language-Python3-steelblue)
 ![OS](https://img.shields.io/badge/OS-_Windows_%7C_Mac_%7C_Linux-steelblue)

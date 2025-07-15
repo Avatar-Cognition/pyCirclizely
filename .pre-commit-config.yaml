@@ -4,6 +4,7 @@ repos:
     rev: v5.0.0
     hooks:
       - id: check-added-large-files
+        exclude: \.png$
         args: [--maxkb=50]
       - id: check-case-conflict
       - id: check-json
@@ -67,7 +68,7 @@ repos:
       - id: nbqa-black
       - id: nbqa-isort
       - id: nbqa-mypy
-        args: [--allow-untyped-defs, --allow-untyped-globals]
+        args: [--config-file=mypy.ini, --allow-untyped-defs, --allow-untyped-globals]
         additional_dependencies:
           - mypy==1.15.0
           - biopython==1.85
