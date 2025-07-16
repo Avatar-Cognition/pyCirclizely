@@ -10,7 +10,20 @@
 #   universal: false
 
 -e file:.
+attrs==25.3.0
+    # via jsonschema
+    # via referencing
 biopython==1.85
+    # via pycirclizely
+fastjsonschema==2.21.1
+    # via nbformat
+jsonschema==4.24.0
+    # via nbformat
+jsonschema-specifications==2025.4.1
+    # via jsonschema
+jupyter-core==5.8.1
+    # via nbformat
+nbformat==5.10.4
     # via pycirclizely
 numpy==2.0.2
     # via biopython
@@ -20,16 +33,29 @@ packaging==25.0
     # via plotly
 pandas==2.3.0
     # via pycirclizely
+platformdirs==4.3.8
+    # via jupyter-core
 plotly==5.24.0
     # via pycirclizely
 python-dateutil==2.9.0.post0
     # via pandas
 pytz==2025.2
     # via pandas
+referencing==0.36.2
+    # via jsonschema
+    # via jsonschema-specifications
+rpds-py==0.26.0
+    # via jsonschema
+    # via referencing
 six==1.17.0
     # via python-dateutil
 tenacity==9.1.2
     # via plotly
+traitlets==5.14.3
+    # via jupyter-core
+    # via nbformat
+typing-extensions==4.14.1
+    # via referencing
 tzdata==2025.2
     # via pandas
 webcolors==24.11.1
