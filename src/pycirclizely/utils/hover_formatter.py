@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 from plotly.basedatatypes import BaseTraceType
@@ -107,7 +107,7 @@ class HoverFormatter:
             self.hover_x.append(cx)
             self.hover_y.append(cy)
 
-    def create_hover_trace(self, **kwargs) -> BaseTraceType:
+    def create_hover_trace(self, **kwargs: Any) -> BaseTraceType:
         """Create a Plotly dummy hover trace."""
         args = dict(
             text=self.hover_texts,

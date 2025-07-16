@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from copy import deepcopy
 from enum import IntEnum
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 from plotly.basedatatypes import BaseTraceType
@@ -114,7 +114,7 @@ def get_plotly_label_params(
     rad: float,
     adjust_rotation: bool,
     orientation: str,
-    **kwargs,
+    **kwargs: Any,
 ) -> dict:
     """Build Plotly label parameters based on radian and orientation."""
     # Start with global defaults
@@ -143,7 +143,7 @@ def get_plotly_label_params(
     return annotation
 
 
-def build_plotly_shape(path: str, defaults: dict = {}, **kwargs) -> dict:
+def build_plotly_shape(path: str, defaults: dict = {}, **kwargs: Any) -> dict:
     """Build a Plotly shape dictionary with defaults and custom parameters."""
     shape_defaults = deepcopy(defaults)
     shape_defaults = deep_dict_update(shape_defaults, kwargs)
@@ -151,7 +151,7 @@ def build_plotly_shape(path: str, defaults: dict = {}, **kwargs) -> dict:
 
 
 def build_scatter_trace(
-    x: list | tuple, y: list | tuple, mode: str, **kwargs
+    x: list | tuple, y: list | tuple, mode: str, **kwargs: Any
 ) -> BaseTraceType:
     """Build a Plotly Scatter trace with defaults and custom parameters."""
     scatter_config = deepcopy(config.plotly_scatter_defaults)
