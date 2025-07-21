@@ -106,7 +106,7 @@ ignore = [
 convention = "numpy"
 
 [build-system]
-requires = ["hatchling==1.26.3"]
+requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.metadata]
