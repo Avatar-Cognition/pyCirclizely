@@ -2,6 +2,7 @@
 
 ![Python3](https://img.shields.io/badge/Language-Python3-steelblue)
 ![OS](https://img.shields.io/badge/OS-_Windows_%7C_Mac_%7C_Linux-steelblue)
+[![Latest PyPI version](https://img.shields.io/pypi/v/pycirclizely.svg)](https://pypi.python.org/pypi/pycirclizely)
 ![License](https://img.shields.io/badge/License-MIT-steelblue)
 
 ## Overview
@@ -19,12 +20,16 @@ pyCirclizely is a reimagining of [pyCirclize](https://github.com/moshi4/pyCircli
 
 `Python 3.10 or later` is required for installation.
 
-_Not yet available on PyPI or conda-forge — install from source for now._
+**Install PyPI package:**
 
-```bash
-git clone https://github.com/yourusername/pyCirclizely.git
-cd pyCirclizely
-pip install -e .
+```
+pip install pycirclizely
+```
+
+**Install conda-forge package:**
+
+```
+conda install -c conda-forge pycirclizely
 ```
 
 ## API Usage

@@ -3,6 +3,7 @@
 ![Python3](https://img.shields.io/badge/Language-Python3-steelblue)
 ![OS](https://img.shields.io/badge/OS-_Windows_%7C_Mac_%7C_Linux-steelblue)
 ![License](https://img.shields.io/badge/License-MIT-steelblue)
+[![Latest PyPI version](https://img.shields.io/pypi/v/pycirclizely.svg)](https://pypi.python.org/pypi/pycirclizely)
 [![CI](https://github.com/Avatar-Cognition/pyCirclizely/actions/workflows/ci.yml/badge.svg)](https://github.com/Avatar-Cognition/pyCirclizely/actions/workflows/ci.yml)
 
 ## Table of contents
@@ -47,7 +48,7 @@ conda install -c conda-forge pycirclizely
 
 ## API Usage
 
-API usage is described in each of the following sections in the [document](https://Avatar-Cognition.github.io/pyCirclizely/).
+API usage is described in each of the following sections in the [documentation](https://Avatar-Cognition.github.io/pyCirclizely/).
 
 - [Getting Started](https://Avatar-Cognition.github.io/pyCirclizely/getting_started/)
 - [Plot API Example](https://Avatar-Cognition.github.io/pyCirclizely/plot_api_example/)
