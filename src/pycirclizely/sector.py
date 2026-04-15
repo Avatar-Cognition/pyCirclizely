@@ -340,11 +340,9 @@ class Sector:
     def __str__(self):
         min_deg_lim, max_deg_lim = min(self.deg_lim), max(self.deg_lim)
         track_names = [t.name for t in self.tracks]
-        return textwrap.dedent(
-            f"""
+        return textwrap.dedent(f"""
             # Sector = '{self.name}'
             # Size = {self.size} ({self.start} - {self.end})
             # Degree Size = {self.deg_size:.2f} ({min_deg_lim:.2f} - {max_deg_lim:.2f})
             # Track List = {track_names}
-            """
-        )[1:]
+            """)[1:]

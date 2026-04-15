@@ -17,7 +17,7 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "biopython>=1.80, <2",
     "nbformat>=4.2.0",
@@ -33,11 +33,10 @@ repository = "https://github.com/Avatar-Cognition/pyCirclizely"
 [tool.hatch.version]
 path = "src/pycirclizely/__init__.py"
 
-[tool.rye]
-managed = true
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "ruff>=0.4.0",
-    "pre-commit>=3.5.0",
+    "prek>=0.3.9",
     "pytest>=8.0.0",
     "pytest-cov>=4.0.0",
     "ipykernel>=6.13.0",
@@ -48,21 +47,19 @@ dev-dependencies = [
     "mkdocs-material>=8.2",
     "mkdocs-autorefs",
     "markdown-katex",
-    "mkdocs-material",
     "mkdocs-section-index",
     "mkdocs-to-pdf==0.10.1",
-    "mkdocstrings[python]",
     "black>=22.3.0",
     # additional
     "hatch-requirements-txt>=0.4.1",
     "kaleido==0.2.1",
     "pygenomeviz>=1.5.0",
-    # tools used by pre-commit
+    # tools used by prek
     "isort>=6.0.0",
     "mypy>=1.15.0",
     "vulture>=2.14",
     "nbqa>=1.9.1",
-    "mdformat>=0.7.22"
+    "mdformat>=0.7.22",
 ]
 
 [tool.pytest.ini_options]

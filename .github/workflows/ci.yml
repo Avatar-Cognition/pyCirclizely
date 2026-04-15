@@ -14,27 +14,25 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.10', '3.11', '3.12', '3.13']
+        python-version: ['3.11', '3.12', '3.13', '3.13']
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Rye
-        run: |
-          curl -sSf https://rye.astral.sh/get | RYE_INSTALL_OPTION="--yes" bash
-          echo "$HOME/.rye/shims" >> $GITHUB_PATH
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
 
       - name: Set up Python ${{ matrix.python-version }}
-        run: |
-          rye pin ${{ matrix.python-version }}
-          rye sync
+        run: uv python install ${{ matrix.python-version }}
 
-      - name: Install pre-commit
-        run: rye add pre-commit
+      - name: Install prek
+        run: uv tool install prek
+
+      - name: Install dependencies
+        run: uv sync --all-groups --python ${{ matrix.python-version }}
 
       - name: Run pre-commit hooks
-        run: rye run pre-commit run --all-files
+        run: uv run prek run --all-files
 
-      - name: Run tests (without coverage)
-        run: |
-          rye run pytest
+      - name: Run tests
+        run: uv run pytest
