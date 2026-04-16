@@ -6,3 +6,5 @@ requirements.yml
 requirements-dev.yml
 .vscode/
 site/
+# keep this!
+!uv.lock

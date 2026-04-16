@@ -106,7 +106,7 @@ class StackedBarTable(Table):
         for col_name in self.col_names:
             bottom = [row_name2stack_value[name] for name in self.row_names]
             for row_name in self.row_names:
-                value = float(self.dataframe.at[row_name, col_name])
+                value = float(self.dataframe.at[row_name, col_name])  # type: ignore[arg-type]
                 row_name2stack_value[row_name] += value
             bottoms.append(bottom)
         return bottoms
