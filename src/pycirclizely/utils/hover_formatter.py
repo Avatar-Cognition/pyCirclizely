@@ -16,13 +16,31 @@ from .plot import build_scatter_trace
 
 @dataclass
 class HoverFormatter:
+    """Collect hover positions, texts and colors and build the hover trace.
+
+    Attributes
+    ----------
+    hover_texts : list[str]
+        Hover text of each item.
+    hover_x : list[float]
+        Cartesian x of each hover sample.
+    hover_y : list[float]
+        Cartesian y of each hover sample.
+    hover_colors : list[str]
+        Hover label background color of each item.
+    precision_position : int
+        Decimals used when formatting positions in the default hover text.
+    region_counts : list[int]
+        Number of hover samples generated for each item by
+        ``add_hover_regions``. When set, ``hover_texts`` and ``hover_colors``
+        (one per item) are repeated accordingly in ``create_hover_trace``.
+    """
+
     hover_texts: list[str] = field(default_factory=list)
     hover_x: list[float] = field(default_factory=list)
     hover_y: list[float] = field(default_factory=list)
     hover_colors: list[str] = field(default_factory=list)
     precision_position: int = 2
-    # Number of hover samples generated for each item (set by add_hover_regions).
-    # When set, hover_texts / hover_colors (one per item) are repeated accordingly.
     region_counts: list[int] = field(default_factory=list)
 
     def process_hover_text(
