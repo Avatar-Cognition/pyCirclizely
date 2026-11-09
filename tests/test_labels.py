@@ -6,6 +6,7 @@ from pycirclizely.utils.plot import GHOST_STYLE, pad_label_away_from_anchor
 
 
 def _ann(circos):
+    """Annotations of the rendered figure."""
     return list(circos.plotfig().layout.annotations)
 
 
@@ -33,7 +34,9 @@ def test_xtick_label_anchored_at_tick_end(orientation, outer):
 
 
 def test_ghost_side_follows_reading_direction():
-    """Ghost side follows reading direction."""
+    """The transparent padding goes on the tick side of the text, so the
+    visible text reads away from the tick in every orientation.
+    """
     # baseline pointing along the outward direction -> visible text second
     assert pad_label_away_from_anchor("ab", (1, 0), 0).endswith(">ab</span>ab")
     # baseline pointing against it -> visible text first

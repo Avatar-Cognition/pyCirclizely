@@ -145,10 +145,14 @@ def get_plotly_label_params(
 
 
 GHOST_STYLE = "color:rgba(0,0,0,0)"
+"""Inline CSS of the transparent text copy used to pad tick labels."""
+
 _BR = re.compile(r"<br\s*/?>", re.IGNORECASE)
+"""Matches plotly line breaks (``<br>``, ``<br/>``, ``<br />``)."""
 
 
 def _ghost(text: str) -> str:
+    """Wrap ``text`` in a transparent span: takes space, renders nothing."""
     return f'<span style="{GHOST_STYLE}">{text}</span>'
 
 

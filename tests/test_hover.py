@@ -12,10 +12,12 @@ def _polar(x: float, y: float) -> tuple[float, float]:
 
 
 def _hover_traces(fig):
+    """Hover-only traces of ``fig`` (text hoverinfo, zero-width line)."""
     return [t for t in fig.data if t.hoverinfo == "text" and t.line.width == 0]
 
 
 def _inside(rad, r, rad0, rad1, r0, r1, tol=1e-9):
+    """Whether polar point ``(rad, r)`` lies in the annular sector given."""
     lo, hi = sorted((rad0 % (2 * math.pi), rad1 % (2 * math.pi)))
     return r0 - tol <= r <= r1 + tol and lo - tol <= rad <= hi + tol
 
@@ -29,7 +31,9 @@ def test_hover_trace_is_not_marker_based():
 
 
 def test_heatmap_coloraxis_kept_with_line_hover_trace():
-    """Heatmap coloraxis kept with line hover trace."""
+    """The colorbar still renders: plotly only draws a coloraxis referenced by
+    a marker trace, and hover traces are now line-only.
+    """
     circos = Circos({"A": 10})
     ca = circos.colorbar(vmin=0, vmax=1)
     track = circos.sectors[0].add_track((50, 90))
@@ -41,7 +45,9 @@ def test_heatmap_coloraxis_kept_with_line_hover_trace():
 
 
 def test_heatmap_hover_samples_cover_each_cell():
-    """Heatmap hover samples cover each cell."""
+    """Every heatmap hover sample lies inside its own cell, and every cell gets
+    several samples (one per cell let neighbours win on large cells).
+    """
     circos = Circos({"A": 10}, start=0, end=90)
     track = circos.sectors[0].add_track((50, 90))
     data = np.arange(40).reshape(4, 10)
@@ -66,7 +72,9 @@ def test_heatmap_hover_samples_cover_each_cell():
 
 @pytest.mark.parametrize("align", ["center", "edge"])
 def test_bar_hover_samples_inside_bar(align):
-    """Bar hover samples inside bar."""
+    """Every bar hover sample lies inside its own bar, for both alignments
+    (``align="edge"`` used to put the single sample on the start edge).
+    """
     circos = Circos({"A": 10})
     track = circos.sectors[0].add_track((50, 90))
     x = np.arange(1, 9)
@@ -88,7 +96,9 @@ def test_bar_hover_samples_inside_bar(align):
 
 
 def test_bar_hover_text_none_disables_hover():
-    """Bar hover text none disables hover."""
+    """``bar(hover_text=None)`` emits no hover trace (it used to raise
+    ``TypeError``).
+    """
     circos = Circos({"A": 10})
     track = circos.sectors[0].add_track((50, 90))
     track.bar([1, 2], [1, 2], hover_text=None)
@@ -96,7 +106,9 @@ def test_bar_hover_text_none_disables_hover():
 
 
 def test_layout_has_equal_aspect_ratio():
-    """Layout has equal aspect ratio."""
+    """1 data unit spans the same pixels in x and y, so the circle is not
+    stretched on non-square figures.
+    """
     fig = Circos({"A": 10}).plotfig(figsize=(12, 6))
     assert fig.layout.yaxis.scaleanchor == "x"
     assert fig.layout.yaxis.scaleratio == 1
