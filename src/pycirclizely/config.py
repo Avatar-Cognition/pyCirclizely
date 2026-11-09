@@ -177,11 +177,6 @@ radar_annotation_defaults = {
     "yanchor": "top",
 }
 
-# Invisible trace carrying hover text at sample points. It is drawn as a
-# zero-width line, not as markers: for marker traces plotly.js clamps the hover
-# distance to max(d - r, 0) with r >= 3px, so every point within 3px of the
-# cursor ties (and big markers tie within their whole radius), making the
-# *first* point win instead of the closest one. Line-only traces use r = 0.5px.
 hovertext_dummy_defaults = {
     "hoverinfo": "text",
     "mode": "lines",
@@ -190,11 +185,21 @@ hovertext_dummy_defaults = {
         "opacity": 0,
     },
 }
+"""Invisible trace carrying hover text at sample points.
 
-# Distance (data units, radius scale 0-100) between hover samples filling area
-# items (heatmap cells, bars, features). ~5px on a 700px figure.
+It is drawn as a zero-width line, not as markers: for marker traces plotly.js
+clamps the hover distance to ``max(d - r, 0)`` with ``r >= 3px``, so every point
+within 3px of the cursor ties (and big markers tie within their whole radius),
+making the *first* point win instead of the closest one. Line-only traces use
+``r = 0.5px``.
+"""
+
 HOVER_SAMPLE_SPACING = 2.0
+"""Distance between hover samples filling area items (heatmap cells, bars,
+features), in data units (radius scale 0-100). About 5px on a 700px figure."""
+
 HOVER_MAX_SAMPLES_PER_REGION = 2000
+"""Upper bound on hover samples generated for a single area item."""
 
 
 ###########################################################
