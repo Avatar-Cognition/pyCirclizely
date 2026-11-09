@@ -62,6 +62,11 @@ plotly_layout_defaults = {
     },
     "yaxis": {
         "autorange": True,
+        # 1 data unit is the same number of pixels in x and y: circles stay
+        # circles whatever the figure size, so shapes, hover points and
+        # pixel-offset labels line up.
+        "scaleanchor": "x",
+        "scaleratio": 1,
         "showgrid": False,
         "zeroline": False,
         "showticklabels": False,
@@ -174,11 +179,27 @@ radar_annotation_defaults = {
 
 hovertext_dummy_defaults = {
     "hoverinfo": "text",
+    "mode": "lines",
+    "line": {"width": 0},
     "marker": {
-        "size": 20,
         "opacity": 0,
     },
 }
+"""Invisible trace carrying hover text at sample points.
+
+It is drawn as a zero-width line, not as markers: for marker traces plotly.js
+clamps the hover distance to ``max(d - r, 0)`` with ``r >= 3px``, so every point
+within 3px of the cursor ties (and big markers tie within their whole radius),
+making the *first* point win instead of the closest one. Line-only traces use
+``r = 0.5px``.
+"""
+
+HOVER_SAMPLE_SPACING = 2.0
+"""Distance between hover samples filling area items (heatmap cells, bars,
+features), in data units (radius scale 0-100). About 5px on a 700px figure."""
+
+HOVER_MAX_SAMPLES_PER_REGION = 2000
+"""Upper bound on hover samples generated for a single area item."""
 
 
 ###########################################################

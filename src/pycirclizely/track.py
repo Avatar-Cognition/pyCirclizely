@@ -250,33 +250,23 @@ class Track:
         )
 
         if axis:
-            font_size = annotation["font"]["size"]
-
+            # Tick label: the visible text must *start* at (x_pos, y_pos) and
+            # extend away from the tick, whatever its pixel size.
             if axis == "x":
-                # X-axis labels (circular ticks)
-                padding = (font_size * 0.05) + (
-                    font_size * len(str(text)) * 0.09
-                    if orientation == "vertical"
-                    else 0
-                )
-                padding_angle = (
-                    plotly_rad + np.pi / 4 - 0.8
-                    if outer
-                    else plotly_rad - np.pi / 4 + 0.8
-                )
-                dx = padding * np.cos(padding_angle)
-                dy = padding * np.sin(padding_angle)
-                if not outer:
-                    dx, dy = -dx, -dy
+                # radial direction (outward for outer ticks, inward otherwise)
+                sign = 1 if outer else -1
+                direction = (sign * np.sin(rad), sign * np.cos(rad))
+            elif axis == "y":
+                # tangential direction, away from the track
+                center_rad = self.x_to_rad(self.center)
+                delta = (rad - center_rad + np.pi) % (2 * np.pi) - np.pi
+                sign = 1 if delta >= 0 else -1
+                direction = (sign * np.cos(rad), -sign * np.sin(rad))
             else:
-                # Y-axis labels (radial ticks)
-                padding = (font_size * 0.05) + (font_size * len(str(text)) * 0.09)
-                tangent_angle = plotly_rad + (np.pi / 2 if outer else -np.pi / 2 + 0.2)
-                dx = padding * np.cos(tangent_angle)
-                dy = padding * np.sin(tangent_angle)
-
-            x_pos += dx
-            y_pos += dy
+                raise ValueError(f"{axis=} is invalid ('x', 'y' or False).")
+            text = utils.plot.pad_label_away_from_anchor(
+                str(text), direction, annotation.get("textangle", 0)
+            )
 
         annotation.update({"x": x_pos, "y": y_pos, "text": text})
         annotation_layout = go.layout.Annotation(**annotation)
@@ -778,7 +768,7 @@ class Track:
             colors = [utils.plot.get_default_color(kwargs, target="fillcolor")] * len(x)
             default_line = 0
 
-        hover_data: dict[str, list[Any]] = {"rad": [], "r": [], "colors": []}
+        hover_data: dict[str, list[Any]] = {"rad_lim": [], "r_lim": [], "colors": []}
 
         for i, (xi, hi, bi, color) in enumerate(zip(x, height, bottom, colors)):
             # Calculate bar geometry
@@ -807,18 +797,17 @@ class Track:
             )
             self._shapes.append(shape)
 
-            if hover_data is not None:
-                hover_data["rad"].append(rad)
-                hover_data["r"].append(r_bottom + r_height)
-                hover_data["colors"].append(color)
+            hover_data["rad_lim"].append((rad_start, rad_start + rad_width))
+            hover_data["r_lim"].append((r_bottom, r_bottom + r_height))
+            hover_data["colors"].append(color)
 
-        if hover_data is None:
+        if hover_text is None:
             return
 
         hover_formatter = HoverFormatter(
             precision_position=self.precision_position,
         )
-        hover_formatter.add_hover_positions(hover_data["rad"], hover_data["r"])
+        hover_formatter.add_hover_regions(hover_data["rad_lim"], hover_data["r_lim"])
         hover_formatter.process_hover_text(
             x,
             height,
@@ -869,7 +858,7 @@ class Track:
         bar_width = (self.size / len(sb_table.row_names)) * width
         vmax = sb_table.row_sum_vmax if vmax is None else vmax
 
-        hover_data: dict[str, list[Any]] = {"rad": [], "r": [], "colors": []}
+        hover_data: dict[str, list[Any]] = {"rad_lim": [], "r_lim": [], "colors": []}
 
         for col_idx, (col_name, height, bottom) in enumerate(
             zip(
@@ -886,14 +875,12 @@ class Track:
                 - r_bottom
             )
 
+            rad_width = self.rad_size * (bar_width / self.size)
             for i in range(len(x)):
                 # Create bar segment
                 path = PolarSVGPatchBuilder.arc_rectangle(
-                    radr=(
-                        rad[i] - self.rad_size * (bar_width / self.size) / 2,
-                        r_bottom[i],
-                    ),
-                    width=self.rad_size * (bar_width / self.size),
+                    radr=(rad[i] - rad_width / 2, r_bottom[i]),
+                    width=rad_width,
                     height=r_height[i],
                 )
                 shape = utils.plot.build_plotly_shape(
@@ -903,10 +890,11 @@ class Track:
                 )
                 self._shapes.append(shape)
 
-                if hover_data is not None:
-                    hover_data["rad"].append(rad[i])
-                    hover_data["r"].append(r_bottom[i] + r_height[i] / 2)
-                    hover_data["colors"].append(color)
+                hover_data["rad_lim"].append(
+                    (rad[i] - rad_width / 2, rad[i] + rad_width / 2)
+                )
+                hover_data["r_lim"].append((r_bottom[i], r_bottom[i] + r_height[i]))
+                hover_data["colors"].append(color)
 
         if hover_text is None:
             return sb_table
@@ -914,7 +902,7 @@ class Track:
         hover_formatter = HoverFormatter(
             precision_position=self.precision_position,
         )
-        hover_formatter.add_hover_positions(hover_data["rad"], hover_data["r"])
+        hover_formatter.add_hover_regions(hover_data["rad_lim"], hover_data["r_lim"])
         hover_formatter.hover_colors = hover_data["colors"]
         hover_formatter.process_stacked_bar_hover_text(
             sb_table, col_name2color, hover_text=hover_text
@@ -963,11 +951,7 @@ class Track:
         r_lim_list = sb_table.calc_barh_r_lim_list(self.r_plot_lim, width)
         vmax = sb_table.row_sum_vmax if vmax is None else vmax
 
-        hover_data: dict[str, list[Any]] = {
-            "x_center": [],
-            "r_center": [],
-            "colors": [],
-        }
+        hover_data: dict[str, list[Any]] = {"rad_lim": [], "r_lim": [], "colors": []}
 
         # Plot bars and collect hover data
         for col_idx, (col_name, height, bottom) in enumerate(
@@ -985,10 +969,9 @@ class Track:
             for row_idx, (r_lim, h, b) in enumerate(zip(r_lim_list, height, bottom)):
                 self.rect(b, b + h, r_lim=r_lim, **_kwargs)
 
-                if hover_data is not None:
-                    hover_data["x_center"].append((b + b + h) / 2)
-                    hover_data["r_center"].append((r_lim[0] + r_lim[1]) / 2)
-                    hover_data["colors"].append(color)
+                hover_data["rad_lim"].append((self.x_to_rad(b), self.x_to_rad(b + h)))
+                hover_data["r_lim"].append(r_lim)
+                hover_data["colors"].append(color)
 
         if hover_text is None:
             return sb_table
@@ -997,8 +980,7 @@ class Track:
             precision_position=self.precision_position,
         )
 
-        rad_positions = [self.x_to_rad(x) for x in hover_data["x_center"]]
-        hover_formatter.add_hover_positions(rad_positions, hover_data["r_center"])
+        hover_formatter.add_hover_regions(hover_data["rad_lim"], hover_data["r_lim"])
 
         hover_formatter.hover_colors = hover_data["colors"]
         hover_formatter.process_stacked_bar_hover_text(
@@ -1163,8 +1145,8 @@ class Track:
         norm = utils.plot.Normalize(vmin=vmin, vmax=vmax)
 
         hover_data: dict[str, list[Any]] = {
-            "rad": [],
-            "r": [],
+            "rad_lim": [],
+            "r_lim": [],
             "colors": [],
             "start_x": [],
             "end_x": [],
@@ -1181,11 +1163,13 @@ class Track:
                 rect_kws = utils.deep_dict_update(rect_kws, {"fillcolor": color})
                 self.rect(rect_start, rect_end, r_lim=rect_r_lim, **rect_kws)
 
-                if hover_data is not None:
-                    center_x = (rect_start + rect_end) / 2
-                    center_r = sum(rect_r_lim) / 2
-                    hover_data["rad"].append(self.x_to_rad(center_x))
-                    hover_data["r"].append(center_r)
+                center_x = (rect_start + rect_end) / 2
+                center_r = sum(rect_r_lim) / 2
+                if hover_text is not None:
+                    hover_data["rad_lim"].append(
+                        (self.x_to_rad(rect_start), self.x_to_rad(rect_end))
+                    )
+                    hover_data["r_lim"].append(rect_r_lim)
                     hover_data["colors"].append(color)
                     hover_data["start_x"].append(rect_start)
                     hover_data["end_x"].append(rect_end)
@@ -1195,6 +1179,27 @@ class Track:
                     text_value = f"{v:.2f}" if isinstance(v, float) else str(v)
                     self.text(text_value, center_x, center_r, **text_kws)
 
+        if coloraxis:
+            # Invisible single-point marker trace so the coloraxis (colorbar) is
+            # rendered: plotly only draws a colorbar referenced by a marker trace.
+            x0, y0 = PolarSVGPatchBuilder._polar_to_cart(
+                self.x_to_rad(self.center), self.r_center
+            )
+            self._traces.append(
+                utils.plot.build_scatter_trace(
+                    x=[x0],
+                    y=[y0],
+                    mode="markers",
+                    hoverinfo="skip",
+                    marker=dict(
+                        color=[vmin],
+                        opacity=0,
+                        coloraxis=coloraxis,
+                        showscale=False,
+                    ),
+                )
+            )
+
         if hover_text is None:
             return
 
@@ -1202,7 +1207,7 @@ class Track:
             precision_position=self.precision_position,
         )
 
-        hover_formatter.add_hover_positions(hover_data["rad"], hover_data["r"])
+        hover_formatter.add_hover_regions(hover_data["rad_lim"], hover_data["r_lim"])
         hover_formatter.process_hover_text(
             hover_data["start_x"],
             hover_data["values"],
@@ -1212,15 +1217,7 @@ class Track:
             hover_text=hover_text,
         )
 
-        if hover_trace := hover_formatter.create_hover_trace(
-            marker=dict(
-                colorscale=color_scale,
-                cmin=vmin,
-                cmax=vmax,
-                coloraxis=coloraxis if coloraxis else None,
-                showscale=False,
-            )
-        ):
+        if hover_trace := hover_formatter.create_hover_trace():
             self._traces.append(hover_trace)
 
     def tree(
@@ -1310,7 +1307,7 @@ class Track:
             or "lightgrey"
         )
 
-        hover_data: dict[str, list[Any]] = {"rad": [], "r": [], "texts": []}
+        hover_data: dict[str, list[Any]] = {"rad_lim": [], "r_lim": [], "texts": []}
 
         for feature in features:
             try:
@@ -1333,9 +1330,8 @@ class Track:
                 raise ValueError(f"{plotstyle=} is invalid ('box' or 'arrow').")
 
             if hover_text_formatter:
-                midpoint = (start + end) / 2
-                hover_data["rad"].append(self.x_to_rad(midpoint))
-                hover_data["r"].append(sum(r_lim) / 2)
+                hover_data["rad_lim"].append((self.x_to_rad(start), self.x_to_rad(end)))
+                hover_data["r_lim"].append(r_lim)
                 hover_data["texts"].append(hover_text_formatter(feature))
 
         if hover_text_formatter is None:
@@ -1345,9 +1341,9 @@ class Track:
             precision_position=self.precision_position,
         )
 
-        hover_formatter.add_hover_positions(hover_data["rad"], hover_data["r"])
+        hover_formatter.add_hover_regions(hover_data["rad_lim"], hover_data["r_lim"])
         hover_formatter.hover_texts = hover_data["texts"]
-        hover_formatter.hover_colors = [bg_color] * len(hover_data["rad"])
+        hover_formatter.hover_colors = [bg_color] * len(hover_data["texts"])
 
         if hover_trace := hover_formatter.create_hover_trace():
             self._traces.append(hover_trace)
