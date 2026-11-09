@@ -1,5 +1,6 @@
+import math
 from dataclasses import dataclass, field
-from typing import Any, Optional, Union
+from typing import Any, Optional, Sequence, Union
 
 import numpy as np
 from plotly.basedatatypes import BaseTraceType
@@ -20,6 +21,9 @@ class HoverFormatter:
     hover_y: list[float] = field(default_factory=list)
     hover_colors: list[str] = field(default_factory=list)
     precision_position: int = 2
+    # Number of hover samples generated for each item (set by add_hover_regions).
+    # When set, hover_texts / hover_colors (one per item) are repeated accordingly.
+    region_counts: list[int] = field(default_factory=list)
 
     def process_hover_text(
         self,
@@ -107,12 +111,60 @@ class HoverFormatter:
             self.hover_x.append(cx)
             self.hover_y.append(cy)
 
+    def add_hover_regions(
+        self,
+        rad_lims: Sequence[tuple[float, float]],
+        r_lims: Sequence[tuple[float, float]],
+        spacing: float | None = None,
+    ) -> None:
+        """
+        Add hover positions covering polar rectangles (heatmap cells, bars...).
+
+        Plotly only knows how to hover *points*, so each region is filled with a
+        grid of invisible samples (one per sub-cell of about `spacing` data units).
+        Plotly then shows the region whose sample is closest to the cursor, which
+        is the region under the cursor (up to half a sub-cell at the borders),
+        regardless of the region shape or how small/elongated it is.
+
+        Args:
+            rad_lims: (start, end) angle of each region in radians.
+            r_lims: (bottom, top) radius of each region.
+            spacing: Target distance between samples, in data (radius) units.
+        """
+        spacing = config.HOVER_SAMPLE_SPACING if spacing is None else spacing
+        for (rad0, rad1), (r0, r1) in zip(rad_lims, r_lims):
+            r_lo, r_hi = min(r0, r1), max(r0, r1)
+            rad_lo, rad_hi = min(rad0, rad1), max(rad0, rad1)
+            arc = (rad_hi - rad_lo) * (r_lo + r_hi) / 2
+            n_r = max(1, math.ceil((r_hi - r_lo) / spacing))
+            n_t = max(1, math.ceil(arc / spacing))
+            n_t = min(n_t, config.HOVER_MAX_SAMPLES_PER_REGION // n_r or 1)
+            rs = r_lo + (r_hi - r_lo) * (np.arange(n_r) + 0.5) / n_r
+            rads = rad_lo + (rad_hi - rad_lo) * (np.arange(n_t) + 0.5) / n_t
+            grid_rad, grid_r = np.meshgrid(rads, rs)
+            self.add_hover_positions(grid_rad.ravel(), grid_r.ravel())
+            self.region_counts.append(n_r * n_t)
+
     def create_hover_trace(self, **kwargs: Any) -> BaseTraceType:
         """Create a Plotly dummy hover trace."""
+        texts, colors = self.hover_texts, self.hover_colors
+        if self.region_counts:
+            if len(texts) != len(self.region_counts):
+                raise ValueError(
+                    f"hover_text length ({len(texts)}) must match number of "
+                    f"regions ({len(self.region_counts)})"
+                )
+            texts = list(np.repeat(np.asarray(texts, dtype=object), self.region_counts))
+            if isinstance(colors, (list, tuple)) and len(colors) == len(
+                self.region_counts
+            ):
+                colors = list(
+                    np.repeat(np.asarray(colors, dtype=object), self.region_counts)
+                )
         args = dict(
-            text=self.hover_texts,
-            marker=dict(color=self.hover_colors),
-            hoverlabel=dict(bgcolor=self.hover_colors),
+            text=texts,
+            marker=dict(color=colors),
+            hoverlabel=dict(bgcolor=colors),
         )
 
         # Start from defaults, then update with args, then with kwargs
@@ -120,8 +172,9 @@ class HoverFormatter:
             deep_dict_update(config.hovertext_dummy_defaults, args), kwargs
         )
 
+        mode = all_args.pop("mode", "lines")
         return build_scatter_trace(
-            x=self.hover_x, y=self.hover_y, mode="markers", **all_args
+            x=self.hover_x, y=self.hover_y, mode=mode, **all_args
         )
 
     def clear(self) -> None:
@@ -130,6 +183,7 @@ class HoverFormatter:
         self.hover_x.clear()
         self.hover_y.clear()
         self.hover_colors.clear()
+        self.region_counts.clear()
 
     ############################################################
     # Private Method

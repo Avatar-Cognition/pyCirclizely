@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import re
 from copy import deepcopy
 from enum import IntEnum
 from typing import Any, Literal
@@ -141,6 +142,49 @@ def get_plotly_label_params(
         annotation.update({"textangle": rotation})
 
     return annotation
+
+
+GHOST_STYLE = "color:rgba(0,0,0,0)"
+_BR = re.compile(r"<br\s*/?>", re.IGNORECASE)
+
+
+def _ghost(text: str) -> str:
+    return f'<span style="{GHOST_STYLE}">{text}</span>'
+
+
+def pad_label_away_from_anchor(
+    text: str, direction: tuple[float, float], textangle: float
+) -> str:
+    """Make a label start at its anchor point and extend along `direction`.
+
+    Plotly annotations are always centered on (x, y) and cannot be anchored by
+    the edge of rotated text. Text width depends on the browser font, so it
+    cannot be computed here. Instead the label is padded, on the side facing
+    the anchor, with a transparent copy of itself: both halves have the exact
+    same rendered size, so the visible half starts exactly at (x, y).
+
+    Args:
+        text: Label text (may contain plotly HTML-like tags and `<br>`).
+        direction: Unit vector (screen-like coords, y up) the label should
+            extend towards (e.g. outward radial direction for outer ticks).
+        textangle: Annotation text angle in degrees (clockwise, plotly).
+    """
+    a = math.radians(textangle or 0)
+    baseline = (math.cos(a), -math.sin(a))  # reading direction
+    up = (math.sin(a), math.cos(a))  # towards the top of the glyphs
+    along = direction[0] * baseline[0] + direction[1] * baseline[1]
+    across = direction[0] * up[0] + direction[1] * up[1]
+    lines = _BR.split(text)
+    if abs(along) >= abs(across):
+        # Text runs along `direction`: pad each line before/after.
+        if along > 0:
+            return "<br>".join(_ghost(line) + line for line in lines)
+        return "<br>".join(line + _ghost(line) for line in lines)
+    # Text runs across `direction`: pad with transparent lines above/below.
+    ghost_block = "<br>".join(_ghost(line) for line in lines)
+    if across > 0:
+        return f"{text}<br>{ghost_block}"
+    return f"{ghost_block}<br>{text}"
 
 
 def build_plotly_shape(path: str, defaults: dict = {}, **kwargs: Any) -> dict:
